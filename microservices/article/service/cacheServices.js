@@ -2,9 +2,10 @@
 import ioRedis from 'ioredis'
 // const redis = new Redis()
 let defaultOptions = {
-  port: 6379, // Redis port
-  host: '127.0.0.1', // Redis host
-  family: 4, // 4 (IPv4) or 6 (IPv6)
+  port: process.env.REDIS_PORT ? parseInt(process.env.REDIS_PORT, 10) : 6379, // Redis port
+  host: process.env.REDIS_HOST || '127.0.0.1', // Redis host
+  family: process.env.REDIS_FAMILY ? parseInt(process.env.REDIS_FAMILY, 10) : 4, // 4 (IPv4) or 6 (IPv6)
+  password: process.env.REDIS_PASSWORD || undefined, // Redis password (if set)
   db: 0,
 }
 

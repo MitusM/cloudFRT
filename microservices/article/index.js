@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import dotenv from 'dotenv'
 import pkg from 'app-root-path'
 const reqModule = pkg.require
