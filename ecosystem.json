@@ -1,103 +1,103 @@
 {
   "apps": [
     {
-      "name": 'Gateway',
-      "script": './index.js',
+      "name": "Gateway",
+      "script": "./index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'autorization',
-      "script": './microservices/auth/index.js',
+      "name": "auth",
+      "script": "./microservices/auth/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'users',
-      'script': './microservices/auth/index.js',
+      "name": "users",
+      "script": "./microservices/users/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
-      },
-      'env_production': {
-        "NODE_ENV": 'production',
-      },
-    },
-    {
-      "name": 'render',
-      "script": './microservices/render/index.js',
-      "watch": true,
-      "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'cache',
-      "script": './microservices/cache/index.js',
+      "name": "render",
+      "script": "./microservices/render/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'article',
-      "script": './microservices/article/index.js',
+      "name": "cache",
+      "script": "./microservices/cache/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'country',
-      "script": './microservices/country/index.js',
+      "name": "article",
+      "script": "./microservices/article/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'geo',
-      "script": './microservices/geo/index.js',
+      "name": "country",
+      "script": "./microservices/country/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
     {
-      "name": 'travel',
-      "script": './microservices/travel/index.js',
+      "name": "geo",
+      "script": "./microservices/geo/index.js",
       "watch": true,
       "env": {
-        "NODE_ENV": 'development',
+        "NODE_ENV": "development"
       },
       "env_production": {
-        "NODE_ENV": 'production',
-      },
+        "NODE_ENV": "production"
+      }
     },
-  ],
+    {
+      "name": "travel",
+      "script": "./microservices/travel/index.js",
+      "watch": true,
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "env_production": {
+        "NODE_ENV": "production"
+      }
+    }
+  ]
 }

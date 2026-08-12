@@ -58,7 +58,7 @@
     "recursive-copy": "^2.0.14",
     "redis": "^4.6.13",
     "sequelize": "^6.37.3",
-    "sharp": "^0.33.3",
+    "sharp": "^0.35.3",
     "sortablejs": "^1.15.2",
     "storage-manager-js": "^4.2.6",
     "tinymce": "^7.0.1",
@@ -82,5 +82,13 @@
     "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^5.1.4",
     "webpack-merge": "^5.10.0"
+  },
+  "overrides": {
+    "semver-regex": "^4.0.5",
+    "http-cache-semantics": "^4.2.0",
+    "serialize-javascript": "^7.1.0",
+    "cross-spawn": "^7.0.6",
+    "tough-cookie": "^4.1.4",
+    "uuid": "^11.1.0"
   }
 }
