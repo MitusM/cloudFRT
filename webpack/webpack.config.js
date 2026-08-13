@@ -112,7 +112,7 @@ const common = merge([
             to: path.join(pathList.build, '/models'),
           },
           {
-            from: 'assets/js/tinymce/oxide-icon-pack-template/dist/icons/',
+            from: 'assets/js/tinymce/oxide-icon-pack-template/dist/icons/cloudFRT/icons.js',
             to: path.join(pathList.build, '/icons'),
           },
           {

@@ -1,45 +1,45 @@
 "use strict";
 (self["webpackChunkcloudFRT"] = self["webpackChunkcloudFRT"] || []).push([["users"],{
 
-/***/ "./microservices/users/assets/scss/index.scss":
+/***/ "./microservices/users/assets/scss/index.scss"
 /*!****************************************************!*\
   !*** ./microservices/users/assets/scss/index.scss ***!
   \****************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/users/assets/js/index.js":
+/***/ "./microservices/users/assets/js/index.js"
 /*!************************************************!*\
   !*** ./microservices/users/assets/js/index.js ***!
   \************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "./node_modules/@babel/runtime/helpers/esm/asyncToGenerator.js");
 /* harmony import */ var _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! @babel/runtime/regenerator */ "./node_modules/@babel/runtime/regenerator/index.js");
 /* harmony import */ var _scss_index_scss__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../scss/index.scss */ "./microservices/users/assets/scss/index.scss");
-/* harmony import */ var nanoid__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! nanoid */ "./node_modules/nanoid/index.browser.js");
-/* harmony import */ var dropzone__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! dropzone */ "./node_modules/dropzone/dist/dropzone.js");
-/* harmony import */ var preloader_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! preloader-js */ "./node_modules/preloader-js/preloader.js");
+/* harmony import */ var nanoid__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! nanoid */ "./node_modules/nanoid/index.browser.js");
+/* harmony import */ var dropzone__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! dropzone */ "./node_modules/dropzone/dist/dropzone.js");
+/* harmony import */ var preloader_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! preloader-js */ "./node_modules/preloader-js/preloader.js");
 
 
 
 
 
 
-(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee3() {
+(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee3() {
   var doc;
   return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.wrap(function _callee3$(_context3) {
     while (1) switch (_context3.prev = _context3.next) {
       case 0:
         doc = document;
         doc.addEventListener('DOMContentLoaded', function () {
-          preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+          preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
           /** url добавить пользователя */
           var urlUserAdd = doc.getElementById('url-user-add');
           /** контейнер с формой добавить пользователя */
@@ -120,7 +120,7 @@ __webpack_require__.r(__webpack_exports__);
             if (user === '') validateFields(username, langError.username);
             if (emailUpdated === '') validateFields(email, langError.email);
             if (user && email) {
-              preloader_js__WEBPACK_IMPORTED_MODULE_4__.show();
+              preloader_js__WEBPACK_IMPORTED_MODULE_5__.show();
               if (user) axios.put('/users/update', {
                 username: user,
                 email: emailUpdated,
@@ -134,7 +134,7 @@ __webpack_require__.r(__webpack_exports__);
                 var data = res.data;
                 var id;
                 var dataObj;
-                preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+                preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
                 if (data.status === 201) {
                   dataObj = data.user;
                   message('success', 'Your account has been updated');
@@ -169,17 +169,17 @@ __webpack_require__.r(__webpack_exports__);
             if (user === '') validateFields(username, langError.username);
             if (pass === '') validateFields(password, langError.password);
             if (user !== '' && pass !== '') {
-              preloader_js__WEBPACK_IMPORTED_MODULE_4__.show();
+              preloader_js__WEBPACK_IMPORTED_MODULE_5__.show();
               axios.put('/users/create', {
                 username: user,
                 email: email.value,
                 password: pass,
                 group: group.value,
                 quota: quota.value,
-                id: (0,nanoid__WEBPACK_IMPORTED_MODULE_5__.nanoid)(),
+                id: (0,nanoid__WEBPACK_IMPORTED_MODULE_3__.nanoid)(),
                 csrf: csrf
               }).then(function (res) {
-                preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+                preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
                 var data = res.data;
                 var id;
                 if (data.status === 201) {
@@ -220,7 +220,7 @@ __webpack_require__.r(__webpack_exports__);
 
           /** Удаляем пользователя */
           var deleteUser = function deleteUser(user) {
-            preloader_js__WEBPACK_IMPORTED_MODULE_4__.show();
+            preloader_js__WEBPACK_IMPORTED_MODULE_5__.show();
             var rid = user.rid;
             var id = user._id;
             dialog.header('Удалить пользователя').show(function (bool) {
@@ -229,7 +229,7 @@ __webpack_require__.r(__webpack_exports__);
                   rid: rid,
                   csrf: csrf
                 }).then(function (res) {
-                  preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+                  preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
                   if (res.data.status === 201) {
                     dialog.close();
                     var el = document.getElementById(id);
@@ -250,7 +250,7 @@ __webpack_require__.r(__webpack_exports__);
 
           /** Блокируем или разблокируем пользователя */
           var userBan = function userBan(user, lock) {
-            preloader_js__WEBPACK_IMPORTED_MODULE_4__.show();
+            preloader_js__WEBPACK_IMPORTED_MODULE_5__.show();
             // TODO: Для будущей совместимости
             var page = lock ? 'lock' : 'unlock';
             var id;
@@ -261,7 +261,7 @@ __webpack_require__.r(__webpack_exports__);
               lock: lock,
               csrf: csrf
             }).then(function (res) {
-              preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+              preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
               data = res.data;
               if (data.status === 201 && data.count > 0) {
                 id = doc.getElementById(user._id);
@@ -299,7 +299,7 @@ __webpack_require__.r(__webpack_exports__);
             });
           };
           userTableBody.addEventListener('click', /*#__PURE__*/function () {
-            var _ref2 = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee(e) {
+            var _ref2 = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee(e) {
               var target, task, id, rid, user;
               return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.wrap(function _callee$(_context) {
                 while (1) switch (_context.prev = _context.next) {
@@ -387,16 +387,16 @@ __webpack_require__.r(__webpack_exports__);
             return window.pageYOffset !== undefined ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
           }
           var addPage = /*#__PURE__*/function () {
-            var _ref3 = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee2(num) {
+            var _ref3 = (0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee2(num) {
               return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.wrap(function _callee2$(_context2) {
                 while (1) switch (_context2.prev = _context2.next) {
                   case 0:
-                    preloader_js__WEBPACK_IMPORTED_MODULE_4__.show();
+                    preloader_js__WEBPACK_IMPORTED_MODULE_5__.show();
                     axios.post('/users/page-' + num, {
                       rid: lastRid,
                       csrf: csrf
                     }).then(function (res) {
-                      preloader_js__WEBPACK_IMPORTED_MODULE_4__.hide();
+                      preloader_js__WEBPACK_IMPORTED_MODULE_5__.hide();
                       var data = res.data;
                       if (data.status === 200 && data.total > 0) {
                         // total += data.total
@@ -434,7 +434,7 @@ __webpack_require__.r(__webpack_exports__);
   }, _callee3);
 }))();
 
-/***/ })
+/***/ }
 
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules

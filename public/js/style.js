@@ -1,11 +1,11 @@
 "use strict";
 (self["webpackChunkcloudFRT"] = self["webpackChunkcloudFRT"] || []).push([["style"],{
 
-/***/ "./assets/js/core/gb.js":
+/***/ "./assets/js/core/gb.js"
 /*!******************************!*\
   !*** ./assets/js/core/gb.js ***!
   \******************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -24,13 +24,13 @@ function formatBytes(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + s; //+ ' ' + sizes[i]
 }
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/form/index.js":
+/***/ "./assets/js/form/index.js"
 /*!*********************************!*\
   !*** ./assets/js/form/index.js ***!
   \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -52,29 +52,29 @@ var Form = /*#__PURE__*/(0,_babel_runtime_helpers_createClass__WEBPACK_IMPORTED_
 });
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Form);
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/index.js":
+/***/ "./assets/js/index.js"
 /*!****************************!*\
   !*** ./assets/js/index.js ***!
   \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _scss_index_scss__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../scss/index.scss */ "./assets/scss/index.scss");
 /* harmony import */ var tippy_js_dist_tippy_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! tippy.js/dist/tippy.css */ "./node_modules/tippy.js/dist/tippy.css");
 /* harmony import */ var izitoast_dist_css_iziToast_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! izitoast/dist/css/iziToast.css */ "./node_modules/izitoast/dist/css/iziToast.css");
-/* harmony import */ var tippy_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! tippy.js */ "./node_modules/tippy.js/dist/tippy.esm.js");
-/* harmony import */ var delegate__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! delegate */ "./node_modules/delegate/src/delegate.js");
-/* harmony import */ var delegate__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(delegate__WEBPACK_IMPORTED_MODULE_3__);
-/* harmony import */ var _system_each_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./system/each.js */ "./assets/js/system/each.js");
-/* harmony import */ var _system_extend_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./system/extend.js */ "./assets/js/system/extend.js");
-/* harmony import */ var _system_fetch_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./system/fetch.js */ "./assets/js/system/fetch.js");
-/* harmony import */ var _form_index_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./form/index.js */ "./assets/js/form/index.js");
-/* harmony import */ var _system_message_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./system/message.js */ "./assets/js/system/message.js");
-/* harmony import */ var _system_attribute_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./system/attribute.js */ "./assets/js/system/attribute.js");
-/* harmony import */ var _core_gb_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./core/gb.js */ "./assets/js/core/gb.js");
-/* harmony import */ var _modal_index_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./modal/index.js */ "./assets/js/modal/index.js");
+/* harmony import */ var tippy_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! tippy.js */ "./node_modules/tippy.js/dist/tippy.esm.js");
+/* harmony import */ var delegate__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! delegate */ "./node_modules/delegate/src/delegate.js");
+/* harmony import */ var delegate__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(delegate__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _system_each_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./system/each.js */ "./assets/js/system/each.js");
+/* harmony import */ var _system_extend_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./system/extend.js */ "./assets/js/system/extend.js");
+/* harmony import */ var _system_fetch_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./system/fetch.js */ "./assets/js/system/fetch.js");
+/* harmony import */ var _form_index_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./form/index.js */ "./assets/js/form/index.js");
+/* harmony import */ var _system_message_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./system/message.js */ "./assets/js/system/message.js");
+/* harmony import */ var _system_attribute_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./system/attribute.js */ "./assets/js/system/attribute.js");
+/* harmony import */ var _core_gb_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./core/gb.js */ "./assets/js/core/gb.js");
+/* harmony import */ var _modal_index_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./modal/index.js */ "./assets/js/modal/index.js");
 
 
 
@@ -89,27 +89,27 @@ __webpack_require__.r(__webpack_exports__);
 
 
 var _$ = {
-  tippy: tippy_js__WEBPACK_IMPORTED_MODULE_12__["default"],
-  extend: _system_extend_js__WEBPACK_IMPORTED_MODULE_5__.extend,
-  each: _system_each_js__WEBPACK_IMPORTED_MODULE_4__.each,
-  ajax: _system_fetch_js__WEBPACK_IMPORTED_MODULE_6__.ajax,
-  delegate: (delegate__WEBPACK_IMPORTED_MODULE_3___default()),
-  Form: _form_index_js__WEBPACK_IMPORTED_MODULE_7__["default"],
-  message: _system_message_js__WEBPACK_IMPORTED_MODULE_8__["default"],
-  data: _system_attribute_js__WEBPACK_IMPORTED_MODULE_9__.data,
-  attr: _system_attribute_js__WEBPACK_IMPORTED_MODULE_9__.attr,
-  gb: _core_gb_js__WEBPACK_IMPORTED_MODULE_10__.formatBytes,
-  Dialog: _modal_index_js__WEBPACK_IMPORTED_MODULE_11__["default"]
+  tippy: tippy_js__WEBPACK_IMPORTED_MODULE_3__["default"],
+  extend: _system_extend_js__WEBPACK_IMPORTED_MODULE_6__.extend,
+  each: _system_each_js__WEBPACK_IMPORTED_MODULE_5__.each,
+  ajax: _system_fetch_js__WEBPACK_IMPORTED_MODULE_7__.ajax,
+  delegate: (delegate__WEBPACK_IMPORTED_MODULE_4___default()),
+  Form: _form_index_js__WEBPACK_IMPORTED_MODULE_8__["default"],
+  message: _system_message_js__WEBPACK_IMPORTED_MODULE_9__["default"],
+  data: _system_attribute_js__WEBPACK_IMPORTED_MODULE_10__.data,
+  attr: _system_attribute_js__WEBPACK_IMPORTED_MODULE_10__.attr,
+  gb: _core_gb_js__WEBPACK_IMPORTED_MODULE_11__.formatBytes,
+  Dialog: _modal_index_js__WEBPACK_IMPORTED_MODULE_12__["default"]
 };
 window._$ = _$;
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/modal/index.js":
+/***/ "./assets/js/modal/index.js"
 /*!**********************************!*\
   !*** ./assets/js/modal/index.js ***!
   \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -128,7 +128,7 @@ __webpack_require__.r(__webpack_exports__);
  * Licensed under the Apache 2.0 license.
  */
 
-var modal = (__webpack_require__(/*! dialog-polyfill */ "./assets/node_modules/dialog-polyfill/dist/dialog-polyfill.esm.js")["default"]);
+var modal = (__webpack_require__(/*! dialog-polyfill */ "./node_modules/dialog-polyfill/dist/dialog-polyfill.esm.js")["default"]);
 // import modal from 'dialog-polyfill'
 var init = Symbol();
 var getElement = Symbol();
@@ -288,13 +288,13 @@ var Dialog = /*#__PURE__*/function () {
 // }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Dialog);
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/system/attribute.js":
+/***/ "./assets/js/system/attribute.js"
 /*!***************************************!*\
   !*** ./assets/js/system/attribute.js ***!
   \***************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -325,13 +325,13 @@ function data(e, attr, val) {
   return data;
 }
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/system/each.js":
+/***/ "./assets/js/system/each.js"
 /*!**********************************!*\
   !*** ./assets/js/system/each.js ***!
   \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -360,13 +360,13 @@ function each(obj, iterator, context) {
   }
 }
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/system/extend.js":
+/***/ "./assets/js/system/extend.js"
 /*!************************************!*\
   !*** ./assets/js/system/extend.js ***!
   \************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -385,13 +385,13 @@ var extend = function extend() {
 };
 
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/system/fetch.js":
+/***/ "./assets/js/system/fetch.js"
 /*!***********************************!*\
   !*** ./assets/js/system/fetch.js ***!
   \***********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -450,13 +450,13 @@ function ajax(url, options) {
   }
 }
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/js/system/message.js":
+/***/ "./assets/js/system/message.js"
 /*!*************************************!*\
   !*** ./assets/js/system/message.js ***!
   \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
@@ -481,23 +481,23 @@ function message(action, settings, fn) {
       obj[key] = settings[key];
     }
   }
-  (izitoast__WEBPACK_IMPORTED_MODULE_0___default())[action](obj);
+  ;(izitoast__WEBPACK_IMPORTED_MODULE_0___default())[action](obj);
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (message);
 
-/***/ }),
+/***/ },
 
-/***/ "./assets/scss/index.scss":
+/***/ "./assets/scss/index.scss"
 /*!********************************!*\
   !*** ./assets/scss/index.scss ***!
   \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
 
-/***/ })
+/***/ }
 
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules

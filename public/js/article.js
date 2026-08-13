@@ -1,10 +1,10 @@
 (self["webpackChunkcloudFRT"] = self["webpackChunkcloudFRT"] || []).push([["article"],{
 
-/***/ "./assets/js/html-formatting/html-formatting.js":
+/***/ "./assets/js/html-formatting/html-formatting.js"
 /*!******************************************************!*\
   !*** ./assets/js/html-formatting/html-formatting.js ***!
   \******************************************************/
-/***/ ((module) => {
+(module) {
 
 /*! htmlFormatting | © 2015 bashkos | https://github.com/WEACOMRU/html-formatting */
 
@@ -174,26 +174,26 @@ var htmlFormatting = function () {
 }();
 module.exports = htmlFormatting;
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/scss/index.scss":
+/***/ "./microservices/article/assets/scss/index.scss"
 /*!******************************************************!*\
   !*** ./microservices/article/assets/scss/index.scss ***!
   \******************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
 // extracted by mini-css-extract-plugin
 
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/js/html-formatting/index.js":
+/***/ "./microservices/article/assets/js/html-formatting/index.js"
 /*!******************************************************************!*\
   !*** ./microservices/article/assets/js/html-formatting/index.js ***!
   \******************************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -281,13 +281,13 @@ var validElements = {
 
 
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/js/index.js":
+/***/ "./microservices/article/assets/js/index.js"
 /*!**************************************************!*\
   !*** ./microservices/article/assets/js/index.js ***!
   \**************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -310,7 +310,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
-(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])( /*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee() {
+(0,_babel_runtime_helpers_asyncToGenerator__WEBPACK_IMPORTED_MODULE_0__["default"])(/*#__PURE__*/_babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.mark(function _callee() {
   var doc;
   return _babel_runtime_regenerator__WEBPACK_IMPORTED_MODULE_1__.wrap(function _callee$(_context) {
     while (1) switch (_context.prev = _context.next) {
@@ -630,13 +630,13 @@ __webpack_require__.r(__webpack_exports__);
   }, _callee);
 }))();
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/js/input-filter.js":
+/***/ "./microservices/article/assets/js/input-filter.js"
 /*!*********************************************************!*\
   !*** ./microservices/article/assets/js/input-filter.js ***!
   \*********************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -712,13 +712,13 @@ function inputFilter(inputField, dropdown, language) {
 }
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (inputFilter);
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/js/typograf/index.js":
+/***/ "./microservices/article/assets/js/typograf/index.js"
 /*!***********************************************************!*\
   !*** ./microservices/article/assets/js/typograf/index.js ***!
   \***********************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -785,13 +785,13 @@ tp.setSetting('common/punctuation/quote', 'ru', {
 });
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (tp);
 
-/***/ }),
+/***/ },
 
-/***/ "./microservices/article/assets/js/upload/picture.js":
+/***/ "./microservices/article/assets/js/upload/picture.js"
 /*!***********************************************************!*\
   !*** ./microservices/article/assets/js/upload/picture.js ***!
   \***********************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
@@ -852,7 +852,7 @@ var picture = function picture(obj, webpOriginal, alt, fileId) {
   return pictureElem;
 };
 
-/***/ })
+/***/ }
 
 },
 /******/ __webpack_require__ => { // webpackRuntimeModules
