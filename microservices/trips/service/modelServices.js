@@ -3,6 +3,16 @@
 // === === === === === === === === === === === ===
 
 import { PDO } from './dbServices.js'
+import { nanoid } from 'nanoid'
+
+// OrientDB (3.x) DATETIME требует формат 'YYYY-MM-DD HH:mm:ss' (local UTC).
+// ISO-строки вида '2026-08-14T06:28:35.308Z' он не парсит.
+function toOrientDate(value) {
+  if (!value) return value
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toISOString().replace('T', ' ').slice(0, 19)
+}
 
 class Model extends PDO {
   constructor(options) {
@@ -115,34 +125,44 @@ class Model extends PDO {
     return this.queryOne('SELECT FROM Trip WHERE @rid = ' + rid)
   }
 
-  //  Поиск поездки по стабильному id (owner + _id будущего)
+  //  Поиск поездки по стабильному _id (для URL, RID нестабилен при экспорте и содержит '#')
   getTripById(id) {
-    return this.queryOne("SELECT FROM Trip WHERE id = '" + id + "'")
+    return this.queryOne("SELECT FROM Trip WHERE _id = '" + id + "'")
   }
 
-  //  Создать поездку (вершину). Возвращает @rid
+  //  Создать поездку (вершину). Возвращает { rid, _id }
   async createTrip(obj, ownerRid, created) {
     obj.ownerRid = ownerRid
-    obj.created_at = created
-    obj.updated_at = created
+    obj._id = obj._id || nanoid(21)
+    obj.created_at = toOrientDate(created)
+    obj.updated_at = toOrientDate(created)
     const q =
-      "CREATE VERTEX Trip SET title=:title, description=:description, " +
+      'CREATE VERTEX Trip SET title=:title, description=:description, ' +
       'start_date=:start_date, end_date=:end_date, currency=:currency, ' +
       'is_archived=:is_archived, reminder_days=:reminder_days, ' +
-      'owner=:owner, ownerRid=:ownerRid, created_at=:created_at, updated_at=:updated_at'
+      '_id=:_id, owner=:owner, ownerRid=:ownerRid, created_at=:created_at, updated_at=:updated_at'
     const res = await this.insert(q, { params: { ...obj } })
-    if (res.done) return res.message['@rid']
+    if (res.done && res.message) {
+      return {
+        rid: String(res.message['@rid']),
+        _id: String(obj._id),
+      }
+    }
     return null
   }
 
-  //  Обновить поездку
+  //  Update: безопасно конвертим даты (если переданы) в OrientDB-формат
   updateTrip(rid, fields) {
-    const set = Object.keys(fields)
+    const f = { ...fields }
+    ;['created_at', 'updated_at', 'added_at'].forEach((k) => {
+      if (f[k] !== undefined) f[k] = toOrientDate(f[k])
+    })
+    const set = Object.keys(f)
       .map((k) => k + '=:' + k)
       .join(', ')
     return this.insert(
       'UPDATE Trip SET ' + set + ' WHERE @rid = ' + rid,
-      { params: { ...fields } },
+      { params: { ...f } },
     )
   }
 
@@ -174,13 +194,15 @@ class Model extends PDO {
 
   //  Добавить участника/гостя ребром
   async addMember(tripRid, userRid, obj) {
+    const params = { ...obj }
+    if (params.added_at !== undefined) params.added_at = toOrientDate(params.added_at)
     const res = await this.insert(
       'CREATE EDGE TripMember FROM ' +
         tripRid +
         ' TO ' +
         userRid +
         ' SET role=:role, is_guest=:is_guest, invited_by=:invited_by, added_at=:added_at',
-      { params: { ...obj } },
+      { params },
     )
     return res.done ? res.message : null
   }

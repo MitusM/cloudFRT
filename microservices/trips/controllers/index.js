@@ -10,7 +10,9 @@ const endpoints = async (app) => {
   const getUser = async (res, meta) => {
     try {
       const resp = await res.app.ask('users', { server: { action: 'user:get', meta } })
-      return (resp && resp.user) || null
+      //  ответ {status, response:{user}} либо прямой {user}
+      const u = resp && resp.response ? resp.response.user : resp && resp.user
+      return u || null
     } catch (err) {
       console.log('⚡ err::user:get', err)
       return null
@@ -32,15 +34,28 @@ const endpoints = async (app) => {
     return edge.is_guest ? 'guest' : 'member'
   }
 
-  //  загрузить трип по :id, 404 если нет
+  //  загрузить трип по :id (стабильный _id или RID), 404 если нет
   const loadTrip = async (req, res) => {
     const id = req.params.id
-    const trip = id ? await db.getTrip(id) : null
+    //  RID формата #cluster:pos — внутренние вызовы; иначе стабильный _id
+    const trip = id
+      ? /^#\d+:\d+$/.test(id)
+        ? await db.getTrip(id)
+        : await db.getTripById(id)
+      : null
     if (!trip) {
       res.status(404).json({ error: 'trip_not_found' })
       return null
     }
     return trip
+  }
+
+  //  разрешить «:userId» из URL: RID (#x:y) → по rid, иначе по username (fallback _id)
+  const resolveUser = (res, key) => {
+    if (!key) return null
+    return /^#\d+:\d+$/.test(key)
+      ? getUser(res, { rid: key })
+      : getUser(res, { username: key })
   }
 
   //  нормализация дат: инференс start/end ±6 дней, end >= start
@@ -108,13 +123,15 @@ const endpoints = async (app) => {
         return res.status(500).json({ error: 'create_failed' })
       }
       //  владелец сразу становится членом (ребро owner)
-      await db.addMember(trip, user.rid, {
+      await db.addMember(trip.rid, user.rid, {
         role: 'owner',
         is_guest: false,
         invited_by: user._id,
         added_at: new Date().toISOString(),
       })
-      const created = await db.getTrip(trip)
+      const created = await db.getTrip(trip.rid)
+      //  вернуть стабильный _id для ссылок
+      if (created) created._id = trip._id
       res.status(201).json({ trip: created })
     } catch (err) {
       console.log('⚡ err::trips:create', err)
@@ -307,7 +324,7 @@ const endpoints = async (app) => {
       if (!trip) return
       const role = await roleOf(trip, req)
       if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
-      const targetUser = await getUser(res, { rid: req.params.userId })
+      const targetUser = await resolveUser(res, req.params.userId)
       if (!targetUser) return res.status(404).json({ error: 'user_not_found' })
       await db.removeMember(trip['@rid'], targetUser.rid)
       res.json({ ok: true })
@@ -354,7 +371,7 @@ const endpoints = async (app) => {
       const role = await roleOf(trip, req)
       if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
       const body = req.body || {}
-      const targetUser = await getUser(res, { rid: req.params.userId })
+      const targetUser = await resolveUser(res, req.params.userId)
       if (!targetUser) return res.status(404).json({ error: 'user_not_found' })
       //  нужен метод смены роли на ребре
       const edge = await db.isMember(trip['@rid'], targetUser.rid)
@@ -381,7 +398,7 @@ const endpoints = async (app) => {
       if (!trip) return
       const role = await roleOf(trip, req)
       if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
-      const targetUser = await getUser(res, { rid: req.params.userId })
+      const targetUser = await resolveUser(res, req.params.userId)
       if (!targetUser) return res.status(404).json({ error: 'user_not_found' })
       await db.removeMember(trip['@rid'], targetUser.rid)
       res.json({ ok: true })
@@ -431,9 +448,12 @@ const endpoints = async (app) => {
         'END:VEVENT',
         'END:VCALENDAR',
       ].join('\r\n')
-      res.setHeader('Content-Type', 'text/calendar; charset=utf-8')
-      res.setHeader('Content-Disposition', 'attachment; filename="trip.ics"')
-      res.send(ics)
+      res.status(200)
+      res.writeHead(200, {
+        'Content-Type': 'text/calendar; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="trip.ics"',
+      })
+      res.end(ics)
     } catch (err) {
       console.log('⚡ err::trips:export', err)
       res.status(500).json({ error: 'internal' })
