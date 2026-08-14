@@ -1,0 +1,223 @@
+<div class="container-fluid">
+  {# animate__animated animate__backOutLeft #}
+  <div class="row">{% include "./breadcrumb.html" %}</div>
+  <div class="article">
+    <div class="container-fluid">
+      <div class="row card">
+        <div id="{{breadcrumb}}" class="animate__animated create-country">
+          <form action="/article/create-{{breadcrumb}}" id="add" method="post">
+            <div class="division-column">
+              <div class="division-column__country">
+                <span class="division-column-title">Страна:</span>
+                <input
+                  class="chosen-value"
+                  type="text"
+                  value=""
+                  placeholder="Выберите страну"
+                  name="country"
+                />
+                <ul class="value-list">
+                  {% for item in country %}
+                  <li data-id="{{item.id}}">{{item.title}}</li>
+                  {% endfor %}
+                </ul>
+              </div>
+              <div class="division-column__region">
+                <span class="division-column-title">Регион:</span>
+                <input
+                  class="region-value"
+                  type="text"
+                  value=""
+                  placeholder="Выберите край и т.д."
+                  name="region"
+                />
+                <ul class="region-list"></ul>
+              </div>
+              <div class="division-column__city">
+                <span class="division-column-title">Город, посёлок, село:</span>
+                <input
+                  class="city-value"
+                  type="text"
+                  value=""
+                  placeholder="Выберите город"
+                  name="city"
+                />
+                <ul class="city-list"></ul>
+              </div>
+            </div>
+
+            <div class="article-form-row">
+              <fieldset class="form-group-row form-group__title">
+                <label for="country-name" class="country-title-label">
+                  {{lang.add.country.title}}:
+                </label>
+                <input
+                  type="text"
+                  class="form-group-input form-control country-name"
+                  name="title"
+                  tabindex="1"
+                  required
+                  autofocus
+                />
+              </fieldset>
+
+              <fieldset class="form-group-row form-group__url">
+                <label for="country-url" class="country-url-label">
+                  {{lang.add.country.url}}:
+                </label>
+                <input
+                  type="text"
+                  class="form-group-input form-control country-url"
+                  name="url"
+                />
+              </fieldset>
+
+              <div class="form-group-location-tags-searchable">
+                <fieldset class="form-group-row form-group__location location">
+                  <label for="location__input" class="location-label">
+                    {{lang.add.country.location}}:
+                  </label>
+                  <input
+                    type="text"
+                    class="form-group-input form-control location__input"
+                    name="location"
+                    type="text"
+                  />
+                </fieldset>
+                <fieldset class="form-group-row form-group__tags tags">
+                  <label for="tags__input" class="tags-label">
+                    {{lang.add.country.tags}}
+                    <span class="form-input-desc">
+                      {{lang.add.country.keyword_desc}}:
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    class="form-group-input form-control tags__input"
+                    name="tags"
+                  />
+                </fieldset>
+              </div>
+
+              <fieldset class="form-group-row form-group__description">
+                <label for="description__textarea" class="tags-label">
+                  {{lang.add.country.description}}:
+                </label>
+                <textarea
+                  name="description"
+                  id="description"
+                  tabindex="3"
+                  class="description__textarea form-control"
+                ></textarea>
+              </fieldset>
+
+              <fieldset class="form-group-row form-group__keyword keyword">
+                <label for="keyword__input" class="keyword-label">
+                  {{lang.add.country.keyword}}
+                  <span class="form-input-desc">
+                    {{lang.add.country.keyword_desc}}:
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  class="form-group-input form-control keyword__input"
+                  name="keyword"
+                />
+              </fieldset>
+            </div>
+
+            <div class="main-article">
+              <div class="main-article__checkbox">
+                <label>Главная статья (Основная): </label>
+                <input type="checkbox" name="main" id="main" />
+              </div>
+            </div>
+
+            <fieldset class="form-group__content">
+              <textarea name="content" id="content" tabindex="2"></textarea>
+            </fieldset>
+            <div class="article-form-group2">
+              <fieldset class="form-group-row form-group-checkbox__search">
+                <label for="search__radio" class="tags-label">
+                  {{lang.add.country.search}}:
+                </label>
+                <input
+                  class="search__radio"
+                  type="checkbox"
+                  name="searchable"
+                  value="true"
+                  checked
+                />
+              </fieldset>
+              <fieldset class="form-group-row form-group-checkbox__comments">
+                <label for="comments" class="comments-label">
+                  {{lang.add.country.comments}}:
+                </label>
+                <input
+                  class="comments"
+                  type="checkbox"
+                  name="comments"
+                  value="true"
+                  checked
+                />
+              </fieldset>
+              <fieldset class="form-group-row form-group-checkbox__views">
+                <label for="number-views" class="number-views-label">
+                  {{lang.add.country.number_views}}:
+                </label>
+                <input
+                  class="number-views"
+                  type="checkbox"
+                  name="numberViews"
+                  value="true"
+                  checked
+                />
+              </fieldset>
+              <fieldset class="form-group-row form-group-checkbox__like">
+                <label for="like" class="number-views-label">
+                  {{lang.add.country.like}}:
+                </label>
+                <input
+                  class="like"
+                  type="checkbox"
+                  name="like"
+                  value="true"
+                  checked
+                />
+              </fieldset>
+            </div>
+
+            <input id="folder" type="hidden" name="folder" value="" />
+            <input type="hidden" name="total" id="total-image" />
+            <div class="form-group__save btn btn-primary" id="submit">
+              {{lang.add.country.save}}
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- DROPZONE -->
+      <div class="dropzone-file card">
+        <div class="d-flex upload-totals">
+          <div class="upload-totals-title" id="">
+            {{lang.upload.total}}:
+            <span class="upload-totals-title__number" id="js-count">0</span>
+          </div>
+        </div>
+        <form
+          action="/upload/article-country"
+          type="file"
+          name="country_file"
+          method="POST"
+          enctype="multipart/form-data"
+          class="dropzone"
+        ></form>
+      </div>
+      <div class="my-dropzone"></div>
+    </div>
+  </div>
+</div>
+<div class="wrapper-dropzone"></div>
+
+<div class="preloader">
+  <div class="animation animation-rotating-square"></div>
+</div>

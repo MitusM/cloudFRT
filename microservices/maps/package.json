@@ -1,0 +1,13 @@
+{
+  "name": "article",
+  "version": "1.0.0",
+  "description": "Пользователи",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": ""
+  },
+  "author": "MitusM",
+  "license": "MIT",
+  "dependencies": {}
+}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <meta name="csrf-param" content="authenticity_token" />
+    <meta name="csrf-token" content="{{ csrf }}" />
+    <meta name="author" />
+    <title>{{ title }}</title>
+    <!-- CSS only -->
+    <link rel="stylesheet" href="/public/css/style.css" />
+    <link rel="stylesheet" href="/public/css/vendors.css" />
+    <link rel="stylesheet" href="/public/css/article.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <script>
+      const lang = {{ lang | dump }};
+      const urlAdd = "{{ urlAdd }}";
+    </script>
+  </head>
+
+  <body>
+    <div class="page">
+      <header class="page-header header-top" role="navigation">
+        {% include "header.html" %}
+      </header>
+
+      <aside class="page-aside sidebar" role="complementary">
+        {% include "left-menu.html" %}
+        <!-- settings -->
+        {% include "menu-settings.html" %}
+      </aside>
+
+      <main class="page-content" role="main">
+        <!-- main -->
+        {% include page %}
+      </main>
+
+      <footer class="page-footer" role="contentinfo"></footer>
+    </div>
+    <script rel="preload" src="/public/js/runtime.js"></script>
+    <script rel="preload" src="/public/js/vendors.js"></script>
+    <script
+      rel="preload"
+      src="https://unpkg.com/axios/dist/axios.min.js"
+    ></script>
+    <script src="/public/js/style.js"></script>
+    {% if breadcrumb === "settings" %}
+    <script src="/public/js/settings.js"></script>
+    {% elif breadcrumb !== "settings" %}
+    <script rel="preload" src="/public/js/article.js"></script>
+    <script src="/public/js/tinymce.min.js"></script>
+    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css"
+      type="text/css"
+    />
+
+    {% elif breadcrumb === "article" %}{% endif %}
+
+    <script></script>
+  </body>
+</html>

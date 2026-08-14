@@ -43,6 +43,7 @@
     "imagemin-webp": "^8.0.0",
     "ioredis": "^5.4.1",
     "izitoast": "^1.4.0",
+    "jimp": "^1.6.1",
     "mime-types": "^2.1.35",
     "moment": "^2.30.1",
     "nanoid": "^5.0.7",
@@ -64,7 +65,8 @@
     "storage-manager-js": "^4.2.6",
     "tinymce": "^7.0.1",
     "tippy.js": "^6.3.7",
-    "typograf": "^7.4.0"
+    "typograf": "^7.4.0",
+    "undici": "^8.10.0"
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.24.3",

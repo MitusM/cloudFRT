@@ -1,0 +1,55 @@
+<!-- SETTINGS -->
+<div class="container-fluid">
+  <div class="row">{% include "./breadcrumb.html" %}</div>
+</div>
+
+<div class="container-fluid">
+  <div class="row d-flex justify-center">
+    <form id="form__add" class="settings-form container card" role="form">
+      <div class="settings-form__content">
+        <div class="settings-form-item form-group">
+          <label class="floating-label" for="tentacles">
+            Колличество пользователей отображаемых на странице:
+          </label>
+          <input
+            type="number"
+            id="tentacles"
+            class="settings-form__content-input input form-control"
+            name="limit"
+            min="10"
+            max="100"
+            step="10"
+            value="{{settings.limit }}"
+          />
+        </div>
+
+        <div class="settings-form-item form-group">
+          <label class="floating-label" for="Text">
+            Дисковое пространство пользователя по умолчанию (Гб):
+          </label>
+          <input
+            type="text"
+            class="settings-form__content-input input form-control"
+            id="quota"
+            name="quota"
+            placeholder="{{settings.quota }}"
+            value="{{settings.quota }}"
+          />
+        </div>
+
+        <div class="settings-form-item form-group">
+          {% if settings.cache == true %} {% set checked ="checked" %} {% endif
+          %}
+          <input type="checkbox" id="cache" name="cache" {{ checked }} />
+          <label for="coding">Кэшировать страницы и данные</label>
+        </div>
+      </div>
+      <button
+        type="submit"
+        class="settings-form__content-button btn btn-primary"
+      >
+        {{ lang.save }}
+      </button>
+    </form>
+  </div>
+</div>
