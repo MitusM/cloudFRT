@@ -16,8 +16,11 @@ import session from 'express-session'
 import { createClient } from 'redis'
 
 // Initialize client.
-let redisClient = createClient()
-redisClient.connect().catch(console.error)
+let redisClient = createClient({
+  password: process.env.REDIS_PASSWORD || undefined,
+})
+redisClient.connect().then(() => console.log('[gateway] redis CONNECTED')).catch((e) => console.error('[gateway] redis CONNECT FAIL:', e.message))
+redisClient.on('error', (e) => console.error('[gateway] redis ERR event:', e.message))
 
 // Initialize store.
 let redisStore = new RedisStore({
