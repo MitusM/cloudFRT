@@ -90,5 +90,14 @@
     "serialize-javascript": "^7.1.0",
     "cross-spawn": "^7.0.6",
     "tough-cookie": "^4.1.4"
+  },
+  "allowScripts": {
+    "cwebp-bin@8.0.0": true,
+    "cwebp-bin@7.0.1": true,
+    "gifsicle@5.3.0": true,
+    "mozjpeg@7.1.1": true,
+    "mozjpeg@8.0.0": true,
+    "optipng-bin@7.0.1": true,
+    "pngquant-bin@6.0.1": true
   }
 }

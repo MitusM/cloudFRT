@@ -1,37 +1,18 @@
 /** ***** ***** ***** ***** ***** ***** *****
  * *  middleware - setup route middlewares  *
- * Copyright (c) 2021 MitusM.
- *
+ * Trips: все /trips/* защищены (req.session.auth)
+ * API-ответ 401 JSON при отсутствии сессии.
  * ***** ***** ***** ***** ***** ***** ***** */
 'use strict'
 
 const middlewares = (app) => {
-  app.all(
-    [
-      '/article/',
-      '/article/settings(.*)',
-      '/article/create-:add(.*)',
-      '/article/upload-:upload(.*)',
-      '/article/delete-:endpoint(.*)',
-      '/article/create-:add(.*)',
-      '/article/validate',
-    ],
-    async (req, res, next) => {
-      if (!req.session.auth) {
-        const redirect = await res.app.ask('auth', {
-          server: {
-            action: 'aut:redirect',
-            meta: {
-              csrf: req.session.csrfSecret,
-            },
-          },
-        })
-        res.end(redirect.response)
-      } else {
-        next()
-      }
-    },
-  )
+  app.all(['/trips(.*)'], async (req, res, next) => {
+    if (!req.session.auth) {
+      res.status(401).json({ error: 'unauthorized' })
+    } else {
+      next()
+    }
+  })
 
   return app
 }

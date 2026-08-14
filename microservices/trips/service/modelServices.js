@@ -88,45 +88,131 @@ class Model extends PDO {
     }
   }
 
-  getAll(limit = 10) {
-    // ORDER BY created DESC
-    return this.queryAll('SELECT @rid as rid, _id FROM article LIMIT ' + limit)
+  // === === === === === === === === ===
+  // Trip (вершина)
+  // === === === === === === === === ===
+
+  getAll = () => {
+    return this.queryAll('SELECT FROM Trip')
   }
 
-  update(set, rid, obj) {
+  //  Список трипов владельца (опционально только архивные)
+  listTrips(ownerRid, archived) {
+    if (archived) {
+      return this.queryAll(
+        'SELECT FROM Trip WHERE ownerRid = :rid AND is_archived = true',
+        { params: { rid: ownerRid } },
+      )
+    }
+    return this.queryAll(
+      'SELECT FROM Trip WHERE ownerRid = :rid ORDER BY created_at DESC',
+      { params: { rid: ownerRid } },
+    )
+  }
+
+  //  Одна поездка по RID
+  getTrip(rid) {
+    return this.queryOne('SELECT FROM Trip WHERE @rid = ' + rid)
+  }
+
+  //  Поиск поездки по стабильному id (owner + _id будущего)
+  getTripById(id) {
+    return this.queryOne("SELECT FROM Trip WHERE id = '" + id + "'")
+  }
+
+  //  Создать поездку (вершину). Возвращает @rid
+  async createTrip(obj, ownerRid, created) {
+    obj.ownerRid = ownerRid
+    obj.created_at = created
+    obj.updated_at = created
+    const q =
+      "CREATE VERTEX Trip SET title=:title, description=:description, " +
+      'start_date=:start_date, end_date=:end_date, currency=:currency, ' +
+      'is_archived=:is_archived, reminder_days=:reminder_days, ' +
+      'owner=:owner, ownerRid=:ownerRid, created_at=:created_at, updated_at=:updated_at'
+    const res = await this.insert(q, { params: { ...obj } })
+    if (res.done) return res.message['@rid']
+    return null
+  }
+
+  //  Обновить поездку
+  updateTrip(rid, fields) {
+    const set = Object.keys(fields)
+      .map((k) => k + '=:' + k)
+      .join(', ')
     return this.insert(
-      'UPDATE article SET ' + set + ' UPSERT WHERE @rid =' + rid,
+      'UPDATE Trip SET ' + set + ' WHERE @rid = ' + rid,
+      { params: { ...fields } },
+    )
+  }
+
+  //  Удалить поездку (каскадно убирает TripMember)
+  deleteTrip(rid) {
+    return this.command('DELETE VERTEX Trip WHERE @rid = ' + rid)
+  }
+
+  // === === === === === === === === ===
+  // TripMember (ребро Trip-[TripMember]->User)
+  // === === === === === === === === ===
+
+  //  Участники поездки: рёбра с полем user (in)
+  async getMembers(tripRid) {
+    const edges = await this.queryAll(
+      "SELECT out, in, role, is_guest, invited_by, added_at FROM TripMember WHERE out = " +
+        tripRid,
+    )
+    if (!edges) return []
+    //  рёбра дают in (User RID) — это участники
+    return edges.map((e) => ({
+      userRid: e.in,
+      role: e.role,
+      is_guest: !!e.is_guest,
+      invited_by: e.invited_by,
+      added_at: e.added_at,
+    }))
+  }
+
+  //  Добавить участника/гостя ребром
+  async addMember(tripRid, userRid, obj) {
+    const res = await this.insert(
+      'CREATE EDGE TripMember FROM ' +
+        tripRid +
+        ' TO ' +
+        userRid +
+        ' SET role=:role, is_guest=:is_guest, invited_by=:invited_by, added_at=:added_at',
       { params: { ...obj } },
     )
+    return res.done ? res.message : null
   }
 
-  async paginate(lowerRid, limit) {
-    return this.queryAll(
-      'SELECT @rid as rid,  FROM article WHERE @rid > ' +
-        lowerRid +
-        ' LIMIT ' +
-        limit,
+  //  Удалить участника/гостя ребром
+  removeMember(tripRid, userRid) {
+    return this.command(
+      'DELETE EDGE TripMember WHERE out = ' +
+        tripRid +
+        ' AND in = ' +
+        userRid,
     )
   }
 
-  getSettings() {
-    return this.queryOne('SELECT * FROM Settings WHERE microservice="article"')
-  }
-
-  setCreated(table, obj, location) {
-    return this.insert(
-      'INSERT INTO ' +
-        table +
-        ' SET title=:title, country=:country, country_id=:country_id,img_upload=:img_upload, created=sysdate(), id=:id, content=:content, description=:description, url=:url, keyword=:keyword, searchable=:searchable, tags=:tags, config=:config, image=:image, main=:main, location=ST_GeomFromText("POINT(' +
-        location +
-        ')")',
-      { params: { ...obj } },
+  //  Проверить членство юзера в трипе: рёбра out=trip and in=user
+  async isMember(tripRid, userRid) {
+    const edges = await this.queryAll(
+      'SELECT FROM TripMember WHERE out = ' +
+        tripRid +
+        ' AND in = ' +
+        userRid,
     )
+    return edges && edges.length > 0 ? edges[0] : null
   }
 
-  select(table, params, value) {
+  //  Все поездки, где юзер участник (графовый обход от User)
+  tripsOfUser(userRid) {
     return this.queryAll(
-      `SELECT ${params} FROM ${table} WHERE ${params} = "${value}"`,
+      "SELECT FROM (SELECT expand(out('TripMember')) FROM Trip) " +
+        "WHERE @rid IN (SELECT expand(in('TripMember')) FROM User WHERE @rid = " +
+        userRid +
+        ')',
     )
   }
 }
