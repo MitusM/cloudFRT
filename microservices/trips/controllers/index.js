@@ -156,8 +156,8 @@ const endpoints = async (app) => {
     try {
       const trip = await loadTrip(req, res)
       if (!trip) return
-      //  Маршрут открытый (см. middleware): роли не проверяем — показ карты для всех.
-      //  Вернуть roleOf + 403, когда карту защитят авторизацией.
+      const role = await roleOf(trip, req)
+      if (!role) return res.status(403).json({ error: 'forbidden' })
       const places = await db.getTripPlaces(String(trip['@rid']))
       const { response } = await res.app.ask('render', {
         server: {
