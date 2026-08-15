@@ -41,7 +41,16 @@ const endpoints = async (app) => {
     }
   })
   app.all('/:microservice/(.*)', async (req, res) => {
-    await res.delegate(req.params.microservice)
+    try {
+      await res.delegate(req.params.microservice)
+    } catch (err) {
+      //  МС не найден/недоступен — не роняем gateway (напр. статика /public/ в dev)
+      if (String(err && err.message).startsWith('Microservice')) {
+        return res.status(404).end('Not Found')
+      }
+      console.log('⚡ err::delegate', err)
+      if (!res.headersSent) res.status(500).end('Internal Error')
+    }
   })
   return app
 }

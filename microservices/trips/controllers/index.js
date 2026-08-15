@@ -2,6 +2,16 @@
 // Trips controllers — ядро агрегата поездок
 // Взято из карты REST-API TREK, пересажено на req.session.auth (cloudFRT)
 // === === === === === === === === === === === ===
+import path from 'path'
+import pkg from 'app-root-path'
+import dotenv from 'dotenv'
+import { createRequire } from 'module'
+
+dotenv.config()
+const appRoot = pkg.path
+const require = createRequire(import.meta.url)
+const lang = require('../lang/ru.json')
+const templateDir = path.join(appRoot, process.env.VIEW_DIR)
 
 const endpoints = async (app) => {
   const db = await app.options.db
@@ -135,6 +145,41 @@ const endpoints = async (app) => {
       res.status(201).json({ trip: created })
     } catch (err) {
       console.log('⚡ err::trips:create', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  })
+
+  //  ==== GET /trips/map/:id — HTML-страница карты поездки (MapLibre, шаг 5) ====
+  //  Рендерится через render-МС (Nunjucks) из шаблона view/html/page/map.html.
+  //  Отдаёт поездку + её места (Place через ребро TripPlace) для маркеров.
+  app.get('/trips/map/:id', async (req, res) => {
+    try {
+      const trip = await loadTrip(req, res)
+      if (!trip) return
+      const role = await roleOf(trip, req)
+      if (!role) return res.status(403).json({ error: 'forbidden' })
+      const places = await db.getTripPlaces(String(trip['@rid']))
+      const { response } = await res.app.ask('render', {
+        server: {
+          action: 'html',
+          meta: {
+            dir: templateDir,
+            page: process.env.TEMPLATE_FILE,
+            data: {
+              csrf: req.session.csrfSecret,
+              title: 'Карта поездки | ' + (trip.title || 'Trips'),
+              lang: lang,
+              breadcrumb: 'map',
+              page: './page/map.html',
+              trip: trip,
+              places: places,
+            },
+          },
+        },
+      })
+      res.status(200).end(response.html)
+    } catch (err) {
+      console.log('⚡ err::trips:map', err)
       res.status(500).json({ error: 'internal' })
     }
   })
