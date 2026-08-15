@@ -1,13 +1,16 @@
 {
-  "name": "article",
+  "name": "trips",
   "version": "1.0.0",
-  "description": "Пользователи",
+  "description": "Ядро-агрегат поездок (cloudFRT)",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": ""
+    "test": "node --test --test-concurrency=1 test/*.test.js"
   },
   "author": "MitusM",
   "license": "MIT",
-  "dependencies": {}
+  "devDependencies": {
+    "amqplib": "^2.0.1",
+    "nanoid": "^6.0.1"
+  }
 }

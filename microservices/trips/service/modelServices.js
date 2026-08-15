@@ -237,6 +237,103 @@ class Model extends PDO {
         ')',
     )
   }
+
+  // === === === === === === === === ===
+  // Place (вершина) + ребро Trip─Place
+  // === === === === === === === === ===
+  // Вершина Place — снапшот места (POI) внутри поездки. Поля копируются из
+  // статьи (путь Б) или из maps-поиска (путь А) в момент добавления, чтобы
+  // метка оставалась осмысленной даже если источник (OSM/статья) изменится.
+  // location: OPoint через ST_GeomFromText("POINT(lon lat)") — единообразно с article.
+
+  //  Создать Place (вершину). Возвращает { rid, _id } или null.
+  //  ВАЖНО: location НЕ храним как spatial OPoint. orientjs (клиентская либа,
+  //  через которую trips ходит в OrientDB) не умеет вставлять ST_GeomFromText —
+  //  падает «Document belongs to abstract class 'OPoint' and cannot be saved»
+  //  (проверено изолированно; REST умеет, orientjs нет). Для снапшота места
+  //  достаточно плоских полей lat/lng (нужны для MapLibre-карты); spatial-
+  //  поиск мест в поездке не нужен (места выбираются по рёбрам Trip─Place).
+  async createPlace(obj) {
+    const p = { ...obj }
+    p._id = p._id || nanoid(21)
+    p.created_at = toOrientDate(p.created_at || new Date())
+    const q =
+      'CREATE VERTEX Place SET ' +
+      'name=:name, description=:description, address=:address, ' +
+      'lat=:lat, lng=:lng, osm_id=:osm_id, google_place_id=:google_place_id, ' +
+      'google_ftid=:google_ftid, source=:source, url=:url, _id=:_id, created_at=:created_at'
+    const res = await this.insert(q, {
+      params: {
+        name: p.name,
+        description: p.description,
+        address: p.address,
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+        osm_id: p.osm_id,
+        google_place_id: p.google_place_id,
+        google_ftid: p.google_ftid,
+        source: p.source,
+        url: p.url,
+        _id: p._id,
+        created_at: p.created_at,
+      },
+    })
+    if (res.done && res.message) {
+      return {
+        rid: String(res.message['@rid']),
+        _id: String(p._id),
+      }
+    }
+    return null
+  }
+
+  //  Добавить место в поездку ребром Trip-[TripPlace]->Place
+  async addPlaceToTrip(tripRid, placeRid, obj) {
+    const params = { ...obj }
+    if (params.added_at !== undefined) params.added_at = toOrientDate(params.added_at)
+    const res = await this.insert(
+      'CREATE EDGE TripPlace FROM ' +
+        tripRid +
+        ' TO ' +
+        placeRid +
+        ' SET added_at=:added_at, added_by=:added_by, day=:day, note=:note',
+      { params },
+    )
+    return res.done ? res.message : null
+  }
+
+  //  Места поездки (обход от Trip по ребру TripPlace)
+  async getTripPlaces(tripRid) {
+    const edges = await this.queryAll(
+      'SELECT out, in, added_at, added_by, day, note FROM TripPlace WHERE out = ' +
+        tripRid,
+    )
+    if (!edges) return []
+    // рёбра дают in (Place RID) — это места поездки
+    const out = []
+    for (const e of edges) {
+      const place = await this.getPlace(e.in)
+      if (place) out.push({ ...place, added_at: e.added_at, added_by: e.added_by, day: e.day, note: e.note })
+    }
+    return out
+  }
+
+  //  Одно место по RID
+  getPlace(rid) {
+    return this.queryOne('SELECT FROM Place WHERE @rid = ' + rid)
+  }
+
+  //  Поиск места по стабильному _id
+  getPlaceById(id) {
+    return this.queryOne("SELECT FROM Place WHERE _id = '" + id + "'")
+  }
+
+  //  Убрать место из поездки (удалить ребро; саму вершину Place можно удалить отдельно)
+  removePlaceFromTrip(tripRid, placeRid) {
+    return this.command(
+      'DELETE EDGE TripPlace WHERE out = ' + tripRid + ' AND in = ' + placeRid,
+    )
+  }
 }
 
 export { Model }

@@ -128,6 +128,28 @@ const endpoints = async (app) => {
     }
   })
 
+  // GET /maps/ — заглушка/заготовка. Позже здесь юзер будет работать с картой.
+  // Пока возвращает метаданные МС и список доступных авторизованных эндпоинтов,
+  // чтобы корень `/maps/` не висел (HTTP 000), а отдавал осмысленный ответ.
+  app.get('/maps/', async (req, res) => {
+    res.json({
+      service: 'maps',
+      name: 'maps',
+      provider: 'openstreetmap',
+      message: 'maps API — провайдер гео-данных (OSM). Здесь будет рабочая точка пользователя с картой.',
+      endpoints: [
+        'POST /maps/search',
+        'GET /maps/pois',
+        'POST /maps/autocomplete',
+        'GET /maps/details/:placeId',
+        'GET /maps/place-photo/:placeId',
+        'GET /maps/place-photo/:placeId/bytes',
+        'GET /maps/reverse',
+        'POST /maps/resolve-url',
+      ],
+    })
+  })
+
   return app
 }
 
