@@ -400,13 +400,15 @@ class Model extends PDO {
   // тированный по выбранной метрике и урезанный лимитом.
   //
   // orderBy: 'trips' (default) | 'users' | 'places'
-  // Используем проверенные обходы (не проекцию in() в SELECT — orientjs её
-  // не всегда корректно отдаёт; надёжнее отдельные query по @rid).
+  // ОДИН SQL: orientjs корректно отдаёт проекции in('hasObject') и двойной
+  // in('hasObject').in('TripPlace') — возвращаются массивами RecordID.
+  // Meta поездок (title/ownerRid) добирается вторым IN-запросом.
   async topGeoObjects(limit = 10, minTrips = 1, orderBy = 'trips') {
     let geos = []
     try {
       geos = await this.queryAll(
-        'SELECT @rid AS geoRid, name AS geoName, osm_id, lat, lng, source, url FROM GeoObject',
+        "SELECT @rid AS geoRid, name AS geoName, osm_id, lat, lng, source, url, " +
+          "in('hasObject') AS places, in('hasObject').in('TripPlace') AS trips FROM GeoObject",
       )
     } catch (err) {
       console.log('⚡ err::topGeoObjects fetch geos', err)
@@ -414,51 +416,50 @@ class Model extends PDO {
     }
     if (!geos || !geos.length) return []
 
+    // RecordID из проекции — объект (cluster+position), строку даёт String().
+    const ridOf = (x) => (x == null ? '' : String(x))
+
     const out = []
     for (const g of geos) {
-      // 1) входящие Place (места-метки на этот объект) — проверенный обход
-      let places = []
-      try {
-        places = await this.queryAll(
-          "SELECT expand(in('hasObject')) FROM GeoObject WHERE @rid = " +
-            String(g.geoRid || g['@rid']),
-        )
-      } catch (err) {
-        console.log('⚡ err::topGeoObjects places-for-geo', err)
-        places = []
-      }
-      if (!places || !places.length) continue
+      const places = Array.isArray(g.places) ? g.places : []
+      if (!places.length) continue
 
-      const tripRids = new Set()
-      const ownerRids = new Set()
-      const topTrips = []
-      // 2) для каждого Place — его поездки (in('TripPlace'))
-      for (const pl of places) {
-        let trips = []
+      // уникальные поездки (RID), отсортированно — для стабильного IN[]
+      const tripSet = new Set()
+      for (const t of Array.isArray(g.trips) ? g.trips : []) {
+        const r = ridOf(t)
+        if (r) tripSet.add(r)
+      }
+      const tripRids = [...tripSet]
+      const tripsCount = tripRids.length
+      if (tripsCount < minTrips) continue
+
+      // подтянуть meta поездок одним запросом
+      let meta = []
+      if (tripRids.length) {
         try {
-          trips = await this.queryAll(
-            "SELECT @rid, title, ownerRid FROM (SELECT expand(in('TripPlace')) FROM Place WHERE @rid = " +
-              String(pl['@rid'] || pl.rid) + ')',
+          meta = await this.queryAll(
+            'SELECT @rid, title, ownerRid FROM Trip WHERE @rid IN [' + tripRids.join(',') + ']',
           )
         } catch (err) {
-          console.log('⚡ err::topGeoObjects trips-for-place', err)
-          trips = []
-        }
-        for (const t of trips || []) {
-          const rrid = String(t['@rid'])
-          if (rrid && !tripRids.has(rrid)) {
-            tripRids.add(rrid)
-            topTrips.push({ rid: rrid, title: t.title, ownerRid: t.ownerRid ? String(t.ownerRid) : null })
-          }
-          if (t.ownerRid) ownerRids.add(String(t.ownerRid))
+          console.log('⚡ err::topGeoObjects trips-meta', err)
+          meta = []
         }
       }
 
-      const tripsCount = tripRids.size
-      if (tripsCount < minTrips) continue
+      const topTrips = []
+      const ownerRids = new Set()
+      for (const m of meta || []) {
+        const r = ridOf(m['@rid'])
+        if (r) {
+          topTrips.push({ rid: r, title: m.title || null, ownerRid: m.ownerRid ? String(m.ownerRid) : null })
+          if (m.ownerRid) ownerRids.add(String(m.ownerRid))
+        }
+      }
+
       out.push({
         geo: {
-          rid: String(g.geoRid || g['@rid']),
+          rid: ridOf(g.geoRid || g['@rid']),
           name: g.geoName,
           osm_id: g.osm_id || null,
           lat: g.lat,
