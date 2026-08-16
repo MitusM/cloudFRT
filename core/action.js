@@ -36,7 +36,7 @@ const action = (app) => {
         user: meta.user,
       })
     } catch (err) {
-      console.error(err)
+      console.error('⚡ gateway:session ERR', err)
       return err
     }
   })
@@ -44,13 +44,14 @@ const action = (app) => {
   app.action('gateway:session-destroy', async (meta, res) => {
     try {
       redisStore.destroy(meta.sid)
+      const location = meta && meta.location ? meta.location : '/'
       res
         .writeHead(302, {
-          location: meta.location,
+          location: location,
         })
         .end()
     } catch (err) {
-      console.error(err)
+      console.error('⚡ session-destroy ERR', err)
       return err
     }
   })

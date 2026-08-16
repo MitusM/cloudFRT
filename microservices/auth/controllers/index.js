@@ -120,11 +120,14 @@ export let endpoints = (app) => {
           },
         )
       } else {
-        res.status(403).end()
+        // csrf не совпал — отвечаем явно, чтобы gateway не молчал (end() без тела дропался)
+        res.status(403).json({ error: 'csrf mismatch' })
       }
     } catch (err) {
-      console.log('⚡ err::login[post]', err)
-      return err
+      console.log('⚡ err::signin', err)
+      try {
+        res.status(500).json({ error: 'internal error' })
+      } catch (_) {}
     }
   })
 
