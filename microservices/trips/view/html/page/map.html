@@ -52,7 +52,7 @@
     // Места поездки, переданные с сервера (JSON из Nunjucks dump)
     const PLACES = {{ places | dump | safe }};
     const DEFAULT_CENTER = [37.62, 55.75]; // Москва (резерв)
-    const STYLE_URL = 'https://demotiles.maplibre.org/style.json';
+    const STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 
     async function initTripMap() {
       const map = new maplibregl.Map({
