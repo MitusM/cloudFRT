@@ -164,11 +164,59 @@ const action = async (app) => {
         added_by: String(user.rid),
         day: placeData.day || null,
         note: placeData.note || null,
+        article_id: placeData.article_id || null,
+        article_rid: placeData.article_rid || null,
       })
+
+      //  B+C: привязать метку к каноническому GeoObject (эталон места, дедуп
+      //  osm_id → name+lat/lng). Даже если фронт не передал GeoObject —
+      //  резолвим/создаём по данным места, чтобы топ-запросы работали.
+      try {
+        const geoRid = await db.findOrCreateGeoObject(placeData)
+        if (geoRid) await db.linkPlaceToGeoObject(place.rid, geoRid)
+      } catch (err) {
+        console.log('⚡ warn::trips:place-add geo-link', err)
+      }
 
       res.json({ place: { rid: place.rid, _id: place._id } })
     } catch (err) {
       console.log('⚡ err::trips:place-add', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  })
+
+  /**
+   * trips:top-places — топ объектов к посещению (места, чаще всего
+   * встречающиеся в поездках). Считается по графу
+   * GeoObject <-hasObject- Place <-TripPlace- Trip (B+C).
+   *
+   * meta:
+   *   { limit: <int> }        — сколько вернуть (по умолч. 10; <=0 → без лимита)
+   *   { minTrips: <int> }     — только объекты с >= N поездок (по умолч. 1)
+   *   { orderBy: 'trips'|'users'|'places' } — по какой метрике сортировать (по умолч. 'trips')
+   *   { fetchUsers: <bool> }  — не используется напрямую; users считается всегда
+   *
+   * Ответ:
+   *   {
+   *     top: [
+   *       { geo: { rid, name, osm_id, lat, lng, source, url },
+   *         trips: <n>, users: <n>, places: <n>,
+   *         topTrips: [ { rid, title, ownerRid } ... ] }
+   *     ],
+   *     total: <n>
+   *   }
+   */
+  app.action('trips:top-places', async (meta, res) => {
+    try {
+      const db = await app.options.db
+      const limit = Number.isInteger(meta.limit) ? meta.limit : 10
+      const minTrips = Number.isInteger(meta.minTrips) && meta.minTrips > 0 ? meta.minTrips : 1
+      const orderBy = ['users', 'places'].includes(meta.orderBy) ? meta.orderBy : 'trips'
+
+      const top = await db.topGeoObjects(limit, minTrips, orderBy)
+      res.json({ top: top || [], total: top ? top.length : 0 })
+    } catch (err) {
+      console.log('⚡ err::trips:top-places', err)
       res.status(500).json({ error: 'internal' })
     }
   })

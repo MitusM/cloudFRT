@@ -21,15 +21,13 @@ class Model extends PDO {
 
   async queryAll(query, params) {
     try {
-      console.log('⚡ query::', query)
-      console.log('⚡ params::', params)
       const session = await this.pool.acquire()
       const message = await session.query(query, params).all()
       session.close()
       return message
     } catch (err) {
       console.log('⚡ err::PDO.queryAll => ModelService.js:19 ', err)
-      process.exit()
+      throw err
     }
   }
 
@@ -41,7 +39,7 @@ class Model extends PDO {
       return message
     } catch (err) {
       console.log('⚡ err::PDO.query => ', err)
-      process.exit()
+      throw err
     }
   }
 
@@ -82,7 +80,7 @@ class Model extends PDO {
       return message
     } catch (err) {
       console.log('⚡ err::PDO.create => ', err)
-      process.exit()
+      return { err: err, done: false }
     }
   }
 
@@ -288,6 +286,8 @@ class Model extends PDO {
   }
 
   //  Добавить место в поездку ребром Trip-[TripPlace]->Place
+  //  article_id (стабильный ключ Article.id) и article_rid (#CLUSTER:RID) —
+  //  связка поездки со статьёй-источником (вариант B+C).
   async addPlaceToTrip(tripRid, placeRid, obj) {
     const params = { ...obj }
     if (params.added_at !== undefined) params.added_at = toOrientDate(params.added_at)
@@ -296,7 +296,8 @@ class Model extends PDO {
         tripRid +
         ' TO ' +
         placeRid +
-        ' SET added_at=:added_at, added_by=:added_by, day=:day, note=:note',
+        ' SET added_at=:added_at, added_by=:added_by, day=:day, note=:note, ' +
+        'article_id=:article_id, article_rid=:article_rid',
       { params },
     )
     return res.done ? res.message : null
@@ -305,7 +306,7 @@ class Model extends PDO {
   //  Места поездки (обход от Trip по ребру TripPlace)
   async getTripPlaces(tripRid) {
     const edges = await this.queryAll(
-      'SELECT out, in, added_at, added_by, day, note FROM TripPlace WHERE out = ' +
+      'SELECT out, in, added_at, added_by, day, note, article_id, article_rid FROM TripPlace WHERE out = ' +
         tripRid,
     )
     if (!edges) return []
@@ -313,9 +314,63 @@ class Model extends PDO {
     const out = []
     for (const e of edges) {
       const place = await this.getPlace(e.in)
-      if (place) out.push({ ...place, added_at: e.added_at, added_by: e.added_by, day: e.day, note: e.note })
+      if (place) out.push({ ...place, added_at: e.added_at, added_by: e.added_by, day: e.day, note: e.note, article_id: e.article_id, article_rid: e.article_rid })
     }
     return out
+  }
+
+  //  Найти канонический GeoObject места (дедуп): сначала по osm_id,
+  //  фолбэк — по name+lat+lng. Создать, если нет. Возвращает rid GeoObject.
+  async findOrCreateGeoObject(placeObj) {
+    const lat = Number(placeObj.lat)
+    const lng = Number(placeObj.lng)
+    let existing = null
+    if (placeObj.osm_id) {
+      const hit = await this.queryOne(
+        "SELECT @rid FROM GeoObject WHERE osm_id = '" +
+          String(placeObj.osm_id).replace(/'/g, "''") + "' LIMIT 1",
+      )
+      if (hit && hit['@rid']) existing = hit['@rid']
+    }
+    if (!existing && !Number.isNaN(lat) && !Number.isNaN(lng) && placeObj.name) {
+      const hit = await this.queryAll(
+        'SELECT @rid FROM GeoObject WHERE name = :name AND lat = :lat AND lng = :lng LIMIT 1',
+        { params: { name: placeObj.name, lat, lng } },
+      )
+      if (hit && hit.length && hit[0]['@rid']) existing = hit[0]['@rid']
+    }
+    if (existing) return String(existing)
+    // не найден — создаём канонічний GeoObject (снапшот места)
+    const g = {
+      name: placeObj.name,
+      lat,
+      lng,
+      osm_id: placeObj.osm_id || null,
+      google_place_id: placeObj.google_place_id || null,
+      google_ftid: placeObj.google_ftid || null,
+      url: placeObj.url || null,
+      source: placeObj.source || 'article',
+      created_at: toOrientDate(new Date()),
+    }
+    const created = await this.insert(
+      'CREATE VERTEX GeoObject SET ' +
+        'name=:name, lat=:lat, lng=:lng, osm_id=:osm_id, ' +
+        'google_place_id=:google_place_id, google_ftid=:google_ftid, ' +
+        'url=:url, source=:source, created_at=:created_at',
+      { params: g },
+    )
+    if (created.done && created.message) return String(created.message['@rid'])
+    return null
+  }
+
+  //  Ребро Place-[hasObject]->GeoObject (привязка метки к эталонному объекту)
+  async linkPlaceToGeoObject(placeRid, geoRid) {
+    if (!placeRid || !geoRid) return null
+    const res = await this.insert(
+      'CREATE EDGE hasObject FROM ' + placeRid + ' TO ' + geoRid,
+      {},
+    )
+    return res.done ? res.message : null
   }
 
   //  Одно место по RID
@@ -333,6 +388,101 @@ class Model extends PDO {
     return this.command(
       'DELETE EDGE TripPlace WHERE out = ' + tripRid + ' AND in = ' + placeRid,
     )
+  }
+
+  // === === === === === === === === ===
+  // Топ-объекты (места к посещению) — B+C
+  // === === === === === === === === ===
+  // Агрегируем по графу GeoObject<-hasObject-Place<-TripPlace-Trip.
+  // Для каждого GeoObject считаем: сколько Place-меток (in_hasObject),
+  // в скольких поездках (уникальные Trip через двойной in()), у скольких
+  // уникальных пользователей (ownerRid этих Trip). Возвращает топ, отсор­
+  // тированный по выбранной метрике и урезанный лимитом.
+  //
+  // orderBy: 'trips' (default) | 'users' | 'places'
+  // Используем проверенные обходы (не проекцию in() в SELECT — orientjs её
+  // не всегда корректно отдаёт; надёжнее отдельные query по @rid).
+  async topGeoObjects(limit = 10, minTrips = 1, orderBy = 'trips') {
+    let geos = []
+    try {
+      geos = await this.queryAll(
+        'SELECT @rid AS geoRid, name AS geoName, osm_id, lat, lng, source, url FROM GeoObject',
+      )
+    } catch (err) {
+      console.log('⚡ err::topGeoObjects fetch geos', err)
+      return []
+    }
+    if (!geos || !geos.length) return []
+
+    const out = []
+    for (const g of geos) {
+      // 1) входящие Place (места-метки на этот объект) — проверенный обход
+      let places = []
+      try {
+        places = await this.queryAll(
+          "SELECT expand(in('hasObject')) FROM GeoObject WHERE @rid = " +
+            String(g.geoRid || g['@rid']),
+        )
+      } catch (err) {
+        console.log('⚡ err::topGeoObjects places-for-geo', err)
+        places = []
+      }
+      if (!places || !places.length) continue
+
+      const tripRids = new Set()
+      const ownerRids = new Set()
+      const topTrips = []
+      // 2) для каждого Place — его поездки (in('TripPlace'))
+      for (const pl of places) {
+        let trips = []
+        try {
+          trips = await this.queryAll(
+            "SELECT @rid, title, ownerRid FROM (SELECT expand(in('TripPlace')) FROM Place WHERE @rid = " +
+              String(pl['@rid'] || pl.rid) + ')',
+          )
+        } catch (err) {
+          console.log('⚡ err::topGeoObjects trips-for-place', err)
+          trips = []
+        }
+        for (const t of trips || []) {
+          const rrid = String(t['@rid'])
+          if (rrid && !tripRids.has(rrid)) {
+            tripRids.add(rrid)
+            topTrips.push({ rid: rrid, title: t.title, ownerRid: t.ownerRid ? String(t.ownerRid) : null })
+          }
+          if (t.ownerRid) ownerRids.add(String(t.ownerRid))
+        }
+      }
+
+      const tripsCount = tripRids.size
+      if (tripsCount < minTrips) continue
+      out.push({
+        geo: {
+          rid: String(g.geoRid || g['@rid']),
+          name: g.geoName,
+          osm_id: g.osm_id || null,
+          lat: g.lat,
+          lng: g.lng,
+          source: g.source || null,
+          url: g.url || null,
+        },
+        trips: tripsCount,
+        users: ownerRids.size,
+        places: places.length,
+        topTrips,
+      })
+    }
+
+    // сортировка по выбранной метрике (ти-брейк: trips desc, затем name)
+    const key = orderBy === 'users' ? 'users' : orderBy === 'places' ? 'places' : 'trips'
+    out.sort((a, b) => {
+      if (b[key] !== a[key]) return b[key] - a[key]
+      if (b.trips !== a.trips) return b.trips - a.trips
+      return String(a.geo.name || '').localeCompare(String(b.geo.name || ''))
+    })
+
+    const n = Number.isInteger(limit) && limit > 0 ? limit : out.length
+    return out.slice(0, n)
   }
 }
 
