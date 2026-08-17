@@ -8,7 +8,7 @@ dotenv.config();
 
 const lang = require("../lang/ru");
 const appRoot = pkg.path;
-const templateDir = path.join(appRoot, process.env.VIEW_DIR);
+const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/');
 
 const action = (app) => {
   app.action("aut:redirect", async (meta, res) => {

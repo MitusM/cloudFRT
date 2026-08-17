@@ -17,6 +17,27 @@ import { Model } from './service/modelServices.js'
 
 dotenv.config()
 
+// === === === === === === === === === === === ===
+// 0. Fail-fast: обязательные переменные окружения
+// === === === === === === === === === === === ===
+const REQUIRED_ENV = [
+  'RABBIT_URL',
+  'ORIENTDB_NAME',
+  'ORIENTDB_USERNAME',
+  'ORIENTDB_PASSWORD',
+  'VIEW_DIR',
+]
+const missing = REQUIRED_ENV.filter((k) => !process.env[k])
+if (missing.length) {
+  console.error(
+    `\n❌ article: отсутствуют обязательные переменные окружения: ${missing.join(', ')}`
+  )
+  console.error(
+    '   Скопируй .env.example в .env и заполни значениями, затем запусти заново.\n'
+  )
+  process.exit(1)
+}
+
 const rabbitUrl = process.env.RABBIT_URL || 'amqp://guest:guest@localhost:5672/'
 const timeout = process.env.TIMED_OUT || 5000
 // === === === === === === === === === === === ===

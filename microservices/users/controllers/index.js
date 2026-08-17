@@ -12,7 +12,7 @@ dotenv.config()
 /**  */
 const lang = require('../lang/ru')
 /** */
-const templateDir = path.join(appRoot, process.env.VIEW_DIR)
+const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 
 const Redis = new Cache({ db: 1 })
 

@@ -11,7 +11,7 @@ dotenv.config()
 const appRoot = pkg.path
 const require = createRequire(import.meta.url)
 const lang = require('../lang/ru.json')
-const templateDir = path.join(appRoot, process.env.VIEW_DIR)
+const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 
 const endpoints = async (app) => {
   const db = await app.options.db
