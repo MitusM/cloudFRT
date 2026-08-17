@@ -33,9 +33,13 @@ CREATE PROPERTY Trip.currency STRING;
 CREATE PROPERTY Trip.cover_image STRING;
 CREATE PROPERTY Trip.is_archived BOOLEAN;
 CREATE PROPERTY Trip.reminder_days INTEGER;
+CREATE PROPERTY Trip.is_private BOOLEAN;      -- true=частная (видит только владелец+участники), false=публичная
+CREATE PROPERTY Trip.status STRING;           -- open|closed (open — идёт формирование, можно добавлять места)
 ALTER PROPERTY Trip.currency DEFAULT "EUR";
 ALTER PROPERTY Trip.is_archived DEFAULT false;
 ALTER PROPERTY Trip.reminder_days DEFAULT 3;
+ALTER PROPERTY Trip.is_private DEFAULT true;
+ALTER PROPERTY Trip.status DEFAULT "open";
 CREATE PROPERTY Trip.owner STRING;               -- стабильный _id владельца
 CREATE PROPERTY Trip.ownerRid STRING;            -- RID владельца, напр. '#22:0'
 CREATE PROPERTY Trip.created_at DATETIME;

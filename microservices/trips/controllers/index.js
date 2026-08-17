@@ -44,6 +44,18 @@ const endpoints = async (app) => {
     return edge.is_guest ? 'guest' : 'member'
   }
 
+  //  true если поездка публичная (видят все, даже не участники)
+  const isPublic = (trip) => trip && String(trip.is_private) === 'false'
+
+  //  может ли текущий юзер ЧИТАТЬ поездку:
+  //  владелец (ownerRid) | участник (TripMember) | публичная (is_private=false)
+  const canRead = async (trip, req) => {
+    if (!trip) return false
+    const role = await roleOf(trip, req)
+    if (role) return true          // owner | member | guest
+    return isPublic(trip)          // не участник, но публичная — можно читать
+  }
+
   //  загрузить трип по :id (стабильный _id или RID), 404 если нет
   const loadTrip = async (req, res) => {
     const id = req.params.id
@@ -90,11 +102,17 @@ const endpoints = async (app) => {
       const owned = await db.listTrips(user.rid, archived)
       //  + трипы, где юзер участник (не владелец)
       const shared = await db.tripsOfUser(user.rid)
+      //  + публичные поездки (видны всем, не владелец/не участник)
+      const publicTrips = await db.listPublicTrips(user.rid)
       const ownedRids = new Set((owned || []).map((t) => String(t['@rid'])))
       const all = []
       for (const t of owned || []) all.push(t)
       for (const t of shared || []) {
         if (!ownedRids.has(String(t['@rid']))) all.push(t)
+      }
+      const known = new Set(all.map((t) => String(t['@rid'])))
+      for (const t of publicTrips || []) {
+        if (!known.has(String(t['@rid']))) all.push(t)
       }
       res.json({ trips: all })
     } catch (err) {
@@ -123,6 +141,10 @@ const endpoints = async (app) => {
           end_date: dates.end_date,
           currency: body.currency || 'EUR',
           is_archived: false,
+          is_private: body.is_private !== undefined
+            ? body.is_private === true || body.is_private === 'true' || body.is_private === 1
+            : true,
+          status: body.status || 'open',
           reminder_days: body.reminder_days != null ? body.reminder_days : 3,
           owner: user._id,
         },
@@ -157,7 +179,7 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const places = await db.getTripPlaces(String(trip['@rid']))
       const { response } = await res.app.ask('render', {
         server: {
@@ -190,7 +212,7 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       trip.userRole = role
       res.json({ trip })
     } catch (err) {
@@ -205,15 +227,16 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (role !== 'owner' && role !== 'member') return res.status(403).json({ error: 'forbidden' })
+      if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
       const body = req.body || {}
       if (body.csrf && body.csrf !== req.session.csrfSecret) {
         return res.status(403).json({ error: 'csrf' })
       }
       const fields = {}
-      for (const k of ['title', 'description', 'start_date', 'end_date', 'currency', 'reminder_days']) {
+      for (const k of ['title', 'description', 'start_date', 'end_date', 'currency', 'reminder_days', 'is_private', 'status']) {
         if (body[k] !== undefined) fields[k] = body[k]
       }
+      if (fields.is_private !== undefined) fields.is_private = fields.is_private === true || fields.is_private === 'true' || fields.is_private === 1
       if (fields.title !== undefined) fields.title = String(fields.title).trim()
       fields.updated_at = new Date().toISOString()
       if (Object.keys(fields).length > 1) {
@@ -249,7 +272,7 @@ const endpoints = async (app) => {
       if (!trip) return
       const user = me(req)
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const dates = normalizeDates(trip.start_date, trip.end_date)
       const newTrip = await db.createTrip(
         {
@@ -324,7 +347,7 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const members = await db.getMembers(trip['@rid'])
       res.json({ members })
     } catch (err) {
@@ -340,7 +363,7 @@ const endpoints = async (app) => {
       if (!trip) return
       const user = me(req)
       const role = await roleOf(trip, req)
-      if (role !== 'owner' && role !== 'member') return res.status(403).json({ error: 'forbidden' })
+      if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
       const body = req.body || {}
       const target = body.username || body._id || body.rid
       if (!target) return res.status(400).json({ error: 'target_required' })
@@ -386,7 +409,7 @@ const endpoints = async (app) => {
       if (!trip) return
       const user = me(req)
       const role = await roleOf(trip, req)
-      if (role !== 'owner' && role !== 'member') return res.status(403).json({ error: 'forbidden' })
+      if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
       const body = req.body || {}
       const target = body.username || body._id || body.rid || body.email
       if (!target) return res.status(400).json({ error: 'target_required' })
@@ -459,7 +482,7 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const members = await db.getMembers(trip['@rid'])
       res.json({ trip, members })
     } catch (err) {
@@ -474,7 +497,7 @@ const endpoints = async (app) => {
       const trip = await loadTrip(req, res)
       if (!trip) return
       const role = await roleOf(trip, req)
-      if (!role) return res.status(403).json({ error: 'forbidden' })
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const fmtDate = (iso) => {
         const d = new Date(iso)
         const pad = (n) => String(n).padStart(2, '0')

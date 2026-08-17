@@ -38,12 +38,31 @@ nodemon --watch . ./index.js   # dev (перезапуск при правке)
 
 | Тип | Класс | Назначение |
 |---|---|---|
-| VERTEX | `Trip` | Поездка (title, dates, currency, owner/ownerRid, …) |
+| VERTEX | `Trip` | Поездка (title, dates, currency, owner/ownerRid, is_private, status, …) |
 | VERTEX | `Place` | Снапшот места (lat/lng, osm_id, url, _id=nanoid) |
 | VERTEX | `GeoObject` | Канонический эталон места (дедуп по osm_id) |
 | EDGE | `TripMember` | Trip -[участвует]-> User (role, is_guest, invited_by) |
 | EDGE | `TripPlace` | Trip -[место]-> Place (+ article_id/article_rid = связка со статьёй) |
 | EDGE | `hasObject` | Place -[связан]-> GeoObject |
+
+## Модель доступа
+
+Поле `Trip.is_private` (дефолт **true** = частная):
+
+| | Частная (`is_private=true`) | Публичная (`is_private=false`) |
+|---|---|---|
+| Чтение | владелец + участники (TripMember) | все (владелец, участники, любые авторизованные) |
+| Запись (PUT/DELETE/transfer/members/guests/cover) | только владелец (`owner`) | только владелец (`owner`) |
+| Copy | кто может читать | кто может читать |
+
+- Владелец — по `ownerRid` == текущий user.rid.
+- Участники/гости — по рёбрам `TripMember` (независимо от is_private).
+- Список `GET /trips/` отдаёт: свои + где участник + публичные чужие.
+- Поле `Trip.status` (`open`/`closed`, дефолт `open`): пока `open` — идёт формирование,
+  любой участник может добавить место (`trips:place-add`); при `closed` добавление
+  мест возвращает 403 `trip_closed` (поездка сформирована).
+  Статус меняет владелец через `PUT /trips/:id` (`status`).
+
 
 ### Установка схемы (один раз)
 

@@ -118,6 +118,18 @@ class Model extends PDO {
     )
   }
 
+  //  Публичные поездки (видны всем, кроме тех, где юзер уже владелец/участник)
+  listPublicTrips(userRid) {
+    return this.queryAll(
+      'SELECT FROM Trip WHERE is_private = false ' +
+        'AND ownerRid <> :rid ' +
+        'AND @rid NOT IN (' +
+        '  SELECT expand(in(' + "'TripMember'" + ')) FROM User WHERE @rid = :rid' +
+        ') ORDER BY created_at DESC',
+      { params: { rid: userRid } },
+    )
+  }
+
   //  Одна поездка по RID
   getTrip(rid) {
     return this.queryOne('SELECT FROM Trip WHERE @rid = ' + rid)
@@ -132,12 +144,15 @@ class Model extends PDO {
   async createTrip(obj, ownerRid, created) {
     obj.ownerRid = ownerRid
     obj._id = obj._id || nanoid(21)
+    obj.is_private = obj.is_private !== undefined ? !!obj.is_private : true
+    obj.status = obj.status || 'open'
     obj.created_at = toOrientDate(created)
     obj.updated_at = toOrientDate(created)
     const q =
       'CREATE VERTEX Trip SET title=:title, description=:description, ' +
       'start_date=:start_date, end_date=:end_date, currency=:currency, ' +
       'is_archived=:is_archived, reminder_days=:reminder_days, ' +
+      'is_private=:is_private, status=:status, ' +
       '_id=:_id, owner=:owner, ownerRid=:ownerRid, created_at=:created_at, updated_at=:updated_at'
     const res = await this.insert(q, { params: { ...obj } })
     if (res.done && res.message) {

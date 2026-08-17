@@ -129,6 +129,11 @@ const action = async (app) => {
         return res.status(403).json({ error: 'forbidden' })
       }
 
+      //  закрытая поездка — добавлять места нельзя (сформирована)
+      if (String(trip.status) === 'closed') {
+        return res.status(403).json({ error: 'trip_closed', message: 'Поездка сформирована, добавить место нельзя' })
+      }
+
       //  создать Place (снапшот) и линковать к Trip
       //  ДЕДУП: если в поездке уже есть место с таким же osm_id (либо с тем же
       //  name+lat+lng при отсутствии osm_id) — не плодить дубликат, вернуть его.
