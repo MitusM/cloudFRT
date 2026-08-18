@@ -1,0 +1,130 @@
+<div class="container-fluid">
+  {# Шаг 3: интерактивная карта гео-объектов (POI из OSM/Overpass).
+     Общий рендер карты берётся у maps:map, POI грузятся через /maps/pois
+     по видимой области (bbox) и рисуются через window.MapsRender.setPoints. #}
+
+  <div class="row"><nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="/maps/">Карта</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Гео-объекты</li>
+    </ol>
+  </nav></div>
+
+  <div class="card" style="padding: 12px 16px; margin-bottom: 16px;">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <label for="poi-category" class="form-label mb-0"><strong>Категория:</strong></label>
+      </div>
+      <div class="col-auto">
+        <select id="poi-category" class="form-select">
+          <option value="hotel" selected>Отели</option>
+          <option value="food">Еда (рестораны)</option>
+          <option value="cafe">Кафе</option>
+          <option value="drinks">Бары</option>
+          <option value="fuel">Заправки</option>
+          <option value="parking">Парковки</option>
+          <option value="store">Магазины</option>
+          <option value="supermarket">Супермаркеты</option>
+          <option value="shopping">Торговые центры</option>
+          <option value="sights">Достопримечательности</option>
+          <option value="museum">Музеи</option>
+          <option value="nature">Природа (парки)</option>
+          <option value="activity">Активный отдых</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button id="poi-refresh" class="btn btn-primary">Показать на карте</button>
+      </div>
+      <div class="col-auto text-muted small">
+        <span id="poi-count">—</span> объектов
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="padding: 8px;">
+    {{ mapHtml | safe }}
+    <div class="small text-muted mt-2">
+      Перемещайте карту и нажимайте «Показать на карте» — POI ищутся в видимой области
+      (OSM/Overpass). Маркером цвета <span style="color:#e11d48;">●</span> отмечены найденные объекты.
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var POI_CATEGORIES = {
+    hotel: 'Отели', food: 'Еда', cafe: 'Кафе', drinks: 'Бары', fuel: 'Заправки',
+    parking: 'Парковки', store: 'Магазины', supermarket: 'Супермаркеты',
+    shopping: 'ТЦ', sights: 'Достопримечательности', museum: 'Музеи',
+    nature: 'Природа', activity: 'Активный отдых'
+  };
+
+  var mapHtmlDiv = document.querySelector('#poi-map');
+  var map = null;
+
+  function ensureMap() {
+    if (map) return map;
+    // контейнер создаёт maps:map (mapHtml). Если маplybre ещё грузится — подождём.
+    var el = document.getElementById('poi-map');
+    if (!el || typeof window.MapsRender === 'undefined' || !window.maplibregl) return null;
+    map = window.MapsRender.createMap('poi-map', {
+      center: {{ center | dump | safe }},
+      zoom: {{ zoom | dump | safe }},
+      markerColor: '#e11d48',
+      heightPx: 600
+    });
+    map.on('moveend', onMoveEnd);
+    return map;
+  }
+
+  function currentCategory() {
+    return document.getElementById('poi-category').value;
+  }
+
+  // bbox из видимой области карты
+  function currentBbox() {
+    if (!map) return null;
+    var b = map.getBounds();
+    return {
+      south: b.getSouth(), west: b.getWest(),
+      north: b.getNorth(), east: b.getEast()
+    };
+  }
+
+  function loadPois() {
+    var m = ensureMap();
+    if (!m) { console.error('[maps:map-page] map not ready'); return; }
+    var bbox = currentBbox();
+    var cat = currentCategory();
+    var qs = new URLSearchParams({
+      category: cat,
+      south: bbox.south, west: bbox.west,
+      north: bbox.north, east: bbox.east,
+      limit: 80
+    });
+    fetch('/maps/pois?' + qs.toString())
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (data) {
+        var pois = (data && data.pois) || [];
+        var count = window.MapsRender.setPoints(m, pois, { markerColor: '#e11d48' });
+        document.getElementById('poi-count').textContent = count || 0;
+      })
+      .catch(function (err) {
+        console.error('[maps:map-page] pois failed', err);
+        document.getElementById('poi-count').textContent = 'ошибка';
+      });
+  }
+
+  function onMoveEnd() { /* лёгкая защита от автозалива на каждый чих — грузим по кнопке */ }
+
+  document.getElementById('poi-refresh').addEventListener('click', loadPois);
+
+  // старт: даём maplibre и DOM догрузиться, потом рендерим первую порцию
+  var tries = 0;
+  function boot() {
+    if (ensureMap()) { loadPois(); return; }
+    if (++tries < 30) setTimeout(boot, 300);
+  }
+  boot();
+})();
+</script>

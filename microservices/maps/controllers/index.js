@@ -5,6 +5,12 @@
 // === === === === === === === === === === === ===
 import * as mapsService from '../service/mapsService.js'
 import * as placePhotoCache from '../service/placePhotoCache.js'
+import { renderMapHtml } from '../service/renderMapHtml.js'
+import path from 'path'
+import pkg from 'app-root-path'
+
+const appRoot = pkg.path
+const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 
 const endpoints = async (app) => {
   // POST /maps/search — поиск мест (OSM Nominatim / Google)
@@ -128,6 +134,41 @@ const endpoints = async (app) => {
     }
   })
 
+  // GET /maps/map — HTML-страница интерактивной карты гео-объектов (POI).
+  // Шаг 3: общий рендер карты (MapLibre + MapsRender) генерится напрямую
+  // через renderMapHtml (без self-RPC maps→maps, чтобы не ловить дедлок
+  // шины); страница грузит POI через /maps/pois по bbox и рисует их
+  // через MapsRender.setPoints.
+  app.get('/maps/map', async (req, res) => {
+    try {
+      const mapHtml = renderMapHtml({ containerId: 'poi-map', heightPx: 600 })
+      const renderResp = await res.app.ask('render', {
+        server: {
+          action: 'html',
+          meta: {
+            dir: templateDir,
+            page: process.env.TEMPLATE_FILE,
+            data: {
+              csrf: req.session.csrfSecret,
+              title: 'Карта гео-объектов | Maps',
+              lang: 'ru',
+              breadcrumb: 'map',
+              page: './page/map.html',
+              mapHtml: mapHtml,
+              center: [55.7558, 37.6173], // Москва (центр РФ) — стартовая точка
+              zoom: 6,
+            },
+          },
+        },
+      })
+      const { response } = renderResp
+      res.status(200).end(response.html)
+    } catch (err) {
+      console.log('⚡ err::maps:map-page', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  })
+
   // GET /maps/ — заглушка/заготовка. Позже здесь юзер будет работать с картой.
   // Пока возвращает метаданные МС и список доступных авторизованных эндпоинтов,
   // чтобы корень `/maps/` не висел (HTTP 000), а отдавал осмысленный ответ.
@@ -146,6 +187,7 @@ const endpoints = async (app) => {
         'GET /maps/place-photo/:placeId/bytes',
         'GET /maps/reverse',
         'POST /maps/resolve-url',
+        'GET /maps/map',
       ],
     })
   })
