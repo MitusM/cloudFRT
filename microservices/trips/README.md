@@ -3,6 +3,50 @@
 Микросервис поездок cloudFRT на шине micromq. Управляет поездками (Trip),
 местами (Place), гео-объектами (GeoObject) и участниками (TripMember).
 
+## Возможности
+
+### 🚗 CRUD поездок — полный жизненный цикл
+- **Создание** — любой авторизованный пользователь может создать поездку (`POST /trips/`)
+- **Чтение** — список своих + shared + публичных чужих (`GET /trips/`), карточка (`GET /trips/:id`)
+- **Редактирование** — заголовок, описание, даты, валюта, напоминания, приватность, статус (`PUT /trips/:id`)
+- **Архивирование / удаление** (`DELETE /trips/:id`)
+- **Копирование** (`POST /trips/:id/copy`)
+- **Смена владельца** (`POST /trips/:id/transfer`)
+
+### 🔐 Модель доступа (изоляция поездок)
+Поля `Trip.is_private` и `Trip.status`:
+- **Частная** (`is_private=true`, дефолт) — видят владелец и участники
+- **Публичная** (`is_private=false`) — видят все авторизованные
+- **Запись** (PUT/DELETE/transfer/members/guests) — **только владелец**
+- **Copy** — кто может читать
+- **Места** (place-add) — участники, только при `status=open`; при `closed` — 403 `trip_closed`
+
+### 👥 Участники и гости
+- **Участники** — добавить/удалить (`POST/DELETE /trips/:id/members/:userId`)
+- **Гости** — добавить/изменить/удалить (`POST/PUT/DELETE /trips/:id/guests/:userId`)
+- **Роли** в ребре `TripMember`: `member` / `guest` / `owner`
+
+### 📍 Места (POI)
+- **Добавление** через шину (`trips:place-add`) — name, lat/lng, osm_id, google_place_id, address, source, url, article_id/article_rid
+- **Дедупликация** — повторный place-add с тем же `osm_id` (или `name+lat/lng`) возвращает существующее (`duplicated:true`)
+- **Связка место ↔ статья (B+C)** — `Place -[hasObject]-> GeoObject`, ребро `TripPlace` несёт `article_id`/`article_rid`
+- **Топ объектов** (`trips:top-places`) — агрегация по графу GeoObject ← Place ← TripPlace
+
+### 🗺️ Карта поездки
+- **`GET /trips/map/:id`** — интерактивная HTML-карта (MapLibre GL 4.4.0)
+- Стиль **OpenFreeMap Liberty**, маркеры мест + popup (name/address/note/day), `fitBounds`
+
+### 📦 Экспорт и бандл
+- **Оффлайн-бандл** (`GET /trips/:id/bundle`)
+- **Экспорт в iCalendar** (`GET /trips/:id/export.ics`)
+
+### 🔄 RPC-интеграция (сервис-2-сервис по шине)
+- `trips:list-user` — поездки пользователя для другого МС (резолв юзера через `users:user:get`)
+- `trips:place-add` — добавить место «в поездку» из другой статьи/сервиса
+- `trips:top-places` — топ объектов к посещению
+
+Все эндпоинты авторизованы через `req.session.auth` (cookie `sid`, см. gateway cloudFRT).
+
 ## Структура
 
 ```
