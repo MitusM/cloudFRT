@@ -171,9 +171,10 @@ const endpoints = async (app) => {
     }
   })
 
-  //  ==== GET /trips/map/:id — HTML-страница карты поездки (MapLibre, шаг 5) ====
-  //  Рендерится через render-МС (Nunjucks) из шаблона view/html/page/map.html.
-  //  Отдаёт поездку + её места (Place через ребро TripPlace) для маркеров.
+  //  ==== GET /trips/map/:id — HTML-страница карты поездки ==================
+  //  Общий рендер карты берётся у maps:map (шаг 1 плана) — trips подставляет
+  //  СВОИ места (приватный данные) через MapsRender.renderMap. Права остаются
+  //  в trips (canRead). Шаблон рендерится через render-МС.
   app.get('/trips/map/:id', async (req, res) => {
     try {
       const trip = await loadTrip(req, res)
@@ -181,6 +182,19 @@ const endpoints = async (app) => {
       const role = await roleOf(trip, req)
       if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
       const places = await db.getTripPlaces(String(trip['@rid']))
+
+      // Общий HTML карты от maps:map (MapLibre + MapsRender.renderMap).
+      // maps НЕ получает данные поездки — только рендер.
+      let mapHtml = ''
+      try {
+        const mapsResp = await res.app.ask('maps', {
+          server: { action: 'map', meta: { containerId: 'trip-map' } },
+        })
+        mapHtml = mapsResp && mapsResp.response ? mapsResp.response.html || '' : (mapsResp && mapsResp.html) || ''
+      } catch (err) {
+        console.log('⚡ err::trips:map maps:map', err)
+      }
+
       const { response } = await res.app.ask('render', {
         server: {
           action: 'html',
@@ -195,6 +209,7 @@ const endpoints = async (app) => {
               page: './page/map.html',
               trip: trip,
               places: places,
+              mapHtml: mapHtml,
             },
           },
         },

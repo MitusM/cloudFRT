@@ -45,7 +45,7 @@ const timeout = process.env.TIMED_OUT || 5000
 // 1. Create an instance of a MicroService class
 // === === === === === === === === === === === ===
 const app = new MicroMQ({
-  microservices: ['render', 'files', 'auth', 'users', 'cache'],
+  microservices: ['render', 'files', 'auth', 'users', 'cache', 'maps'],
   name: 'trips',
   rabbit: {
     url: rabbitUrl,
