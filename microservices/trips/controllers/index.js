@@ -188,7 +188,7 @@ const endpoints = async (app) => {
       let mapHtml = ''
       try {
         const mapsResp = await res.app.ask('maps', {
-          server: { action: 'map', meta: { containerId: 'trip-map' } },
+          server: { action: 'maps:map', meta: { containerId: 'trip-map' } },
         })
         mapHtml = mapsResp && mapsResp.response ? mapsResp.response.html || '' : (mapsResp && mapsResp.html) || ''
       } catch (err) {
