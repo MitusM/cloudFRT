@@ -71,7 +71,7 @@ const action = async (app) => {
       // не создаём вторую карту в том же контейнере
       if (el._frtMap) return el._frtMap;
 
-      const center = Array.isArray(opts.center) ? opts.center : [${JSON.stringify(center)}];
+      const center = Array.isArray(opts.center) ? opts.center : ${JSON.stringify(center)};
       const zoom = typeof opts.zoom === 'number' ? opts.zoom : ${JSON.stringify(zoom)};
       const markerColor = opts.markerColor || '${markerColor}';
       const styleUrl = opts.styleUrl || '${styleUrl}';
