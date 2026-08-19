@@ -31,9 +31,15 @@
   без внешних npm-зависимостей):
   - 🧭 **Компас** — кнопка, `map.easeTo({bearing:0, pitch:0})` (вернуть на север);
   - 📏 **Линейка** — клики по карте рисуют ломаную с подписями расстояний
-    (haversine, км/м);
+    (haversine, км/м); публичный API: `map._frtRuler` =
+    `{activate, deactivate, toggle, addPoint(lnglat), reset}`
+    (для интеграций/тестов).
   - 🏷 **Тултип** — при наведении на маркер показывает имя места (popup остаётся по клику).
   Опции: `controlsPosition` (по умолчанию `'top-right'`), `hideControls` (`false`).
+
+> ⚠️ **Шрифт подписей линейки.** `text-font` symbol-слоя обязан быть из набора глифов
+> стиля (поле `glyphs`), иначе MapLibre молча не рисует текст. Для OpenFreeMap Liberty
+> это Noto Sans (Regular/Bold/Italic) — Roboto там нет, не использовать.
 
 > ⚠️ **self-RPC нельзя.** Внутри maps-контроллера нельзя звать `app.ask('maps', ...)`
 > (maps→maps) — запрос зависает (шина не обрабатывает self-вызов). Контроллер
