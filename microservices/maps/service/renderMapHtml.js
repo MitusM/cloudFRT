@@ -225,13 +225,18 @@ function renderMapHtml(opts = {}) {
         }
         if (!map.getLayer(L.labels) && coords.length) {
           map.addLayer({ id: L.labels, type: 'symbol', source: S.pts,
-            layout: { 'text-field': ['get', 'distance'], 'text-font': ['Roboto Medium'],
+            layout: { 'text-field': ['get', 'distance'], 'text-font': ['Noto Sans Regular'],
               'text-anchor': 'top', 'text-size': 12, 'text-offset': [0, 0.8] },
             paint: { 'text-color': '#263238', 'text-halo-color': '#fff', 'text-halo-width': 1 } });
         }
       }
       function update() {
-        if (!map.isStyleLoaded()) return;
+        // стиль ещё не готов — доедаем по style.load (сам запрет на блокировку
+        // будущих вызовов: подписываемся один раз, но НЕ блокируем прямые update())
+        if (!map.isStyleLoaded()) {
+          map.once('style.load', update);
+          return;
+        }
         ensureLayers();
         const ls = map.getSource(S.line); const ps = map.getSource(S.pts);
         if (ls) ls.setData(lineFC());
@@ -261,6 +266,15 @@ function renderMapHtml(opts = {}) {
       function toggle() { active.is ? deactivate() : activate(); }
       map.on('style.load', () => { if (active.is) update(); });
       map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
+      // публичный API (для интеграций/тестов): активировать + добавить точку
+      const api = {
+        activate: activate,
+        deactivate: deactivate,
+        toggle: toggle,
+        addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
+        reset: function () { coords.length = 0; update(); },
+      };
+      if (!map._frtRuler) map._frtRuler = api;
     }
 
     // добавить маркеры (без создания карты) + вернуть bounds
