@@ -198,11 +198,15 @@ function renderMapHtml(opts = {}) {
       }
       function pointsFC() {
         let sum = 0;
+        // общая длина ломаной (сумма всех сегментов)
+        let total = 0;
+        for (let i = 1; i < coords.length; i++) total += haversineKm(coords[i - 1], coords[i]);
         const features = coords.map((c, i) => {
           if (i > 0) sum += haversineKm(coords[i - 1], c);
           return {
             type: 'Feature', id: String(i),
-            properties: { distance: i === 0 ? '' : fmtKm(sum) },
+            // промежуточные — накопленное; у последней точки — общая длина всей ломаной
+            properties: { distance: i === 0 ? '' : (i === coords.length - 1 ? fmtKm(total) + ' итого' : fmtKm(sum)) },
             geometry: { type: 'Point', coordinates: c },
           };
         });
