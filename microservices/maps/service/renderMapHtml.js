@@ -190,6 +190,9 @@ function renderMapHtml(opts = {}) {
       const satStyle = {
         version: 8,
         name: 'frt-satellite',
+        // глифы — те же, что у Liberty (Noto Sans), чтобы symbol-слои
+        // (линейка, подписи поверх) могли рисовать текст на спутнике
+        glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
         sources: {
           esri: {
             type: 'raster',
@@ -208,31 +211,71 @@ function renderMapHtml(opts = {}) {
             tileSize: 256,
             maxzoom: 18,
             attribution: '© Esri'
+          },
+          // векторные подписи OpenFreeMap поверх спутника — для локализации
+          // названий (applyLanguage обрабатывает symbol-слои этого стиля)
+          omt: {
+            type: 'vector',
+            url: 'https://tiles.openfreemap.org/planet'
           }
         },
         layers: [
           { id: 'esri-rs', type: 'raster', source: 'esri' },
-          { id: 'esri-rl', type: 'raster', source: 'esriLabels' }
+          { id: 'esri-rl', type: 'raster', source: 'esriLabels' },
+          // локализуемые подписи поверх спутниковых снимков
+          { id: 'sat-label_city', type: 'symbol', source: 'omt', 'source-layer': 'place',
+            filter: ['all', ['==', ['get', 'class'], 'city'], ['!=', ['get', 'capital'], 2]], minzoom: 3,
+            layout: { 'text-anchor': 'bottom',
+              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 4, 11, 7, 13, 11, 18] },
+            paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+          { id: 'sat-label_town', type: 'symbol', source: 'omt', 'source-layer': 'place',
+            filter: ['==', ['get', 'class'], 'town'], minzoom: 6,
+            layout: { 'text-anchor': 'bottom',
+              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 12, 11, 14] },
+            paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+          { id: 'sat-label_village', type: 'symbol', source: 'omt', 'source-layer': 'place',
+            filter: ['==', ['get', 'class'], 'village'], minzoom: 9,
+            layout: { 'text-anchor': 'bottom',
+              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
+              'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 10, 11, 12] },
+            paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+          { id: 'sat-label_state', type: 'symbol', source: 'omt', 'source-layer': 'place',
+            filter: ['==', ['get', 'class'], 'state'], minzoom: 5,
+            layout: { 'text-transform': 'uppercase',
+              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-font': ['Noto Sans Italic'], 'text-letter-spacing': 0.2, 'text-max-width': 9,
+              'text-size': ['interpolate', ['linear'], ['zoom'], 5, 10, 8, 14] },
+            paint: { 'text-color': '#333', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
+          { id: 'sat-water_name_point_label', type: 'symbol', source: 'omt', 'source-layer': 'water_name',
+            filter: ['match', ['geometry-type'], ['MultiPoint', 'Point'], true, false],
+            layout: { 'symbol-placement': 'point',
+              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-font': ['Noto Sans Italic'], 'text-letter-spacing': 0.2, 'text-max-width': 5,
+              'text-size': ['interpolate', ['linear'], ['zoom'], 0, 10, 8, 14] },
+            paint: { 'text-color': '#495e91', 'text-halo-color': 'rgba(255,255,255,0.7)', 'text-halo-width': 1.5 } }
         ]
       };
-      const mk = (label) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.textContent = label;
-        b.style.fontSize = '12px';
-        b.style.padding = '4px 8px';
-        b.style.fontWeight = '600';
-        return b;
-      };
-      const stdBtn = mk('Стандартная');
-      const satBtn = mk('Спутниковая');
+      const stdBtn = btn('Стандартная карта (OpenFreeMap Liberty)',
+        '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+        '<path fill="none" d="M0 0h24v24H0z"/><path d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>',
+        () => applyStd());
+      const satBtn = btn('Спутниковая карта (Esri World Imagery)',
+        '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+        '<path fill="none" d="M0 0h24v24H0z"/><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM5 4.99h3C8 6.65 6.65 8 5 8V4.99zM5 12v-2c2.76 0 5-2.25 5-5.01h2C12 8.86 8.87 12 5 12zm0 6l3.5-4.5 2.5 3.01L14.5 12l4.5 6H5z"/></svg>',
+        () => applySat());
+      function applyStd() { buttons.forEach((x) => x.btn.classList.remove('-active')); stdBtn.classList.add('-active'); map.setStyle(libUrl); }
+      function applySat() { buttons.forEach((x) => x.btn.classList.remove('-active')); satBtn.classList.add('-active'); map.setStyle(satStyle); }
       const buttons = [
-        { btn: stdBtn, apply: () => map.setStyle(libUrl) },
-        { btn: satBtn, apply: () => map.setStyle(satStyle) }
+        { btn: stdBtn },
+        { btn: satBtn }
       ];
-      buttons.forEach(({ btn: b, apply }) =>
-        b.addEventListener('click', () => { buttons.forEach((x) => x.btn.classList.remove('-active')); b.classList.add('-active'); apply(); })
-      );
+      stdBtn.addEventListener('click', applyStd);
+      satBtn.addEventListener('click', applySat);
       function syncActive() {
         let n = '';
         try { n = (map.getStyle() && (map.getStyle().name || '')) || ''; } catch (e) {}
@@ -298,7 +341,8 @@ function renderMapHtml(opts = {}) {
           map.addLayer({ id: L.labels, type: 'symbol', source: S.pts,
             layout: { 'text-field': ['get', 'distance'], 'text-font': ['Noto Sans Regular'],
               'text-anchor': 'top', 'text-size': 12, 'text-offset': [0, 0.8] },
-            paint: { 'text-color': '#263238', 'text-halo-color': '#fff', 'text-halo-width': 1 } });
+            paint: { 'text-color': '#1f2937', 'text-halo-color': '#ffffff',
+              'text-halo-width': 3, 'text-halo-blur': 0.5 } });
         }
       }
       function update() {
@@ -432,13 +476,21 @@ function renderMapHtml(opts = {}) {
         map._frtLangApplied = true;
         applyLanguage(map);
       };
+      // при ИЗМЕНЕНИИ стиля (setStyle: стандартная→спутник и обратно) сбрасываем
+      // флаг, чтобы applyLanguage заново обработала symbol-слои нового стиля.
+      const resetLang = () => { map._frtLangApplied = false; };
       if (map.isStyleLoaded && map.isStyleLoaded()) applyOnce();
-      map.on('style.load', applyOnce);
+      map.on('style.load', () => { resetLang(); applyOnce(); });
       map.on('styledata', () => {
-        // при перезагрузке стиля (swapStyle) применяем заново, но не спамим
+        // при перезагрузке стиля (swapStyle) применяем заново, но не спам.
+        // styledata срабатывает и когда стиль уже локализован — флаг защищает.
         if (map._frtStyleReloading) return;
         map._frtStyleReloading = true;
-        setTimeout(() => { map._frtStyleReloading = false; applyOnce(); }, 100);
+        setTimeout(() => {
+          map._frtStyleReloading = false;
+          resetLang();
+          applyOnce();
+        }, 100);
       });
       return map;
     };
