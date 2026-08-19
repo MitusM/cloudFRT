@@ -119,11 +119,27 @@
 
   document.getElementById('poi-refresh').addEventListener('click', loadPois);
 
-  // старт: даём maplibre и DOM догрузиться, потом рендерим первую порцию
+  // старт: даём maplibre и DOM догрузиться, потом ставим стартовую метку
+  // на Горно-Алтайск. POI по области грузятся ТОЛЬКО по кнопке «Показать
+  // на карте» (вариант Б): спокойно видно, как работает карта.
   var tries = 0;
   function boot() {
-    if (ensureMap()) { loadPois(); return; }
+    if (ensureMap()) { placeStartMarker(); return; }
     if (++tries < 30) setTimeout(boot, 300);
+  }
+
+  // стартовая метка: Горно-Алтайск (центр открытой области)
+  function placeStartMarker() {
+    var m = ensureMap();
+    if (!m) return;
+    var city = [{
+      name: 'Горно-Алтайск',
+      lat: 51.9299,
+      lng: 85.9789,
+      note: 'Горный Алтай'
+    }];
+    var n = window.MapsRender.setPoints(m, city, { markerColor: '#e11d48' });
+    document.getElementById('poi-count').textContent = n || 0;
   }
   boot();
 })();
