@@ -26,7 +26,8 @@
 //              heightPx?=480, styleUrl?=<Liberty>, containerId?=<auto>,
 //              language?='auto' (язык подписей карты),
 //              fitBoundsPadding?=48, fitBoundsMaxZoom?=14,
-//              controlsPosition?='top-right', hideControls?=false }
+//              controlsPosition?='top-right', hideControls?=false,
+//              styles?=true (переключатель Стандартная/Спутниковая в тулбаре) }
 //
 // Тулбар-контролы (addControl): 🧭 компас (bearing→0), 📏 линейка (клики →
 // ломаная с подписями расстояний), 🏷 тултип при наведении на маркер (имя места).
@@ -180,6 +181,72 @@ function renderMapHtml(opts = {}) {
       update();
       map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
     }
+
+    // 📏 ruler — кликами ставит точки; рисует ломаную + подписи расстояний
+    // 🛰 выбрать вид карты: Стандартная (OpenFreeMap Liberty) / Спутниковая
+    // (Esri World Imagery + подписи поверх). Без внешних API-ключей.
+    function makeStyles(map, position, opts) {
+      const libUrl = opts.styleUrl || 'https://tiles.openfreemap.org/styles/liberty';
+      const satStyle = {
+        version: 8,
+        name: 'frt-satellite',
+        sources: {
+          esri: {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            maxzoom: 19,
+            attribution: '© Esri, Maxar, Earthstar Geographics'
+          },
+          esriLabels: {
+            type: 'raster',
+            tiles: [
+              'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+            ],
+            tileSize: 256,
+            maxzoom: 18,
+            attribution: '© Esri'
+          }
+        },
+        layers: [
+          { id: 'esri-rs', type: 'raster', source: 'esri' },
+          { id: 'esri-rl', type: 'raster', source: 'esriLabels' }
+        ]
+      };
+      const mk = (label) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.style.fontSize = '12px';
+        b.style.padding = '4px 8px';
+        b.style.fontWeight = '600';
+        return b;
+      };
+      const stdBtn = mk('Стандартная');
+      const satBtn = mk('Спутниковая');
+      const buttons = [
+        { btn: stdBtn, apply: () => map.setStyle(libUrl) },
+        { btn: satBtn, apply: () => map.setStyle(satStyle) }
+      ];
+      buttons.forEach(({ btn: b, apply }) =>
+        b.addEventListener('click', () => { buttons.forEach((x) => x.btn.classList.remove('-active')); b.classList.add('-active'); apply(); })
+      );
+      function syncActive() {
+        let n = '';
+        try { n = (map.getStyle() && (map.getStyle().name || '')) || ''; } catch (e) {}
+        const sat = n === 'frt-satellite';
+        stdBtn.classList.toggle('-active', !sat);
+        satBtn.classList.toggle('-active', sat);
+      }
+      map.on('styledata', syncActive);
+      map.on('style.load', syncActive);
+      syncActive();
+      map.addControl({ onAdd: () => ctrlGroup(buttons.map((x) => x.btn)), onRemove: () => {} }, position);
+    }
+
+    // добавить маркеры (без создания карты) + вернуть bounds
 
     // 📏 ruler — кликами ставит точки; рисует ломаную + подписи расстояний
     function makeRuler(map, position) {
@@ -355,6 +422,8 @@ function renderMapHtml(opts = {}) {
       if (!opt.hideControls) {
         makeCompass(map, ctrlPosition);
         makeRuler(map, ctrlPosition);
+        // выбор вида карты — Стандартная/Спутниковая (опция styles, по умолч. вкл.)
+        if (opt.styles !== false) makeStyles(map, ctrlPosition, opt);
       }
       // локализация подписей — применяем, когда стиль загружен, и переживаем
       // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.

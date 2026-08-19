@@ -37,7 +37,12 @@
     `{activate, deactivate, toggle, addPoint(lnglat), reset}`
     (для интеграций/тестов).
   - 🏷 **Тултип** — при наведении на маркер показывает имя места (popup остаётся по клику).
-  Опции: `controlsPosition` (по умолчанию `'top-right'`), `hideControls` (`false`).
+  - 🛰 **Виды карты** — переключатель «Стандартная / Спутниковая»: стандартная —
+    OpenFreeMap Liberty (с локализацией подписей); спутниковая — Esri World Imagery
+    (растровые снимки + подписи поверх), без внешних API-ключей. Активная кнопка
+    подсвечена, переживает перезагрузку стиля. Опция `styles: false` — скрыть.
+  Опции: `controlsPosition` (по умолчанию `'top-right'`), `hideControls` (`false`),
+  `styles` (default `true`).
 
 > ⚠️ **Шрифт подписей линейки.** `text-font` symbol-слоя обязан быть из набора глифов
 > стиля (поле `glyphs`), иначе MapLibre молча не рисует текст. Для OpenFreeMap Liberty
