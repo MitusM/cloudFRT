@@ -9,6 +9,12 @@
 // Принцип: карта общая, данные разные. maps не знает о данных вызывающего —
 // тот подставляет свои точки через MapsRender.renderMap/setPoints.
 //
+// Язык подписей: подключён плагин @teritorio/openmaptiles-gl-language (UMD)
+// — нативная локализация OpenMapTiles (поля name:ru, name:en, …). Стиль Liberty
+// у нас как раз на OpenMapTiles-схеме, так что смена языка работает из коробки.
+// Вызывающий задаёт язык через opts.language: 'auto' (по умолчанию — язык
+// браузера посетителя), либо 'ru'|'en'|'de'|'fr'|… (см. supportedLanguages плагина).
+//
 // Контракт window.MapsRender (определяется в возвращаемом HTML):
 //   createMap(container, opts?)           — создать карту (или вернуть существующую)
 //   renderMap(container, points, opts?)   — создать + залить точки + fitBounds (старый контракт)
@@ -19,6 +25,7 @@
 //   points:  [{ name?, address?, note?, day?, lat, lng }]  (lat/lng обязательны)
 //   opts:    { markerColor?='#e11d48', center?=[37.62,55.75], zoom?=5,
 //              heightPx?=480, styleUrl?=<Liberty>, containerId?=<auto>,
+//              language?='auto' (язык подписей карты),
 //              fitBoundsPadding?=48, fitBoundsMaxZoom?=14 }
 // === === === === === === === === === === === ===
 
@@ -28,6 +35,8 @@ function renderMapHtml(opts = {}) {
   const zoom = typeof opts.zoom === 'number' ? opts.zoom : 5
   const heightPx = typeof opts.heightPx === 'number' ? opts.heightPx : 480
   const styleUrl = opts.styleUrl || 'https://tiles.openfreemap.org/styles/liberty'
+  // язык подписей карты: 'auto' (по умолч.) → язык браузера; иначе iso-код плагина
+  const language = opts.language || 'auto'
 
   // авто-id контейнера: уникален на странице; вызывающий задаёт свой через opts.containerId.
   const containerId =
@@ -39,6 +48,7 @@ function renderMapHtml(opts = {}) {
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@teritorio/openmaptiles-gl-language@1.5.4/dist/openmaptiles_gl_language.umd.production.min.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -70,6 +80,35 @@ function renderMapHtml(opts = {}) {
       return (points || []).filter(
         (p) => p && p.lat != null && p.lng != null && !isNaN(+p.lat) && !isNaN(+p.lng)
       );
+    }
+
+    // язык подписей: 'auto' → браузер посетителя (решает сам плагин), иначе iso-код
+    const LANGUAGE = ${JSON.stringify(language)};
+    const LANG_CTRL = { applied: false };
+
+    // применить язык подписей (подписывается на styledata, чтобы переживать
+    // перезагрузку стиля). При 'auto' плагин сам берёт navigator.language:
+    // передаём defaultLanguage только когда язык задан явно.
+    function applyLanguage(map) {
+      try {
+        const NS = window.openmaptiles_gl_language || window.OpenMapTilesLanguage;
+        if (!NS || !NS.OpenMapTilesLanguage) {
+          console.warn('[maps:map] открымаптайлс-language не загрузился — подписи без локали');
+          return;
+        }
+        if (LANG_CTRL.applied) return;
+        const ctl = new NS.OpenMapTilesLanguage({
+          defaultLanguage: LANGUAGE === 'auto' ? undefined : LANGUAGE,
+        });
+        map.addControl(ctl);
+        // принудительно применяем, если styledata уже прошёл (иначе ждём _initialUpdate)
+        if (map.isStyleLoaded && map.isStyleLoaded()) {
+          try { ctl.setLanguage(LANGUAGE === 'auto' ? ctl.browserLanguage(ctl.supportedLanguages) : LANGUAGE); } catch (e) { /* уже применил _initialUpdate */ }
+        }
+        LANG_CTRL.applied = true;
+      } catch (err) {
+        console.error('[maps:map] ошибка применения языка карты:', err);
+      }
     }
 
     // добавить маркеры (без создания карты) + вернуть bounds
@@ -120,6 +159,8 @@ function renderMapHtml(opts = {}) {
         zoom: opt.zoom,
       });
       el._frtMap = map;
+      // локализация подписей (если язык != null и плагин доступен)
+      applyLanguage(map);
       return map;
     };
 

@@ -21,6 +21,11 @@
   `[37.62, 55.75]`), `zoom` (5), `markerColor` (`#e11d48`), `styleUrl`, `fitBoundsPadding` (48),
   `fitBoundsMaxZoom` (14). Точки: `lat`/`lng` обязательны, поддерживают
   `name` / `address` / `note` / `day`.
+- **Локализация подписей**: подключён плагин `@teritorio/openmaptiles-gl-language`
+  (UMD/CDN unpkg) — нативная смена языка OpenMapTiles (поля `name:ru`, `name:en`, …).
+  Опция `language`: `'auto'` (по умолчанию — язык браузера посетителя) или явный
+  iso-код (`ru`, `en`, `de`, `fr`, …). Пробрасывается в RPC `maps:map` и `GET /maps/map`
+  через `meta`/query.
 
 > ⚠️ **self-RPC нельзя.** Внутри maps-контроллера нельзя звать `app.ask('maps', ...)`
 > (maps→maps) — запрос зависает (шина не обрабатывает self-вызов). Контроллер
