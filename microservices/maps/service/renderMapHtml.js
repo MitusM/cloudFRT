@@ -25,7 +25,13 @@
 //   opts:    { markerColor?='#e11d48', center?=[37.62,55.75], zoom?=5,
 //              heightPx?=480, styleUrl?=<Liberty>, containerId?=<auto>,
 //              language?='auto' (язык подписей карты),
-//              fitBoundsPadding?=48, fitBoundsMaxZoom?=14 }
+//              fitBoundsPadding?=48, fitBoundsMaxZoom?=14,
+//              controlsPosition?='top-right', hideControls?=false }
+//
+// Тулбар-контролы (addControl): 🧭 компас (bearing→0), 📏 линейка (клики →
+// ломаная с подписями расстояний), 🏷 тултип при наведении на маркер (имя места).
+// Self-contained (по мотивам @mapbox-controls/*, совместимы с MapLibre GL),
+// без внешних npm-зависимостей.
 // === === === === === === === === === === === ===
 
 function renderMapHtml(opts = {}) {
@@ -120,6 +126,143 @@ function renderMapHtml(opts = {}) {
       }
     }
 
+    // ── Вспомогательные контролы (compass/ruler) — self-contained, без внешних ──
+    // зависимостей (adhoc по мотивам @mapbox-controls/*, совместимы с MapLibre).
+    // Классы формы maplibregl-ctrl-* — под CSS MapLibre.
+
+    // расстояние по сфере (haversine) в км между [lng,lat] точками
+    function haversineKm(a, b) {
+      const R = 6371;
+      const toRad = (d) => (d * Math.PI) / 180;
+      const dLat = toRad(b[1] - a[1]);
+      const dLng = toRad(b[0] - a[0]);
+      const lat1 = toRad(a[1]);
+      const lat2 = toRad(b[1]);
+      const h = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    function fmtKm(km) {
+      return km < 1 ? (km * 1000).toFixed(0) + ' м' : km.toFixed(2) + ' км';
+    }
+    function el(cls) {
+      const e = document.createElement('div');
+      e.className = cls;
+      return e;
+    }
+    function btn(title, svg, onClick) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.title = title;
+      b.innerHTML = svg;
+      b.addEventListener('click', onClick);
+      return b;
+    }
+    function ctrlGroup(children) {
+      const g = el('maplibregl-ctrl maplibregl-ctrl-group');
+      children.forEach((c) => g.appendChild(c));
+      return g;
+    }
+
+    // 🧭 compass — вернуть на север (bearing/pitch = 0)
+    function makeCompass(map, position) {
+      const btnEl = btn(
+        'Компас',
+        '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg">' +
+          '<path fill="none" d="M0 0h24v24H0z"/><path fill="#e11d48" d="M12 3l4 8H8z"/>' +
+          '<path fill="#9E9E9E" d="M12 21l-4-8h8z"/></svg>',
+        () => map.easeTo({ bearing: 0, pitch: 0 })
+      );
+      const update = () => {
+        btnEl.style.transform = 'rotate(' + (-map.getBearing()) + 'deg)';
+      };
+      map.on('rotate', update);
+      update();
+      map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
+    }
+
+    // 📏 ruler — кликами ставит точки; рисует ломаную + подписи расстояний
+    function makeRuler(map, position) {
+      const active = { is: false };
+      const coords = []; // [[lng,lat], …]
+      const L = { line: 'frt-ruler-line', pts: 'frt-ruler-points', labels: 'frt-ruler-labels' };
+      const S = { line: 'frt-ruler-line-src', pts: 'frt-ruler-points-src' };
+      const btnEl = btn(
+        'Линейка',
+        '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor">' +
+          '<rect fill="none" height="24" width="24"/><path d="M20,6H4C2.9,6,2,6.9,2,8v8c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2V8C22,6.9,21.1,6,20,6z M20,16H4V8h3v3c0,0.55,0.45,1,1,1h0 c0.55,0,1-0.45,1-1V8h2v3c0,0.55,0.45,1,1,1h0c0.55,0,1-0.45,1-1V8h2v3c0,0.55,0.45,1,1,1h0c0.55,0,1-0.45,1-1V8h3V16z"/></svg>',
+        () => toggle()
+      );
+      function lineFC() {
+        return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
+      }
+      function pointsFC() {
+        let sum = 0;
+        const features = coords.map((c, i) => {
+          if (i > 0) sum += haversineKm(coords[i - 1], c);
+          return {
+            type: 'Feature', id: String(i),
+            properties: { distance: i === 0 ? '' : fmtKm(sum) },
+            geometry: { type: 'Point', coordinates: c },
+          };
+        });
+        return { type: 'FeatureCollection', features };
+      }
+      function ensureSources() {
+        if (!map.getSource(S.line)) map.addSource(S.line, { type: 'geojson', data: lineFC() });
+        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
+      }
+      function ensureLayers() {
+        ensureSources();
+        if (!map.getLayer(L.line)) {
+          map.addLayer({ id: L.line, type: 'line', source: S.line,
+            paint: { 'line-color': '#263238', 'line-width': 2 } });
+        }
+        if (!map.getLayer(L.pts) && coords.length) {
+          map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
+            paint: { 'circle-radius': 5, 'circle-color': '#fff',
+              'circle-stroke-width': 2, 'circle-stroke-color': '#000' } });
+        }
+        if (!map.getLayer(L.labels) && coords.length) {
+          map.addLayer({ id: L.labels, type: 'symbol', source: S.pts,
+            layout: { 'text-field': ['get', 'distance'], 'text-font': ['Roboto Medium'],
+              'text-anchor': 'top', 'text-size': 12, 'text-offset': [0, 0.8] },
+            paint: { 'text-color': '#263238', 'text-halo-color': '#fff', 'text-halo-width': 1 } });
+        }
+      }
+      function update() {
+        if (!map.isStyleLoaded()) return;
+        ensureLayers();
+        const ls = map.getSource(S.line); const ps = map.getSource(S.pts);
+        if (ls) ls.setData(lineFC());
+        if (ps) ps.setData(pointsFC());
+      }
+      function mapClick(e) {
+        coords.push([e.lngLat.lng, e.lngLat.lat]);
+        update();
+      }
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        coords.length = 0;
+        map.on('click', mapClick);
+        update();
+        btnEl.classList.add('-active');
+      }
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        map.off('click', mapClick);
+        ['line', 'pts', 'labels'].forEach((k) => { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
+        [S.line, S.pts].forEach((k) => { if (map.getSource(k)) map.removeSource(k); });
+        coords.length = 0;
+        btnEl.classList.remove('-active');
+      }
+      function toggle() { active.is ? deactivate() : activate(); }
+      map.on('style.load', () => { if (active.is) update(); });
+      map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
+    }
+
     // добавить маркеры (без создания карты) + вернуть bounds
     function addMarkers(map, pts, opt) {
       if (!map._frtMarkers) map._frtMarkers = [];
@@ -147,6 +290,26 @@ function renderMapHtml(opts = {}) {
           )
           .addTo(map);
         map._frtMarkers.push(mk);
+        // 🏷 тултип при наведении на маркер (имя места) — без конфликта с popup (клик)
+        if (!map._frtTip) { map._frtTip = (function () {
+          const node = document.createElement('div');
+          node.style.cssText = 'position:absolute;pointer-events:none;background:rgba(30,30,30,.92);' +
+            'color:#fff;padding:4px 8px;border-radius:6px;font:12px/1.4 sans-serif;white-space:nowrap;' +
+            'transform:translate(-50%,-120%);z-index:2;opacity:0;transition:opacity .12s;';
+          map.getContainer().appendChild(node);
+          return node;
+        })(); }
+        pin.addEventListener('mouseenter', function () {
+          if (!map._frtTip) return;
+          map._frtTip.textContent = p.name || 'Место';
+          const pos = map.project([lng, lat]);
+          map._frtTip.style.left = pos.x + 'px';
+          map._frtTip.style.top = pos.y + 'px';
+          map._frtTip.style.opacity = '1';
+        });
+        pin.addEventListener('mouseleave', function () {
+          if (map._frtTip) map._frtTip.style.opacity = '0';
+        });
         bounds.extend([lng, lat]);
       }
       return bounds;
@@ -168,6 +331,13 @@ function renderMapHtml(opts = {}) {
         zoom: opt.zoom,
       });
       el._frtMap = map;
+      // Тулбар-контролы (компас + линейка) — добавляем после инициализации.
+      // Позиция настраивается opts.controlsPosition (по умолчанию top-right).
+      const ctrlPosition = opt.controlsPosition || 'top-right';
+      if (!opt.hideControls) {
+        makeCompass(map, ctrlPosition);
+        makeRuler(map, ctrlPosition);
+      }
       // локализация подписей — применяем, когда стиль загружен, и переживаем
       // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.
       const applyOnce = () => {
