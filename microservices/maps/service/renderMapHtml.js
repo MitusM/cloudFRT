@@ -9,11 +9,11 @@
 // Принцип: карта общая, данные разные. maps не знает о данных вызывающего —
 // тот подставляет свои точки через MapsRender.renderMap/setPoints.
 //
-// Язык подписей: подключён плагин @teritorio/openmaptiles-gl-language (UMD)
-// — нативная локализация OpenMapTiles (поля name:ru, name:en, …). Стиль Liberty
-// у нас как раз на OpenMapTiles-схеме, так что смена языка работает из коробки.
-// Вызывающий задаёт язык через opts.language: 'auto' (по умолчанию — язык
-// браузера посетителя), либо 'ru'|'en'|'de'|'fr'|… (см. supportedLanguages плагина).
+// Язык подписей: собственная функция локализации (не внешний плагин).
+// Для нелатинских языков (ru/uk/…) сохраняем прежнюю двуязычную пару
+// "latin + nonlatin" из стиля Liberty, для латинских (en/de/fr/…) — одно
+// название на этом языке. Вызывающий задаёт opts.language: 'auto' (по умолчанию
+// — язык браузера посетителя) или iso-код 'ru'|'en'|'de'|'fr'|….
 //
 // Контракт window.MapsRender (определяется в возвращаемом HTML):
 //   createMap(container, opts?)           — создать карту (или вернуть существующую)
@@ -48,7 +48,6 @@ function renderMapHtml(opts = {}) {
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
-<script src="https://unpkg.com/@teritorio/openmaptiles-gl-language@1.5.4/dist/openmaptiles_gl_language.umd.production.min.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -82,32 +81,58 @@ function renderMapHtml(opts = {}) {
       );
     }
 
-    // язык подписей: 'auto' → браузер посетителя (решает сам плагин), иначе iso-код
+    // язык подписей: 'auto' → браузер посетителя, иначе iso-код (ru/en/de/fr/…)
     const LANGUAGE = ${JSON.stringify(language)};
-    const LANG_CTRL = { applied: false };
 
-    // применить язык подписей (подписывается на styledata, чтобы переживать
-    // перезагрузку стиля). При 'auto' плагин сам берёт navigator.language:
-    // передаём defaultLanguage только когда язык задан явно.
+    // Коды нелатинских языков — для них оставляем прежнюю двуязычную пару
+    // "latin + nonlatin" (рус. подпись, а под ней латиница), как в исходном
+    // стиле Liberty. Для латинских языков (en/de/fr/es/…) — единственное
+    // название на этом языке. При 'auto' ориентируемся на navigator.language.
+    const NONLATIN = ['ru','uk','be','bg','sr','mk','kk','ky','tg','uz','hy','ka','ar','fa','he','zh','ja','ko','th','vi','el','hi','bn','ta','te','ml','mr','gu','pa','ne','si','km','lo','my','am','ti'];
+
+    function browserLang() {
+      const raw = (navigator.language || navigator.userLanguage || 'en') + '';
+      const code = raw.split('-')[0].toLowerCase();
+      return code;
+    }
+
+    // поле названия под язык: нелатинский → name:ru/name:uk…, латинский → name:en/…
+    function langField(lang) { return 'name:' + (lang || 'en'); }
+
+    // собрать text-field для слоя: сохраняем пару latin+nonlatin для нелатинских
+    // языков (как в исходном Liberty), иначе — coalesce на языке.
+    function buildTextField(lang) {
+      const f = langField(lang);
+      if (NONLATIN.includes(lang)) {
+        // двуязычно: если есть кириллица/не-латиница → "latin + nonlatin";
+        // иначе → локализованное имя (или дефолт name)
+        return [
+          'case',
+          ['has', 'name:nonlatin'],
+          ['concat', ['get', 'name:latin'], ' ', ['get', 'name:nonlatin']],
+          ['coalesce', ['get', f], ['get', 'name']]
+        ];
+      }
+      // латинский язык: одно название без дублей
+      return ['coalesce', ['get', f], ['get', 'name']];
+    }
+
+    // применить язык ко всем symbol-слоям карты (без перезагрузки стиля)
     function applyLanguage(map) {
       try {
-        const NS = window.openmaptiles_gl_language || window.OpenMapTilesLanguage;
-        if (!NS || !NS.OpenMapTilesLanguage) {
-          console.warn('[maps:map] открымаптайлс-language не загрузился — подписи без локали');
-          return;
-        }
-        if (LANG_CTRL.applied) return;
-        const ctl = new NS.OpenMapTilesLanguage({
-          defaultLanguage: LANGUAGE === 'auto' ? undefined : LANGUAGE,
+        const lang = LANGUAGE === 'auto' ? browserLang() : LANGUAGE;
+        const style = map.getStyle && map.getStyle();
+        const layers = style && style.layers;
+        if (!layers) return;
+        let n = 0;
+        layers.forEach((l) => {
+          if (l.type !== 'symbol' || !l.layout || !l.layout['text-field']) return;
+          map.setLayoutProperty(l.id, 'text-field', buildTextField(lang));
+          n++;
         });
-        map.addControl(ctl);
-        // принудительно применяем, если styledata уже прошёл (иначе ждём _initialUpdate)
-        if (map.isStyleLoaded && map.isStyleLoaded()) {
-          try { ctl.setLanguage(LANGUAGE === 'auto' ? ctl.browserLanguage(ctl.supportedLanguages) : LANGUAGE); } catch (e) { /* уже применил _initialUpdate */ }
-        }
-        LANG_CTRL.applied = true;
+        if (n > 0) console.log('[maps:map] язык подписей →', lang, '(' + n + ' слоёв)');
       } catch (err) {
-        console.error('[maps:map] ошибка применения языка карты:', err);
+        console.error('[maps:map] ошибка применения языка:', err);
       }
     }
 
@@ -159,8 +184,21 @@ function renderMapHtml(opts = {}) {
         zoom: opt.zoom,
       });
       el._frtMap = map;
-      // локализация подписей (если язык != null и плагин доступен)
-      applyLanguage(map);
+      // локализация подписей — применяем, когда стиль загружен, и переживаем
+      // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.
+      const applyOnce = () => {
+        if (map._frtLangApplied) return;
+        map._frtLangApplied = true;
+        applyLanguage(map);
+      };
+      if (map.isStyleLoaded && map.isStyleLoaded()) applyOnce();
+      map.on('style.load', applyOnce);
+      map.on('styledata', () => {
+        // при перезагрузке стиля (swapStyle) применяем заново, но не спамим
+        if (map._frtStyleReloading) return;
+        map._frtStyleReloading = true;
+        setTimeout(() => { map._frtStyleReloading = false; applyOnce(); }, 100);
+      });
       return map;
     };
 
