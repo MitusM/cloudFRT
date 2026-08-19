@@ -19,7 +19,7 @@ const action = async (app) => {
    * meta (все необязательные):
    *   { center?: [lng, lat], zoom?: number, markerColor?: string,
    *     heightPx?: number, styleUrl?: string, containerId?: string,
-   *     language?: 'auto'|'ru'|'en'|'de'|'fr'|… (подписи карты, по умолч. 'auto' = язык браузера) }
+   *     language?: 'ru'(дефолт)|'auto'|'en'|'de'|'fr'|… (подписи карты) }
    *
    * Ответ: res.json({ html }) — см. renderMapHtml.js за контрактом MapsRender.
    */

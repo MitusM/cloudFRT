@@ -10,10 +10,9 @@
 // тот подставляет свои точки через MapsRender.renderMap/setPoints.
 //
 // Язык подписей: собственная функция локализации (не внешний плагин).
-// Для нелатинских языков (ru/uk/…) сохраняем прежнюю двуязычную пару
-// "latin + nonlatin" из стиля Liberty, для латинских (en/de/fr/…) — одно
-// название на этом языке. Вызывающий задаёт opts.language: 'auto' (по умолчанию
-// — язык браузера посетителя) или iso-код 'ru'|'en'|'de'|'fr'|….
+// Каждый symbol-слой получает text-field на ОДНОМ заданном языке: name:ru / name:en / …
+// (никаких пар «latin + nonlatin» → «EN+RU»). По умолчанию язык — 'ru' (работаем
+// с Россией). Можно изменить: opts.language = 'auto' (язык браузера) | 'en'|'de'|'fr'|….
 //
 // Контракт window.MapsRender (определяется в возвращаемом HTML):
 //   createMap(container, opts?)           — создать карту (или вернуть существующую)
@@ -35,8 +34,9 @@ function renderMapHtml(opts = {}) {
   const zoom = typeof opts.zoom === 'number' ? opts.zoom : 5
   const heightPx = typeof opts.heightPx === 'number' ? opts.heightPx : 480
   const styleUrl = opts.styleUrl || 'https://tiles.openfreemap.org/styles/liberty'
-  // язык подписей карты: 'auto' (по умолч.) → язык браузера; иначе iso-код плагина
-  const language = opts.language || 'auto'
+  // язык подписей карты: default 'ru' (работаем с Россией — один русский, без EN+RU).
+  // Можно 'auto' (язык браузера) или явный iso-код: 'en'|'de'|'fr'|….
+  const language = opts.language || 'ru'
 
   // авто-id контейнера: уникален на странице; вызывающий задаёт свой через opts.containerId.
   const containerId =
@@ -81,40 +81,24 @@ function renderMapHtml(opts = {}) {
       );
     }
 
-    // язык подписей: 'auto' → браузер посетителя, иначе iso-код (ru/en/de/fr/…)
+    // язык подписей: 'auto' → браузер посетителя, иначе iso-код
     const LANGUAGE = ${JSON.stringify(language)};
 
-    // Коды нелатинских языков — для них оставляем прежнюю двуязычную пару
-    // "latin + nonlatin" (рус. подпись, а под ней латиница), как в исходном
-    // стиле Liberty. Для латинских языков (en/de/fr/es/…) — единственное
-    // название на этом языке. При 'auto' ориентируемся на navigator.language.
-    const NONLATIN = ['ru','uk','be','bg','sr','mk','kk','ky','tg','uz','hy','ka','ar','fa','he','zh','ja','ko','th','vi','el','hi','bn','ta','te','ml','mr','gu','pa','ne','si','km','lo','my','am','ti'];
-
+    // код языка браузера (для режима 'auto')
     function browserLang() {
       const raw = (navigator.language || navigator.userLanguage || 'en') + '';
-      const code = raw.split('-')[0].toLowerCase();
-      return code;
+      return raw.split('-')[0].toLowerCase();
     }
 
-    // поле названия под язык: нелатинский → name:ru/name:uk…, латинский → name:en/…
+    // поле названия под язык: name:ru / name:en / …
     function langField(lang) { return 'name:' + (lang || 'en'); }
 
     // собрать text-field для слоя: сохраняем пару latin+nonlatin для нелатинских
     // языков (как в исходном Liberty), иначе — coalesce на языке.
     function buildTextField(lang) {
-      const f = langField(lang);
-      if (NONLATIN.includes(lang)) {
-        // двуязычно: если есть кириллица/не-латиница → "latin + nonlatin";
-        // иначе → локализованное имя (или дефолт name)
-        return [
-          'case',
-          ['has', 'name:nonlatin'],
-          ['concat', ['get', 'name:latin'], ' ', ['get', 'name:nonlatin']],
-          ['coalesce', ['get', f], ['get', 'name']]
-        ];
-      }
-      // латинский язык: одно название без дублей
-      return ['coalesce', ['get', f], ['get', 'name']];
+      // всегда ОДНО название на выбранном языке (name:ru / name:en / …),
+      // без пары latin+nonlatin (никаких «EN + RU»). Фолбэк — name.
+      return ['coalesce', ['get', langField(lang)], ['get', 'name']];
     }
 
     // применить язык ко всем symbol-слоям карты (без перезагрузки стиля)
