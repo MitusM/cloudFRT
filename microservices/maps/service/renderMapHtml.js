@@ -147,7 +147,9 @@ function renderMapHtml(opts = {}) {
       return 2 * R * Math.asin(Math.sqrt(h));
     }
     function fmtKm(km) {
-      return km < 1 ? (km * 1000).toFixed(0) + ' м' : km.toFixed(2) + ' км';
+      // неразрывный пробел (\u00A0) между числом и единицей — MapLibre иначе
+    // схлопывает обычный пробел, и подпись сливается (напр. «митого»)
+    return km < 1 ? (km * 1000).toFixed(0) + '\u00A0м' : km.toFixed(2) + '\u00A0км';
     }
     function el(cls) {
       const e = document.createElement('div');
@@ -319,7 +321,7 @@ function renderMapHtml(opts = {}) {
           return {
             type: 'Feature', id: String(i),
             // промежуточные — накопленное; у последней точки — общая длина всей ломаной
-            properties: { distance: i === 0 ? '' : (i === coords.length - 1 ? fmtKm(total) + ' итого' : fmtKm(sum)) },
+            properties: { distance: i === 0 ? '' : (i === coords.length - 1 ? fmtKm(total) + '\u00A0итого' : fmtKm(sum)) },
             geometry: { type: 'Point', coordinates: c },
           };
         });
