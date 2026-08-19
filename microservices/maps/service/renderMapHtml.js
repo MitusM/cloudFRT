@@ -117,7 +117,10 @@ function renderMapHtml(opts = {}) {
         if (!layers) return;
         let n = 0;
         layers.forEach((l) => {
+          // служебные слои (линейка frt-ruler-*, маркеры) не локализуем —
+          // у них text-field = ['get','distance'], его нельзя затирать name:ru
           if (l.type !== 'symbol' || !l.layout || !l.layout['text-field']) return;
+          if ((l.id || '').indexOf('frt-') === 0) return;
           map.setLayoutProperty(l.id, 'text-field', buildTextField(lang));
           n++;
         });
@@ -226,35 +229,35 @@ function renderMapHtml(opts = {}) {
           { id: 'sat-label_city', type: 'symbol', source: 'omt', 'source-layer': 'place',
             filter: ['all', ['==', ['get', 'class'], 'city'], ['!=', ['get', 'capital'], 2]], minzoom: 3,
             layout: { 'text-anchor': 'bottom',
-              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
               'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
               'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 4, 11, 7, 13, 11, 18] },
             paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
           { id: 'sat-label_town', type: 'symbol', source: 'omt', 'source-layer': 'place',
             filter: ['==', ['get', 'class'], 'town'], minzoom: 6,
             layout: { 'text-anchor': 'bottom',
-              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
               'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
               'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 12, 11, 14] },
             paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
           { id: 'sat-label_village', type: 'symbol', source: 'omt', 'source-layer': 'place',
             filter: ['==', ['get', 'class'], 'village'], minzoom: 9,
             layout: { 'text-anchor': 'bottom',
-              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
               'text-font': ['Noto Sans Regular'], 'text-max-width': 8,
               'text-size': ['interpolate', ['exponential', 1.2], ['zoom'], 7, 10, 11, 12] },
             paint: { 'text-color': '#000', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
           { id: 'sat-label_state', type: 'symbol', source: 'omt', 'source-layer': 'place',
             filter: ['==', ['get', 'class'], 'state'], minzoom: 5,
             layout: { 'text-transform': 'uppercase',
-              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
               'text-font': ['Noto Sans Italic'], 'text-letter-spacing': 0.2, 'text-max-width': 9,
               'text-size': ['interpolate', ['linear'], ['zoom'], 5, 10, 8, 14] },
             paint: { 'text-color': '#333', 'text-halo-blur': 1, 'text-halo-color': '#fff', 'text-halo-width': 1 } },
           { id: 'sat-water_name_point_label', type: 'symbol', source: 'omt', 'source-layer': 'water_name',
             filter: ['match', ['geometry-type'], ['MultiPoint', 'Point'], true, false],
             layout: { 'symbol-placement': 'point',
-              'text-field': ['case', ['has', 'name:nonlatin'], ['concat', ['get', 'name:latin'], '\\n', ['get', 'name:nonlatin']], ['coalesce', ['get', 'name_en'], ['get', 'name']]],
+              'text-field': ['coalesce', ['get', 'name:ru'], ['get', 'name']],
               'text-font': ['Noto Sans Italic'], 'text-letter-spacing': 0.2, 'text-max-width': 5,
               'text-size': ['interpolate', ['linear'], ['zoom'], 0, 10, 8, 14] },
             paint: { 'text-color': '#495e91', 'text-halo-color': 'rgba(255,255,255,0.7)', 'text-halo-width': 1.5 } }
