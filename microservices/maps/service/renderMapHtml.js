@@ -53,8 +53,10 @@ function renderMapHtml(opts = {}) {
 
   const html = `
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
+<link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.css" />
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -397,6 +399,97 @@ function renderMapHtml(opts = {}) {
       if (!map._frtRuler) map._frtRuler = api;
     }
 
+    // ── Поиск мест (maplibre-gl-geocoder) ──
+    // Провайдер бьёт в наш серверный POST /maps/geocode (он уже возвращает
+    // GeoJSON FeatureCollection). Сначала ищутся свои SearchPlace в OrientDB,
+    // при промахе — фолбэк Nominatim (и результат сохраняется в БД).
+    // Контрол добавляется один раз в createMap и работает на обеих стилях
+    // (стандарт + спутник), т.к. переключение стиля не пересоздаёт карту.
+    function makeGeocoder(map, opts) {
+      if (map._frtGeocoder || !window.MaplibreGeocoder) return;
+      const position = (opts.geocoderPosition) || 'top-left';
+      const zoom = typeof opts.geocoderZoom === 'number' ? opts.geocoderZoom : 14;
+      const placeHolder = opts.geocoderPlaceholder || 'Поиск места…';
+
+      const provider = {
+        // search text → FeatureCollection (наш серверный эндпоинт)
+        forwardGeocode: function (config) {
+          const features = [];
+          return fetch('/maps/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              query: config.query,
+              lang: window.MapsRender && window.MapsRender.getLang ? window.MapsRender.getLang() : undefined,
+            }),
+          })
+            .then(function (resp) {
+              if (!resp.ok) throw new Error('geocode HTTP ' + resp.status);
+              return resp.json();
+            })
+            .then(function (data) {
+              const fc = (data && data.features) || [];
+              return {
+                features: fc.map(function (f) {
+                  const p = (f.properties || {});
+                  const center = p.center || ((f.geometry && f.geometry.coordinates) || [0, 0]);
+                  const place_name = (p.name || '') + (p.address ? ', ' + p.address : '');
+                  return {
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: (f.geometry && f.geometry.coordinates) || [0, 0],
+                    },
+                    // некоторые поля геокодер читает на верхнем уровне фичи,
+                    // а не из properties (дефолтный render делает item.place_name.split)
+                    place_name: place_name,
+                    text: p.name || '',
+                    center: center,
+                    properties: {
+                      title: p.name || '',
+                      description: p.address || '',
+                      id: p.osm_id || p.id,
+                      center: center,
+                      place_name: place_name,
+                      text: p.name || '',
+                    },
+                  };
+                }),
+              };
+            })
+            .catch(function (err) {
+              console.error('[maps:map] geocoder fetch error:', err);
+              return { features: [] };
+            });
+        },
+        // reverse geocoding — не нужен (нет выбранной точки), возвращаем пусто
+        reverseGeocode: function () {
+          return Promise.resolve({ features: [] });
+        },
+      };
+
+      try {
+        const geocoder = new window.MaplibreGeocoder(provider, {
+          maplibregl: window.maplibregl,
+          placeholder: placeHolder,
+          zoom: zoom,
+          collapsed: false,
+          showResultsWhileTyping: true,
+        });
+        map.addControl(geocoder, position);
+        map._frtGeocoder = geocoder;
+        // при выборе результата — плавный перелёт к месту
+        geocoder.on('result', function (e) {
+          var c = e && e.result && e.result.center;
+          if (c && c.length === 2) {
+            map.jumpTo({ center: c, zoom: zoom });
+          }
+        });
+      } catch (err) {
+        console.error('[maps:map] geocoder init error:', err);
+      }
+    }
+
     // добавить маркеры (без создания карты) + вернуть bounds
     function addMarkers(map, pts, opt) {
       if (!map._frtMarkers) map._frtMarkers = [];
@@ -449,6 +542,11 @@ function renderMapHtml(opts = {}) {
       return bounds;
     }
 
+    // текущий язык карты (для внешних контролов, напр. геокодера)
+    window.MapsRender.getLang = function () {
+      return LANGUAGE === 'auto' ? browserLang() : LANGUAGE;
+    };
+
     // создать карту в контейнере (если ещё нет) и вернуть её
     window.MapsRender.createMap = function (container, o) {
       const opt = optsOf(o);
@@ -474,6 +572,8 @@ function renderMapHtml(opts = {}) {
         // выбор вида карты — Стандартная/Спутниковая (опция styles, по умолч. вкл.)
         if (opt.styles !== false) makeStyles(map, ctrlPosition, opt);
       }
+      // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
+      makeGeocoder(map, opt);
       // локализация подписей — применяем, когда стиль загружен, и переживаем
       // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.
       const applyOnce = () => {

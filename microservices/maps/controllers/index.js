@@ -28,6 +28,44 @@ const endpoints = async (app) => {
     }
   })
 
+  // POST /maps/geocode — поиск мест для геокодера (maplibre-gl-geocoder).
+  // Сначала наши SearchPlace (OrientDB), фолбэк — Nominatim; найденное
+  // сохраняем в SearchPlace (наполнение БД своими POI). Возвращает GeoJSON
+  // FeatureCollection { type, features:[{type,geometry:{Point,[lng,lat]},properties}] }
+  app.post('/maps/geocode', async (req, res) => {
+    try {
+      const { query, lang } = req.body || {}
+      if (!query || typeof query !== 'string') {
+        return res.status(400).json({ type: 'FeatureCollection', features: [] })
+      }
+      const db = await app.options.db
+      const result = await mapsService.searchSearchPlace(db, query, lang)
+      const features = (result.places || [])
+        .filter((p) => p.lat != null && p.lng != null)
+        .map((p) => ({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [Number(p.lng), Number(p.lat)] },
+          properties: {
+            id: p.id,
+            name: p.name || '',
+            place_name: p.name || p.address || '',
+            text: p.name || '',
+            place_formatted: p.address || '',
+            address: p.address || '',
+            osm_id: p.osm_id,
+            google_place_id: p.google_place_id,
+            url: p.url,
+            source: p.source,
+            center: [Number(p.lng), Number(p.lat)],
+          },
+        }))
+      res.json({ type: 'FeatureCollection', features, source: result.source })
+    } catch (err) {
+      console.log('⚡ err::maps:geocode', err)
+      res.status(err.status || 500).json({ error: err.message || 'geocode failed' })
+    }
+  })
+
   // GET /maps/pois — POI по категории в bbox
   app.get('/maps/pois', async (req, res) => {
     try {
@@ -183,6 +221,7 @@ const endpoints = async (app) => {
       message: 'maps API — провайдер гео-данных (OSM). Здесь будет рабочая точка пользователя с картой.',
       endpoints: [
         'POST /maps/search',
+        'POST /maps/geocode',
         'GET /maps/pois',
         'POST /maps/autocomplete',
         'GET /maps/details/:placeId',

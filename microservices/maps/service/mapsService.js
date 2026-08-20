@@ -463,6 +463,105 @@ export async function searchPlaces(query, lang, locationBias) {
   return { places, source: 'google' }
 }
 
+// ── Поиск мест: сначала наши SearchPlace (OrientDB), фолбэк — Nominatim ─────
+// Вариант 1 (20.08.2026): поиск по названию бьёт сначала по вершине SearchPlace
+// в OrientDB. Если там пусто — Nominatim (OSM). Найденные места СОХРАНЯЕМ в
+// SearchPlace, чтобы постепенно наполнить БД своими POI и в следующий раз
+// находить локально (без внешнего запроса).
+// db — Model extends PDO (app.options.db), query|lang — строка.
+function toOrientDateTime(value) {
+  if (!value) return value
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toISOString().replace('T', ' ').slice(0, 19)
+}
+
+export async function searchSearchPlace(db, query, lang) {
+  const LIMIT = 8
+  // 1) Ищем в своих SearchPlace (нечётко по имени, только поисковые)
+  let local = []
+  if (db) {
+    try {
+      local = await db.queryAll(
+        'SELECT FROM SearchPlace WHERE searchable = true AND name LIKE :term LIMIT :limit',
+        { params: { term: '%' + String(query).toLowerCase() + '%', limit: LIMIT } },
+      )
+      local = (local || []).map((p) => ({
+        id: String(p['@rid']),
+        name: p.name || '',
+        address: p.address || '',
+        lat: p.lat != null ? Number(p.lat) : null,
+        lng: p.lng != null ? Number(p.lng) : null,
+        osm_id: p.osm_id || null,
+        google_place_id: p.google_place_id || null,
+        url: p.url || null,
+        source: p.source || 'local',
+      }))
+    } catch (err) {
+      console.log('⚡ err::searchSearchPlace(локальный) => ', err)
+      local = []
+    }
+  }
+  if (local.length) {
+    return { places: local, source: 'local' }
+  }
+
+  // 2) Промах — внешний Nominatim/Google
+  let remote
+  try {
+    remote = await searchPlaces(query, lang)
+  } catch (err) {
+    console.log('⚡ err::searchSearchPlace(внешний) => ', err)
+    remote = { places: [], source: 'error' }
+  }
+  const places = (remote.places || []).slice(0, LIMIT).map((p) => ({
+    id: p.osm_id || null,
+    name: p.name || '',
+    address: p.address || '',
+    lat: p.lat != null ? Number(p.lat) : null,
+    lng: p.lng != null ? Number(p.lng) : null,
+    osm_id: p.osm_id || null,
+    google_place_id: p.google_place_id || null,
+    url: p.website || null,
+    source: p.source || remote.source || 'openstreetmap',
+  }))
+
+  // 3) Сохраняем найденное в SearchPlace (наполняем БД своими POI)
+  if (db) {
+    for (const p of places) {
+      if (!p.name || p.lat == null || p.lng == null) continue
+      try {
+        const exists = await db.queryAll(
+          'SELECT FROM SearchPlace WHERE name = :name AND lat = :lat AND lng = :lng LIMIT 1',
+          { params: { name: p.name, lat: p.lat, lng: p.lng } },
+        )
+        if (exists && exists.length) continue
+        await db.command(
+          'CREATE VERTEX SearchPlace SET ' +
+            'name=:name, address=:address, lat=:lat, lng=:lng, osm_id=:osm_id, ' +
+            'google_place_id=:google_place_id, url=:url, source=:source, ' +
+            'searchable=true, created_at=:created_at',
+          { params: {
+            name: p.name,
+            address: p.address,
+            lat: p.lat,
+            lng: p.lng,
+            osm_id: p.osm_id,
+            google_place_id: p.google_place_id,
+            url: p.url,
+            source: p.source,
+            created_at: toOrientDateTime(new Date()),
+          } },
+        )
+      } catch (err) {
+        console.log('⚡ err::searchSearchPlace(сохранение) => ', err)
+      }
+    }
+  }
+
+  return { places, source: remote.source || 'openstreetmap' }
+}
+
 // ── Autocomplete (Google or Nominatim fallback) ─────────────────────────────
 export async function autocompletePlaces(input, lang, locationBias) {
   const apiKey = getMapsKey()
