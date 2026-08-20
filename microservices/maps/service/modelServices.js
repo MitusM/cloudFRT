@@ -18,8 +18,9 @@ class Model extends PDO {
   }
 
   async queryAll(query, params) {
+    let session
     try {
-      const session = await this.pool.acquire()
+      session = await this.pool.acquire()
       const message = await session.query(query, params).all()
       session.close()
       return message
@@ -31,8 +32,9 @@ class Model extends PDO {
   }
 
   async queryOne(query, params) {
+    let session
     try {
-      const session = await this.pool.acquire()
+      session = await this.pool.acquire()
       const message = await session.query(query, params).one()
       session.close()
       return message
@@ -44,8 +46,9 @@ class Model extends PDO {
   }
 
   async command(query, params) {
+    let session
     try {
-      const session = await this.pool.acquire()
+      session = await this.pool.acquire()
       const message = await session.command(query, params).all()
       session.close()
       return message
@@ -57,8 +60,9 @@ class Model extends PDO {
   }
 
   async insert(query, json) {
+    let session
     try {
-      const session = await this.pool.acquire()
+      session = await this.pool.acquire()
       const message = await session.command(query, json).one()
       session.close()
       return { message: message, type: 'insert', done: true }
