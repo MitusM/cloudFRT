@@ -57,6 +57,7 @@ function renderMapHtml(opts = {}) {
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.js"></script>
+<script src="https://unpkg.com/maplibre-gl-map-to-image@1.2.0/dist/maplibre-gl-map-to-image.min.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -294,6 +295,174 @@ function renderMapHtml(opts = {}) {
       map.on('style.load', syncActive);
       syncActive();
       map.addControl({ onAdd: () => ctrlGroup(buttons.map((x) => x.btn)), onRemove: () => {} }, position);
+    }
+
+    // 📥 export — скачать текущий вид карты (включая маркеры) как PNG.
+    // Клиентский рендер через maplibre-gl-map-to-image (CDN, UMD-глобал
+    // window.MapLibreGLMapToImage.toElement). Из кадра убираем все контролы
+    // (компас/линейку/виды/геокодер) и попапы — оставляем только маркеры.
+    //
+    // UX: НЕ качаем сразу после генерации (a.click() в конце асинхронной
+    // цепочки теряет user activation → Chrome/Яндекс молча блокирует download,
+    // особенно на спутнике, где карта долго не становится idle). Вместо этого
+    // показываем модалку с превью PNG и кнопкой «Скачать PNG» — клик по ней
+    // свежий жест, скачивание гарантировано.
+    function makeExport(map, position, opts) {
+      const btnEl = btn(
+        'Скачать карту как PNG',
+        '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+        '<path fill="none" d="M0 0h24v24H0z"/><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>',
+        () => doExport()
+      );
+
+      // имя файла: frt-map-ГГГГ-ММ-ДД_ЧЧ-ММ.png
+      function stamp() {
+        const d = new Date();
+        const pad = (n) => (n < 10 ? '0' + n : '' + n);
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + '_' + pad(d.getHours()) + '-' + pad(d.getMinutes());
+      }
+
+      // создать (или вернуть) модалку превью
+      function ensureModal() {
+        let m = document.getElementById('frt-export-modal');
+        if (m) return m;
+        m = document.createElement('div');
+        m.id = 'frt-export-modal';
+        m.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;' +
+          'background:rgba(0,0,0,.55);font:14px/1.4 system-ui,sans-serif;';
+        m.innerHTML =
+          '<div style="background:#fff;border-radius:12px;max-width:92vw;max-height:92vh;display:flex;flex-direction:column;' +
+          'box-shadow:0 12px 40px rgba(0,0,0,.35);overflow:hidden;">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;' +
+              'border-bottom:1px solid #e5e7eb;">' +
+              '<strong id="frt-export-title">Карта</strong>' +
+              '<button id="frt-export-close" type="button" title="Закрыть" style="border:0;background:none;cursor:pointer;' +
+                'font-size:22px;line-height:1;color:#6b7280;padding:2px 6px;">×</button>' +
+            '</div>' +
+            '<div style="flex:1;overflow:auto;background:#f3f4f6;display:flex;align-items:center;justify-content:center;padding:12px;">' +
+              '<img id="frt-export-preview" alt="Превью карты" style="max-width:100%;max-height:70vh;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,.2);display:block;"/>' +
+            '</div>' +
+            '<div style="display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid #e5e7eb;">' +
+              '<button id="frt-export-dl" type="button" style="border:1px solid #d1d5db;background:#fff;color:#111827;' +
+                'border-radius:8px;padding:8px 16px;cursor:pointer;font-weight:600;">Скачать PNG</button>' +
+            '</div>' +
+          '</div>';
+        m.addEventListener('click', function (e) { if (e.target === m) closeModal(); });
+        m.querySelector('#frt-export-close').addEventListener('click', closeModal);
+        m.querySelector('#frt-export-dl').addEventListener('click', downloadPng);
+        document.body.appendChild(m);
+        return m;
+      }
+      function openModal(src) {
+        const m = ensureModal();
+        m.querySelector('#frt-export-preview').src = src;
+        m.querySelector('#frt-export-title').textContent = 'Карта · PNG ' + (imgDim() ? imgDim() : '');
+        m.style.display = 'flex';
+      }
+      function closeModal() {
+        const m = document.getElementById('frt-export-modal');
+        if (m) m.style.display = 'none';
+      }
+      function downloadPng() {
+        const img = document.getElementById('frt-map-export-img');
+        if (!img || !img.src) return;
+        const a = document.createElement('a');
+        a.download = 'frt-map-' + stamp() + '.png';
+        a.href = img.src;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+      function imgDim() {
+        const img = document.getElementById('frt-map-export-img');
+        if (img && img.naturalWidth) return img.naturalWidth + '×' + img.naturalHeight;
+        return '';
+      }
+
+      function doExport() {
+        const lib = window.MapLibreGLMapToImage;
+        if (!lib || !lib.toElement) {
+          console.error('[maps:map] maplibre-gl-map-to-image не загружен (CDN?)');
+          return;
+        }
+        // плагин требует ID существующего <img>, куда положит dataUrl;
+        // держим скрытый невидимый img, снимаем с него src для превью.
+        let img = document.getElementById('frt-map-export-img');
+        if (!img) {
+          img = document.createElement('img');
+          img.id = 'frt-map-export-img';
+          img.style.cssText = 'position:absolute;left:-99999px;top:0;width:1px;height:1px;';
+          document.body.appendChild(img);
+        }
+        // индикатор генерации: крутим заголовок кнопки
+        btnEl.disabled = true;
+        const old = btnEl.innerHTML;
+        btnEl.innerHTML = '…';
+        // Обход бага плагина v1.2.0: при coverEdits=false объект
+        // _canvasContextAttributes не создаётся, но в финальной очистке
+        // toElement пишет в него (e._canvasContextAttributes.preserveDrawingBuffer=u)
+        // → undefined.preserveDrawingBuffer → TypeError → промис reject →
+        // скачивание молча не происходит. Заранее создаём пустой объект.
+        if (!map._canvasContextAttributes) map._canvasContextAttributes = {};
+        // НЕДЕТЕРМИНИРОВАННОСТЬ: плагин ждёт map.once('idle') внутри toElement.
+        // Если карта «спит» (не рендерит, уже в состоянии idle), то следующий
+        // idle не эмитится → промис зависит ВЕЧНО (кнопка залипает). На спутнике
+        // это проявлялось стабильнее (растровые тайлы). triggerRepaint()
+        // гарантирует запланированный рендер, после которого придёт idle.
+        map.triggerRepaint();
+        // страховочный таймаут: если idle/рендер не пришли за 20с — снимаем
+        // блокировку кнопки, чтобы не «залипала» без результата.
+        let finished = false;
+        const timer = setTimeout(function () {
+          if (!finished) {
+            console.error('[maps:map] export timeout (map idle не наступил)');
+            btnEl.disabled = false;
+            btnEl.innerHTML = old;
+          }
+        }, 20000);
+        lib.toElement(map, {
+          targetImageId: 'frt-map-export-img',
+          format: 'png',
+          pixelRatio: 2,
+          hideAllControls: true,   // компас/линейка/виды/геокодер — не в кадре
+          hidePopups: true,        // попапы открываются по клику — не в кадре
+          coverEdits: false,       // ничего не двигаем (bbox не используем) — без фликера
+        })
+          .then(function () {
+            finished = true;
+            clearTimeout(timer);
+            // генерация готова — показываем превью + кнопку «Скачать PNG»
+            // (свежий клик = новый user activation → download не блокируется)
+            openModal(img.src);
+          })
+          .catch(function (err) {
+            finished = true;
+            clearTimeout(timer);
+            console.error('[maps:map] export error:', err);
+          })
+          .finally(function () {
+            btnEl.disabled = false;
+            btnEl.innerHTML = old;
+          });
+        // «будильник» для idle: плагин внутри toElement ждёт map.once('idle').
+        // Если карта статична (всё загружено, ничего не рендерится), MapLibre
+        // НЕ эмитит idle повторно → промис toElement виснет вечно, кнопка
+        // залипает. Это проявляется на спутниковой карте (растры статичны)
+        // стабильно, на стандартной — реже. Микро-пинок (jumpTo туда-обратно,
+        // визуально незаметен) заставляет карту отрисовать кадр и эмитить idle.
+        // Проверено: без него промис виснет, с ним — resolve приходит.
+        setTimeout(function () {
+          try {
+            if (map.isMoving && map.isMoving()) return;
+            if ((map.isStyleLoaded && !map.isStyleLoaded()) || (!map.style || !map.style.loaded())) return;
+            const c = map.getCenter();
+            const d = 1e-4 * Math.max(1, map.getZoom() / 8);
+            map.jumpTo({ center: [c.lng + d, c.lat] });
+            map.jumpTo({ center: [c.lng, c.lat] });
+          } catch (e) { /* не критично */ }
+        }, 800);
+      }
+      map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
     }
 
     // добавить маркеры (без создания карты) + вернуть bounds
@@ -571,6 +740,8 @@ function renderMapHtml(opts = {}) {
         makeRuler(map, ctrlPosition);
         // выбор вида карты — Стандартная/Спутниковая (опция styles, по умолч. вкл.)
         if (opt.styles !== false) makeStyles(map, ctrlPosition, opt);
+        // экспорт в PNG — кнопка скачивания (работает на обеих стилях)
+        if (opt.export !== false) makeExport(map, ctrlPosition, opt);
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);

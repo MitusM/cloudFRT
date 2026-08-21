@@ -15,6 +15,7 @@ const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 
 const endpoints = async (app) => {
   const db = await app.options.db
+  const { getOgCache, setOgCache, clearOgCache } = await import('../service/ogCache.js')
 
   //  получить юзера через users user:get (по rid|username|_id)
   const getUser = async (res, meta) => {
@@ -195,6 +196,9 @@ const endpoints = async (app) => {
         console.log('⚡ err::trips:map maps:map', err)
       }
 
+      const origin = (req.headers['x-forwarded-proto'] || req.protocol || 'https') + '://' + (req.headers.host || 'frt.su')
+      const tripId = trip._id || String(trip['@rid']).replace(/:/g, '_')
+
       const { response } = await res.app.ask('render', {
         server: {
           action: 'html',
@@ -210,6 +214,10 @@ const endpoints = async (app) => {
               trip: trip,
               places: places,
               mapHtml: mapHtml,
+              // OG-мета для шеринга поездки в соцсетях (см. index.html <head>)
+              appUrl: origin,
+              ogImage: origin + '/trips/' + tripId + '/og-image',
+              ogTitle: trip.title || 'Карта поездки',
             },
           },
         },
@@ -217,6 +225,60 @@ const endpoints = async (app) => {
       res.status(200).end(response.html)
     } catch (err) {
       console.log('⚡ err::trips:map', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  })
+
+  //  ==== GET /trips/:id/og-image — OG-картинка поездки (для шеринга в соцсетях) ====
+  //  Серверный рендер карты с маркерами поездки через МС maps (maps:og → headless
+  //  Chromium). Возвращает бинарный PNG (Gateway декодирует __frtBase64).
+  //  Доступ: как у самой поездки (публичная — аноним, приватная — участник/владелец).
+  app.get('/trips/:id/og-image', async (req, res) => {
+    try {
+      const trip = await loadTrip(req, res)
+      if (!trip) return
+      if (!(await canRead(trip, req))) return res.status(403).json({ error: 'forbidden' })
+
+      // кэш готовой OG-картинки (рендер headless дорогой, ~6-25с).
+      // Кэш-ключ = стабильный _id поездки; инвалидация при изменении трипа/мест.
+      const tripId = String(trip._id || trip.id || req.params.id)
+      const cached = await getOgCache(tripId)
+      if (cached) {
+        const bufBase64 = cached.toString('base64')
+        return res.json({ __frtBase64: bufBase64, contentType: 'image/png', fromCache: true })
+      }
+
+      const places = await db.getTripPlaces(String(trip['@rid']))
+
+      // маркеры поездки: те же поля, что принимает MapsRender.setPoints
+      const markers = (places || [])
+        .filter((p) => p && p.lat != null && p.lng != null)
+        .map((p) => ({
+          lat: Number(p.lat),
+          lng: Number(p.lng),
+          name: p.name || '',
+          note: p.note || undefined,
+        }))
+
+      const ogResp = await res.app.ask('maps', {
+        server: { action: 'maps:og', meta: { markers } },
+      })
+      const body = (ogResp && ogResp.response) || {}
+      if (body.__frtBase64) {
+        // сохранить в кэш до отдачи (следующий запрос — мгновенно)
+        try {
+          const buf = Buffer.from(body.__frtBase64, 'base64')
+          await setOgCache(tripId, buf)
+        } catch (e) {
+          console.log('⚡ trips: og-cache set', e && e.message)
+        }
+        // Gateway декодирует base64 в Buffer и отдаёт бинарный PNG
+        res.json({ __frtBase64: body.__frtBase64, contentType: 'image/png' })
+      } else {
+        res.status(500).json({ error: body.error || 'og render failed' })
+      }
+    } catch (err) {
+      console.log('⚡ err::trips:og-image', err)
       res.status(500).json({ error: 'internal' })
     }
   })
@@ -258,6 +320,8 @@ const endpoints = async (app) => {
         await db.updateTrip(trip['@rid'], fields)
       }
       const updated = await db.getTrip(trip['@rid'])
+      // изменился трип (название/is_private/статус) → OG-превью устарело
+      await clearOgCache(String(trip._id || trip.id || req.params.id))
       res.json({ trip: updated })
     } catch (err) {
       console.log('⚡ err::trips:update', err)
@@ -272,6 +336,8 @@ const endpoints = async (app) => {
       if (!trip) return
       const role = await roleOf(trip, req)
       if (role !== 'owner') return res.status(403).json({ error: 'forbidden' })
+      // трип удаляется — чистим OG-кэш
+      await clearOgCache(String(trip._id || trip.id || req.params.id))
       await db.deleteTrip(trip['@rid'])
       res.json({ ok: true })
     } catch (err) {

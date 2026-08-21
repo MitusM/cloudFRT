@@ -6,6 +6,7 @@
 import * as mapsService from '../service/mapsService.js'
 import * as placePhotoCache from '../service/placePhotoCache.js'
 import { renderMapHtml } from '../service/renderMapHtml.js'
+import { renderMapPng } from '../service/ogExport.js'
 import path from 'path'
 import pkg from 'app-root-path'
 
@@ -169,6 +170,30 @@ const endpoints = async (app) => {
     } catch (err) {
       console.log('⚡ err::maps:resolve-url', err)
       res.status(err.status || 500).json({ error: err.message || 'resolve failed' })
+    }
+  })
+
+  // GET /maps/og — серверный рендер карты в PNG (для OG-превью поездок).
+  // Вспомогательный HTTP-вариант RPC action `maps:og` (для отладки). trips
+  // вызывает maps:og по шине и возвращает PNG клиенту через /trips/:id/og-image.
+  // Query: markers (JSON-массив [{lat,lng,name}]), width, height, language.
+  app.get('/maps/og', async (req, res) => {
+    try {
+      let markers = []
+      if (req.query.markers) {
+        try { markers = JSON.parse(req.query.markers) } catch (e) { markers = [] }
+      }
+      const png = await renderMapPng({
+        markers,
+        width: req.query.width ? parseInt(req.query.width) : 1200,
+        height: req.query.height ? parseInt(req.query.height) : 630,
+        language: req.query.language || 'ru',
+      })
+      // microservice res (Response) — сериализует в JSON; Gateway по __frtBase64
+      // декодирует в Buffer и отдаёт бинарный PNG с заголовком image/png.
+      res.json({ __frtBase64: png.toString('base64'), contentType: 'image/png' })    } catch (err) {
+      console.log('⚡ err::maps:og', err)
+      res.status(500).json({ error: err.message || 'internal' })
     }
   })
 

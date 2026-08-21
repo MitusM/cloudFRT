@@ -8,6 +8,15 @@
 
 const middlewares = (app) => {
   app.all(['/trips(.*)'], async (req, res, next) => {
+    const path = req.path || (req.url || '').split('?')[0]
+    // Публичные под-пути: OG-картинка поездки (/trips/:id/og-image) и страница
+    // карты поездки (/trips/map/:id). Их обязан сам эндпоинт проверить правами
+    // поездки (canRead: публичная — отдаём анониму, приватная — 403), чтобы
+    // соцсети/скрейперы могли получить превью публичных поездок без логина.
+    const isPublicPath =
+      path.startsWith('/trips/map') || /^\/trips\/[^/]+\/og-image$/.test(path)
+    if (isPublicPath) return next()
+
     if (!req.session.auth) {
       // Запрос ждёт JSON (API) — вернём 401 JSON
       const accepts = (req.headers['accept'] || '').toLowerCase()

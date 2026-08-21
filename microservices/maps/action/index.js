@@ -6,6 +6,7 @@
 // Генерация HTML — в service/renderMapHtml.js (общая с контроллером).
 // === === === === === === === === === === === ===
 import { renderMapHtml } from '../service/renderMapHtml.js'
+import { renderMapPng } from '../service/ogExport.js'
 
 const action = async (app) => {
   /**
@@ -30,6 +31,18 @@ const action = async (app) => {
     } catch (err) {
       console.log('⚡ err::maps:map', err)
       res.status(500).json({ error: 'internal' })
+    }
+  })
+
+  app.action('maps:og', async (meta, res) => {
+    try {
+      const png = await renderMapPng(meta || {})
+      // RPC-шина сериализует через JSON; бинарное тело передаём как base64,
+      // Gateway декодирует по ключу __frtBase64 и пишет настоящие байты клиенту.
+      res.json({ __frtBase64: png.toString('base64'), contentType: 'image/png' })
+    } catch (err) {
+      console.log('⚡ err::maps:og', err)
+      res.status(500).json({ error: err.message || 'internal' })
     }
   })
 

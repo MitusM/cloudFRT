@@ -183,6 +183,12 @@ const action = async (app) => {
         console.log('⚡ warn::trips:place-add geo-link', err)
       }
 
+      // новое место → OG-картинка поездки изменилась, сбросить кэш
+      try {
+        const { clearOgCache } = await import('../service/ogCache.js')
+        await clearOgCache(String(trip._id || ''))
+      } catch (err) { /* не критично */ }
+
       res.json({ place: { rid: place.rid, _id: place._id } })
     } catch (err) {
       console.log('⚡ err::trips:place-add', err)

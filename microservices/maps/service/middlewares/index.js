@@ -11,6 +11,7 @@ const PUBLIC_PATHS = [
   '/maps/map',
   '/maps/geocode',
   '/maps/pois',
+  '/maps/og',
 ]
 
 const middlewares = (app) => {

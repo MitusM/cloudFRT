@@ -41,8 +41,47 @@
     OpenFreeMap Liberty (с локализацией подписей); спутниковая — Esri World Imagery
     (растровые снимки + подписи поверх), без внешних API-ключей. Активная кнопка
     подсвечена, переживает перезагрузку стиля. Опция `styles: false` — скрыть.
+  - 📥 **Экспорт карты в PNG** — кнопка «Скачать карту как PNG»: открывает модалку
+    с превью, экспорт через плагин `maplibre-gl-map-to-image` (CDN unpkg @1.2.0,
+    depends on `html-to-image`). Опция `export: false` — скрыть.
   Опции: `controlsPosition` (по умолчанию `'top-right'`), `hideControls` (`false`),
-  `styles` (default `true`).
+  `styles` (default `true`), `export` (default `true`).
+
+#### 📥 Экспорт карты в PNG (клиентский)
+Кнопка 📥 в тулбаре → модалка с превью → «Скачать PNG» (свежий жест пользователя
+гарантирует download без user-activation-блокировки браузера). Механика —
+`maplibre-gl-map-to-image@1.2.0`: `window.MapLibreGLMapToImage.toElement(map, opts)`
+рендерит карту + маркеры в PNG/JPEG/SVG, результат кладёт в `src` скрытого
+`<img id="frt-map-export-img">`. Имя файла `frt-map-YYYY-MM-DD_HH-MM.png`.
+
+> ⚠️ **Два бага плагина, обойдены в `makeExport`:**
+> (1) при `coverEdits:false` плагин не создаёт `map._canvasContextAttributes`,
+> но в `.then` всегда пишет `_canvasContextAttributes.preserveDrawingBuffer`
+> → TypeError. Фикс: `if (!map._canvasContextAttributes) map._canvasContextAttributes = {};`
+> перед вызовом.
+> (2) плагин ждёт `map.once('idle')`; статичная/заснувшая карта (спутник,
+> рендер-растры не обновляются) никогда не шлёт `idle` → промис висит вечно,
+> кнопка «застревает». Фикс: «будильник» — микро-прыжок центра туда-обратно
+> (~0.8с после старта) форсирует реальный рендер → `idle` → плагин резолвится.
+
+#### 🖼️ OG-превью поездки (серверный рендер, headless Chromium)
+При шеринге ссылки на поездку соцсети показывают её карту с маркерами 1:1
+(тот же код рендера, что видит пользователь), размер `1200×630`:
+
+- `trips GET /trips/:id/og-image` — грузит поездку + места → RPC `maps:og` → PNG;
+- `maps:og` / **`service/ogExport.js`** — рендер во headless Chromium (Playwright):
+  HTML через `renderMapHtml` (`hideControls:true`, `styles:false`, `export:false`),
+  boot-скрипт `MapsRender.createMap` → `setPoints(маркеры)` → ждёт `window.__frtOG`
+  (maplibregl + style + tiles + места) → скриншот контейнера.
+- **бинарный ответ**: шина сериализует JSON, поэтому МС отдаёт
+  `{ __frtBase64, contentType:'image/png' }`, а Gateway
+  (`core/micromq/src/Gateway.js`) декодирует в Buffer и пишет настоящие байты.
+- **таймаут**: headless-рендер ~7–28 с → `TIMED_OUT` поднят 15с→60с
+  (корневой `.env` и `trips/.env`), иначе Gateway режет 408.
+- **кэш**: `trips/service/ogCache.js` → `cloudFRT/og-cache/<tripId>.png` (TTL 7 дней,
+  инвалидация при изменении трипа/мест). Холодный рендер ~28 с, из кэша — миллисекунды.
+- Playwright установлен отдельно (`npm i playwright --no-save` + `npx playwright install
+  chromium`); осознанно не в `package.json` (нужен только для OG-рендера).
 
 > ⚠️ **Шрифт подписей линейки.** `text-font` symbol-слоя обязан быть из набора глифов
 > стиля (поле `glyphs`), иначе MapLibre молча не рисует текст. Для OpenFreeMap Liberty
@@ -79,25 +118,29 @@
 - **Google-ветки** — зарезервированы (код есть), активны только если задан
   `GOOGLE_PLACES_API_KEY`; по умолчанию пусто → **100% трафик через OSM**.
 
-## Эндпоинты (все авторизованы `req.session.auth`)
-- `POST /maps/search` — поиск места
-- `GET /maps/pois` — POI по категории и bbox (Overpass)
-- `POST /maps/autocomplete` — автодополнение
-- `GET /maps/details/:placeId` — детали места
-- `GET /maps/place-photo/:placeId` — мета фото
-- `GET /maps/place-photo/:placeId/bytes` — фото (JPEG)
-- `GET /maps/reverse` — координаты → адрес
-- `POST /maps/resolve-url` — Google Maps URL → координаты
+## Эндпоинты
+Авторизованы `req.session.auth`: `POST /maps/search`, `GET /maps/pois`,
+`POST /maps/autocomplete`, `GET /maps/details/:placeId`,
+`GET /maps/place-photo/:placeId`, `GET /maps/place-photo/:placeId/bytes`,
+`GET /maps/reverse`, `POST /maps/resolve-url`, `GET /maps/`.
+
+Публичные (без auth, `PUBLIC_PATHS`):
 - `GET /maps/map` — интерактивная карта гео-объектов (HTML)
-- `GET /maps/` — метаданные сервиса + список эндпоинтов (рабочая точка пользователя)
+- `GET /maps/geocode` — поиск места (SearchPlace из OrientDB → фолбэк Nominatim)
+- `GET /maps/pois` — POI по категории и bbox
+- `GET /maps/og` — серверный рендер карты в PNG (для OG-превью; query: `markers` JSON,
+  `width`/`height`/`language`) — отладочный HTTP-вариант RPC `maps:og`
 
 ## RPC (сервис-2-сервис по шине)
 - `maps:map` — вернуть HTML карты + JS `window.MapsRender.*` (для trips и др.)
+- `maps:og` — вернуть бинарный PNG карты `{ __frtBase64, contentType:'image/png' }`
+  (для OG-превью поездок; запрос: `markers`[], `width`, `height`, `language`)
 
 ## Структура
 - `index.js` — регистрация МС на шине micromq (name='maps', сервисы render/files/auth/users/cache)
 - `action/index.js` — RPC-action `maps:map`
 - `service/renderMapHtml.js` — единая генерация HTML карты
+- `service/ogExport.js` — серверный рендер PNG через headless Chromium (Playwright)
 - `service/mapsService.js` — гео-логика (18 экспортов: Nominatim/Overpass/Wikimedia/SSRF/крипто)
 - `controllers/index.js` — REST-эндпоинты + GET /maps/map + заглушка /maps/
 - `view/html/` — шаблоны (layout `index.html`, страница карты `page/map.html`)
