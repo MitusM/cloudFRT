@@ -54,10 +54,16 @@ function renderMapHtml(opts = {}) {
   const html = `
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
 <link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.css" />
+<link rel="stylesheet" href="https://unpkg.com/@watergis/maplibre-gl-terradraw@1.15.3/dist/maplibre-gl-terradraw.css" />
+<style>
+  .maplibregl-ctrl-active { background-color: #fbc412 !important; }
+  .maplibregl-ctrl-active:hover { background-color: #e5b010 !important; }
+</style>
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.js"></script>
 <script src="https://unpkg.com/maplibre-gl-map-to-image@1.2.0/dist/maplibre-gl-map-to-image.min.js"></script>
+<script src="https://unpkg.com/@watergis/maplibre-gl-terradraw@1.15.3/dist/maplibre-gl-terradraw.umd.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -131,6 +137,163 @@ function renderMapHtml(opts = {}) {
       } catch (err) {
         console.error('[maps:map] ошибка применения языка:', err);
       }
+    }
+
+    // ── Maplibre-gl-terradraw — рисование + измерения (CDN UMD, watergis) ──
+    // Все режимы кроме Valhalla (требует сервер маршрутизации).
+    // Опция opts.terradraw=false отключает. Пересоздаётся при style.load.
+    function initTerradraw(map, opt) {
+      var Mc = window.MaplibreTerradrawControl && window.MaplibreTerradrawControl.MaplibreMeasureControl;
+      if (!Mc) {
+        console.warn('[maps:map] terradraw not loaded (CDN?)');
+        return;
+      }
+      try {
+        var draw = new Mc({
+          modes: [
+            'point', 'marker', 'linestring', 'polyline',
+            'polygon', 'rectangle', 'angled-rectangle', 'circle',
+            'freehand', 'freehand-linestring',
+            'select', 'delete-selection', 'delete', 'undo', 'redo', 'download'
+          ],
+          open: true,
+          measureUnitType: 'metric',
+          distancePrecision: 2,
+          areaPrecision: 2,
+        });
+        map.addControl(draw, 'top-left');
+        map._frtTerradraw = draw;
+      } catch (err) {
+        console.error('[maps:map] terradraw init error:', err);
+      }
+    }
+
+    // ── Текстовый слой (source 'frt-text-source', symbol 'frt-text-label') ──
+    // Общая функция, доступна и из initTerradraw, и из makeTextTool.
+    function frtRenderTextLayer(map) {
+      try { if (map.getLayer('frt-text-label')) map.removeLayer('frt-text-label'); } catch (e) {}
+      try { if (map.getSource('frt-text-source')) map.removeSource('frt-text-source'); } catch (e) {}
+      var feats = map._frtTextFeatures || [];
+      if (!feats.length) return;
+      map.addSource('frt-text-source', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: feats }
+      });
+      map.addLayer({
+        id: 'frt-text-label',
+        type: 'symbol', source: 'frt-text-source',
+        layout: {
+          'text-field': ['get', 'text'],
+          'text-size': ['coalesce', ['get', 'size'], 18],
+          'text-font': ['Noto Sans Regular'],
+          'text-anchor': 'center',
+          'text-allow-overlap': true
+        },
+        paint: {
+          'text-color': '#1a1a1a',
+          'text-halo-color': '#ffffff',
+          'text-halo-width': 2
+        }
+      });
+    }
+
+    // ── Текст на карту: своя кнопка «T», свой попап-ввод, рендер symbol-слоем ──
+    // Не зависит от terra-draw. Форма ввода — красивый popup (не prompt).
+    function makeTextTool(map, ctrlPos) {
+      if (map._frtTextToolDone) return;
+      map._frtTextToolDone = true;
+      if (!map._frtTextFeatures) map._frtTextFeatures = [];
+
+      function rebuild() { frtRenderTextLayer(map); }
+      map.on('style.load', rebuild);
+      if (map.isStyleLoaded && map.isStyleLoaded()) rebuild();
+
+      var active = false;
+
+      function showPopup(lngLat) {
+        var container = map.getContainer();
+        var pos = map.project([lngLat.lng, lngLat.lat]);
+        var popup = document.createElement('div');
+        popup.id = 'frt-text-popup';
+        popup.style.cssText = 'position:absolute;z-index:999;background:#fff;border-radius:8px;' +
+          'box-shadow:0 2px 12px rgba(0,0,0,.25);padding:8px;left:' + pos.x + 'px;top:' + (pos.y - 60) + 'px;';
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Введите текст';
+        input.style.cssText = 'border:1px solid #ccc;border-radius:4px;padding:6px 10px;font:14px sans-serif;' +
+          'width:180px;outline:none;';
+
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:6px;margin-top:6px;justify-content:flex-end;';
+
+        var okBtn = document.createElement('button');
+        okBtn.textContent = 'OK';
+        okBtn.style.cssText = 'background:#e11d48;color:#fff;border:none;border-radius:4px;padding:4px 14px;' +
+          'font:13px sans-serif;cursor:pointer;';
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Отмена';
+        cancelBtn.style.cssText = 'background:#eee;color:#333;border:none;border-radius:4px;padding:4px 14px;' +
+          'font:13px sans-serif;cursor:pointer;';
+
+        function close() { if (popup.parentNode) popup.parentNode.removeChild(popup); }
+
+        okBtn.onclick = function () {
+          var t = input.value.trim();
+          if (!t) { close(); return; }
+          map._frtTextFeatures.push({
+            type: 'Feature',
+            geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] },
+            properties: { text: t }
+          });
+          rebuild();
+          close();
+        };
+        cancelBtn.onclick = close;
+
+        btnRow.appendChild(okBtn);
+        btnRow.appendChild(cancelBtn);
+        popup.appendChild(input);
+        popup.appendChild(btnRow);
+        container.appendChild(popup);
+        input.focus();
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') okBtn.click();
+          if (e.key === 'Escape') close();
+        });
+      }
+
+      function onClick(e) {
+        if (!active) return;
+        showPopup(e.lngLat);
+      }
+
+      var hintEl = null;
+      function activate() {
+        if (active) {
+          active = false;
+          map.getContainer().style.cursor = '';
+          if (hintEl) { hintEl.remove(); hintEl = null; }
+          map.off('click', onClick);
+          return;
+        }
+        active = true;
+        map.getContainer().style.cursor = 'crosshair';
+        hintEl = document.createElement('div');
+        hintEl.textContent = 'Кликните на карте для ввода текста';
+        hintEl.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);' +
+          'background:rgba(0,0,0,.7);color:#fff;padding:4px 12px;border-radius:6px;' +
+          'font:13px sans-serif;pointer-events:none;z-index:99;';
+        map.getContainer().appendChild(hintEl);
+        map.on('click', onClick);
+      }
+
+      var btnEl = btn('Добавить текст', '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>', function () {
+        activate();
+        btnEl.classList.toggle('maplibregl-ctrl-active');
+      });
+      map.addControl({ onAdd: function () { return ctrlGroup([btnEl]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Вспомогательные контролы (compass/ruler) — self-contained, без внешних ──
@@ -543,7 +706,7 @@ function renderMapHtml(opts = {}) {
         coords.length = 0;
         map.on('click', mapClick);
         update();
-        btnEl.classList.add('-active');
+        btnEl.classList.add('maplibregl-ctrl-active');
       }
       function deactivate() {
         active.is = false;
@@ -552,7 +715,7 @@ function renderMapHtml(opts = {}) {
         ['line', 'pts', 'labels'].forEach((k) => { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
         [S.line, S.pts].forEach((k) => { if (map.getSource(k)) map.removeSource(k); });
         coords.length = 0;
-        btnEl.classList.remove('-active');
+        btnEl.classList.remove('maplibregl-ctrl-active');
       }
       function toggle() { active.is ? deactivate() : activate(); }
       map.on('style.load', () => { if (active.is) update(); });
@@ -745,6 +908,24 @@ function renderMapHtml(opts = {}) {
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);
+      // текстовые подписи — своя кнопка «Т» в правой панели
+      makeTextTool(map, ctrlPosition);
+      // terradraw — рисование + измерения. Инициализируем после загрузки стиля.
+      // При каждом style.load (переключение Стандартная↔Спутник) TerraDraw
+      // теряет source/layer — удаляем старый control и создаём новый.
+      // TerraDraw: если стиль уже загружен — стартуем сразу. При смене стиля
+      // (Standard↔Satellite) пересоздаём через style.load. Один обработчик.
+      if (opt.terradraw !== false) {
+        function tdRestart() {
+          if (map._frtTerradraw) {
+            try { map.removeControl(map._frtTerradraw); } catch (e) {}
+            map._frtTerradraw = null;
+          }
+          initTerradraw(map, opt);
+        }
+        if (map.isStyleLoaded && map.isStyleLoaded()) tdRestart();
+        map.on('style.load', tdRestart);
+      }
       // локализация подписей — применяем, когда стиль загружен, и переживаем
       // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.
       const applyOnce = () => {
@@ -818,6 +999,17 @@ function renderMapHtml(opts = {}) {
         map.fitBounds(bounds, { padding: opt.pad, maxZoom: opt.maxZoom });
       }
       return map;
+    };
+
+    // ── TerraDraw API (рисование + измерения) ──
+    window.MapsRender.getDrawData = function (map) {
+      return (map && map._frtTerradraw) ? map._frtTerradraw.getData() : null;
+    };
+    window.MapsRender.clearDraw = function (map) {
+      if (map && map._frtTerradraw) map._frtTerradraw.clear();
+    };
+    window.MapsRender.setDrawData = function (map, geojson) {
+      if (map && map._frtTerradraw) map._frtTerradraw.setData(geojson);
     };
   })();
 </script>`.trim()
