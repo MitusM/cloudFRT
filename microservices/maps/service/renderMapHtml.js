@@ -1575,6 +1575,138 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Angled-Rectangle (повёрнутый прямоугольник, 3 клика) ──
+    // Клик 1: угол A. Клик 2: сторона AB (длина+направление).
+    // Клик 3: перпендикуляр от C к AB → высота → прямоугольник.
+    // Click-based как polygon. Стили: fill #EDEFF0 / 0.7, outline #666666 / 2.
+    function makeAngledRectTool(map, ctrlPos) {
+      if (map._frtAngledRectDone) return;
+      map._frtAngledRectDone = true;
+
+      var active = { is: false };
+      var features = [];
+      var pts = []; // [lng, lat][]
+
+      var L = { fill: 'frt-angled-fill', outline: 'frt-angled-outline', pts: 'frt-angled-points' };
+      var S = { fill: 'frt-angled-fill-src', pts: 'frt-angled-points-src' };
+
+      var btnEl = btn('Повёрнутый', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M 12.55 15 C 5.66 15 0 20.66 0 27.55 0 33.57 4.32 38.65 10 39.84 L 10 60.26 C 4.32 61.45 0 66.53 0 72.55 0 79.44 5.66 85.1 12.55 85.1 18.6 85.1 23.64 80.73 24.79 75 L 75.25 75 C 76.4 80.73 81.5 85.1 87.55 85.1 94.2 85.1 99.66 79.81 100.03 73.25 100.07 72.68 100.1 72.09 100.1 71.5 100.1 65.55 95.84 60.43 90 59.52 L 90 39.85 C 95.49 38.74 99.7 33.98 100.03 28.25 100.07 27.68 100.1 27.09 100.1 26.5 100.1 20.29 94.2 15 87.55 15 81.53 15 76.46 19.32 75.26 25 L 24.77 25 C 23.58 19.32 18.56 15 12.55 15 Z" fill="#5f6368" fill-opacity="0.7"/></svg>',
+        function () { toggle(); });
+
+      function buildRect() {
+        if (pts.length < 3) return null;
+        var a = pts[0], b = pts[1], c = pts[2];
+        // вектор AB
+        var abx = b[0] - a[0], aby = b[1] - a[1];
+        // вектор AC
+        var acx = c[0] - a[0], acy = c[1] - a[1];
+        // проекция AC на AB (нормализованная)
+        var abLen2 = abx * abx + aby * aby;
+        if (abLen2 === 0) return null;
+        var t = (acx * abx + acy * aby) / abLen2;
+        // перпендикуляр = AC - проекция
+        var px = acx - t * abx;
+        var py = acy - t * aby;
+        // вершины прямоугольника: a, b, b+perp, a+perp
+        var d = [a[0] + abx + px, a[1] + aby + py];
+        var ring = [a, b, d, [a[0] + px, a[1] + py], a];
+        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+      }
+
+      function fc() {
+        var all = features.slice();
+        if (pts.length >= 3) {
+          var cur = buildRect();
+          if (cur) { cur.id = '_current'; all.push(cur); }
+        } else if (pts.length === 2) {
+          // показываем линию AB
+          all.push({ type: 'Feature', id: '_line', properties: {}, geometry: { type: 'LineString', coordinates: [pts[0], pts[1]] } });
+        }
+        return { type: 'FeatureCollection', features: all };
+      }
+
+      function pointsFC() {
+        return { type: 'FeatureCollection', features: pts.map(function (c, i) {
+          return { type: 'Feature', id: '_apts_' + i, properties: {}, geometry: { type: 'Point', coordinates: c } };
+        })};
+      }
+
+      function ensureLayers() {
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: fc() });
+        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
+        if (!map.getLayer(L.fill)) {
+          map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
+            paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
+        }
+        if (!map.getLayer(L.outline)) {
+          map.addLayer({ id: L.outline, type: 'line', source: S.fill,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+        if (!map.getLayer(L.pts)) {
+          map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
+            paint: { 'circle-radius': 3, 'circle-color': '#FAFAFA',
+              'circle-stroke-width': 1, 'circle-stroke-color': '#666666' } });
+        }
+      }
+
+      function update() {
+        if (!map.isStyleLoaded()) { map.once('style.load', update); return; }
+        ensureLayers();
+        var fs = map.getSource(S.fill); if (fs) fs.setData(fc());
+        var ps = map.getSource(S.pts); if (ps) ps.setData(pointsFC());
+      }
+
+      function commit() {
+        if (pts.length >= 3) {
+          var r = buildRect();
+          if (r) features.push(r);
+        }
+        pts.length = 0;
+      }
+
+      function mapClick(e) {
+        if (!active.is) return;
+        pts.push([e.lngLat.lng, e.lngLat.lat]);
+        if (pts.length === 3) {
+          commit();
+          update();
+          deactivate();
+          return;
+        }
+        update();
+      }
+
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        map.on('click', mapClick);
+        update();
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        map.off('click', mapClick);
+        if (pts.length) { commit(); update(); }
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+
+      function toggle() { active.is ? deactivate() : activate(); }
+      map.on('style.load', function () { if (active.is) update(); });
+
+      var api = {
+        activate: activate, deactivate: deactivate, toggle: toggle,
+        reset: function () { features.length = 0; pts.length = 0; update(); },
+        getFeatures: function () { return features.slice(); },
+      };
+      if (!map._frtAngledRect) map._frtAngledRect = api;
+      return btnEl;
+    }
+
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
@@ -1588,9 +1720,10 @@ function renderMapHtml(opts = {}) {
       var rectBtn = makeRectangleTool(map, ctrlPos);
       var circleBtn = makeCircleTool(map, ctrlPos);
       var freehandBtn = makeFreehandTool(map, ctrlPos);
+      var angledRectBtn = makeAngledRectTool(map, ctrlPos);
 
       // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn].forEach(function (b) {
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -1599,10 +1732,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
