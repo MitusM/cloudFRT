@@ -1189,9 +1189,15 @@ function renderMapHtml(opts = {}) {
         if (!active.is || !start) return;
         rect = { c: start, d: current || start };
         start = null; current = null;
-        map.getCanvas().style.cursor = 'crosshair';
+        // exit drawing mode, НО НЕ удаляем слои — прямоугольник остаётся видимым
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        map.off('mousedown', mapMousedown);
+        map.off('mousemove', mapMousemove);
+        map.off('mouseup', mapMouseup);
+        btnEl.classList.remove('maplibregl-ctrl-active');
         update(null, null);
-        deactivate();
       }
       function activate() {
         active.is = true;
@@ -1201,6 +1207,7 @@ function renderMapHtml(opts = {}) {
         map.on('mousemove', mapMousemove);
         map.on('mouseup', mapMouseup);
         rect = null; start = null; current = null;
+        update(null, null); // сразу очищаем старый прямоугольник
         btnEl.classList.add('maplibregl-ctrl-active');
       }
       function deactivate() {
