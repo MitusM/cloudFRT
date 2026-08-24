@@ -39,7 +39,7 @@ function renderMapHtml(opts = {}) {
   const markerColor = opts.markerColor || '#e11d48'
   const center = Array.isArray(opts.center) ? opts.center : [37.62, 55.75]
   const zoom = typeof opts.zoom === 'number' ? opts.zoom : 5
-  const heightPx = typeof opts.heightPx === 'number' ? opts.heightPx : 480
+  const heightPx = typeof opts.heightPx === 'number' ? opts.heightPx : 900
   const styleUrl = opts.styleUrl || 'https://tiles.openfreemap.org/styles/liberty'
   // язык подписей карты: default 'ru' (работаем с Россией — один русский, без EN+RU).
   // Можно 'auto' (язык браузера) или явный iso-код: 'en'|'de'|'fr'|….
@@ -976,7 +976,7 @@ function renderMapHtml(opts = {}) {
       }
       function commit() {
         if (coords.length > 1) {
-          features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords.slice() } });
+          features.push({ type: 'Feature', properties: { _frtId: 'frt-' + map._frtNextId++ }, geometry: { type: 'LineString', coordinates: coords.slice() } });
         }
         coords.length = 0;
       }
@@ -1005,6 +1005,12 @@ function renderMapHtml(opts = {}) {
         addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
         reset: function () { features.length = 0; coords.length = 0; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i].properties._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtLineString) map._frtLineString = api;
       return btnEl;
@@ -1079,7 +1085,7 @@ function renderMapHtml(opts = {}) {
         if (coords.length > 2) {
           var ring = coords.slice();
           ring.push(ring[0]);
-          features.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } });
+          features.push({ type: 'Feature', properties: { _frtId: 'frt-' + map._frtNextId++ }, geometry: { type: 'Polygon', coordinates: [ring] } });
         }
         coords.length = 0;
       }
@@ -1121,6 +1127,12 @@ function renderMapHtml(opts = {}) {
         addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
         reset: function () { features.length = 0; coords.length = 0; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i].properties._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtPolygon) map._frtPolygon = api;
       return btnEl;
@@ -1151,22 +1163,24 @@ function renderMapHtml(opts = {}) {
         '<circle cx="80" cy="80" r="5" fill="#5f6368"/></svg>',
         function () { toggle(); });
 
-      function makeRectFeat(c, d) {
-        if (!c || !d) return null;
-        var minX = Math.min(c.lng, d.lng), maxX = Math.max(c.lng, d.lng);
-        var minY = Math.min(c.lat, d.lat), maxY = Math.max(c.lat, d.lat);
-        return {
+      function makeRectFeat(f) {
+        if (!f || !f.c || !f.d) return null;
+        var minX = Math.min(f.c.lng, f.d.lng), maxX = Math.max(f.c.lng, f.d.lng);
+        var minY = Math.min(f.c.lat, f.d.lat), maxY = Math.max(f.c.lat, f.d.lat);
+        var feat = {
           type: 'Feature', properties: {},
           geometry: { type: 'Polygon', coordinates: [[
             [minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]
           ]]}
         };
+        if (f._frtId) feat.properties._frtId = f._frtId;
+        return feat;
       }
 
       function fc() {
-        var all = features.map(function(f) { return makeRectFeat(f.c, f.d); }).filter(Boolean);
+        var all = features.map(function(f) { return makeRectFeat(f); }).filter(Boolean);
         if (dragStart && dragCurrent) {
-          var cur = makeRectFeat(dragStart, dragCurrent);
+          var cur = makeRectFeat({ c: dragStart, d: dragCurrent });
           if (cur) { cur.id = '_current'; all.push(cur); }
         }
         return { type: 'FeatureCollection', features: all };
@@ -1239,7 +1253,8 @@ function renderMapHtml(opts = {}) {
           update();
           return;
         }
-        features.push({ c: dragStart, d: dragCurrent });
+        var _id = 'frt-' + map._frtNextId++;
+        features.push({ _frtId: _id, c: dragStart, d: dragCurrent });
         dragStart = null;
         dragCurrent = null;
         update();
@@ -1273,6 +1288,12 @@ function renderMapHtml(opts = {}) {
         activate: activate, deactivate: deactivate, toggle: toggle,
         reset: function () { features.length = 0; dragStart = null; dragCurrent = null; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i]._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtRectangle) map._frtRectangle = api;
       return btnEl;
@@ -1300,8 +1321,9 @@ function renderMapHtml(opts = {}) {
         '<line x1="50" y1="35" x2="50" y2="65" stroke="#5f6368" stroke-width="2"/></svg>',
         function () { toggle(); });
 
-      function makeCircleFeat(c, r) {
-        if (!c || r == null) return null;
+      function makeCircleFeat(f) {
+        if (!f || !f.c || f.r == null) return null;
+        var c = f.c, r = f.r;
         var seg = 64;
         var latRad = c.lat * Math.PI / 180;
         var cosLat = Math.cos(latRad);
@@ -1312,7 +1334,9 @@ function renderMapHtml(opts = {}) {
           var dy = r * Math.sin(a);
           ring.push([c.lng + dx, c.lat + dy]);
         }
-        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+        var feat = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+        if (f._frtId) feat.properties._frtId = f._frtId;
+        return feat;
       }
 
       function radius() {
@@ -1326,10 +1350,10 @@ function renderMapHtml(opts = {}) {
 
       function fc() {
         var all = features.filter(function(f) { return f.c != null; })
-          .map(function(f) { return makeCircleFeat(f.c, f.r); }).filter(Boolean);
+          .map(function(f) { return makeCircleFeat(f); }).filter(Boolean);
         var r = radius();
         if (dragStart && r != null && r > 0) {
-          var cur = makeCircleFeat(dragStart, r);
+          var cur = makeCircleFeat({ c: dragStart, r: r });
           if (cur) { cur.id = '_current'; all.push(cur); }
         }
         return { type: 'FeatureCollection', features: all };
@@ -1401,7 +1425,8 @@ function renderMapHtml(opts = {}) {
           update();
           return;
         }
-        features.push({ c: dragStart, r: r });
+        var _id2 = 'frt-' + map._frtNextId++;
+        features.push({ _frtId: _id2, c: dragStart, r: r });
         dragStart = null;
         dragCurrent = null;
         update();
@@ -1434,6 +1459,12 @@ function renderMapHtml(opts = {}) {
         activate: activate, deactivate: deactivate, toggle: toggle,
         reset: function () { features.length = 0; dragStart = null; dragCurrent = null; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i]._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtCircle) map._frtCircle = api;
       return btnEl;
@@ -1458,11 +1489,14 @@ function renderMapHtml(opts = {}) {
         '<path d="M160-120v-170l527-526q12-12 27-18t30-6q16 0 30.5 6t25.5 18l56 56q12 11 18 25.5t6 30.5q0 15-6 30t-18 27L330-120H160Zm80-80h56l393-392-28-29-29-28-392 393v56Zm560-503-57-57 57 57Zm-139 82-29-28 57 57-28-29ZM560-120q74 0 137-37t63-103q0-36-19-62t-51-45l-59 59q23 10 36 22t13 26q0 23-36.5 41.5T560-200q-17 0-28.5 11.5T520-160q0 17 11.5 28.5T560-120ZM183-426l60-60q-20-8-31.5-16.5T200-520q0-12 18-24t76-37q88-38 117-69t29-70q0-55-44-87.5T280-840q-45 0-80.5 16T145-785q-11 13-9 29t15 26q13 11 29 9t27-13q14-14 31-20t42-6q41 0 60.5 12t19.5 28q0 14-17.5 25.5T262-654q-80 35-111 63.5T120-520q0 32 17 54.5t46 39.5Z" fill="#5f6368"/></svg>',
         function () { toggle(); });
 
-      function makePolyFeat(pts) {
+      function makePolyFeat(f) {
+        var pts = f.pts || f;
         if (!pts || pts.length < 3) return null;
         var ring = pts.slice();
         ring.push(ring[0]); // замкнуть
-        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+        var feat = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+        if (f._frtId) feat.properties._frtId = f._frtId;
+        return feat;
       }
 
       function fc() {
@@ -1538,7 +1572,8 @@ function renderMapHtml(opts = {}) {
           update();
           return;
         }
-        features.push(currentPoints.slice());
+        var _id3 = 'frt-' + map._frtNextId++;
+        features.push({ _frtId: _id3, pts: currentPoints.slice() });
         currentPoints = null;
         update();
       }
@@ -1570,6 +1605,12 @@ function renderMapHtml(opts = {}) {
         activate: activate, deactivate: deactivate, toggle: toggle,
         reset: function () { features.length = 0; currentPoints = null; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i]._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtFreehand) map._frtFreehand = api;
       return btnEl;
@@ -1660,7 +1701,7 @@ function renderMapHtml(opts = {}) {
       function commit() {
         if (pts.length >= 3) {
           var r = buildRect();
-          if (r) features.push(r);
+          if (r) { r.properties._frtId = 'frt-' + map._frtNextId++; features.push(r); }
         }
         pts.length = 0;
       }
@@ -1702,6 +1743,12 @@ function renderMapHtml(opts = {}) {
         activate: activate, deactivate: deactivate, toggle: toggle,
         reset: function () { features.length = 0; pts.length = 0; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i].properties._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtAngledRect) map._frtAngledRect = api;
       return btnEl;
@@ -1726,9 +1773,12 @@ function renderMapHtml(opts = {}) {
         '<path d="M554-120q-54 0-91-37t-37-89q0-76 61.5-137.5T641-460q-3-36-18-54.5T582-533q-30 0-65 25t-83 82q-78 93-114.5 121T241-277q-51 0-86-38t-35-92q0-54 23.5-110.5T223-653q19-26 28-44t9-29q0-7-2.5-10.5T250-740q-10 0-25 12.5T190-689l-70-71q32-39 65-59.5t65-20.5q46 0 78 32t32 80q0 29-15 64t-50 84q-38 54-56.5 95T220-413q0 17 5.5 26.5T241-377q10 0 17.5-5.5T286-409q13-14 31-34.5t44-50.5q63-75 114-107t107-32q67 0 110 45t49 123h99v100h-99q-8 112-58.5 178.5T554-120Zm2-100q32 0 54-36.5T640-358q-46 11-80 43.5T526-250q0 14 8 22t22 8Z" fill="#5f6368"/></svg>',
         function () { toggle(); });
 
-      function makeLineFeat(pts) {
+      function makeLineFeat(f) {
+        var pts = f.pts || f;
         if (!pts || pts.length < 2) return null;
-        return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: pts } };
+        var feat = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: pts } };
+        if (f._frtId) feat.properties._frtId = f._frtId;
+        return feat;
       }
 
       function fc() {
@@ -1799,7 +1849,8 @@ function renderMapHtml(opts = {}) {
           update();
           return;
         }
-        features.push(currentPoints.slice());
+        var _id5 = 'frt-' + map._frtNextId++;
+        features.push({ _frtId: _id5, pts: currentPoints.slice() });
         currentPoints = null;
         update();
       }
@@ -1831,6 +1882,12 @@ function renderMapHtml(opts = {}) {
         activate: activate, deactivate: deactivate, toggle: toggle,
         reset: function () { features.length = 0; currentPoints = null; update(); },
         getFeatures: function () { return features.slice(); },
+        removeById: function (id) {
+          for (var i = 0; i < features.length; i++) {
+            if (features[i]._frtId === id) { features.splice(i, 1); update(); return true; }
+          }
+          return false;
+        },
       };
       if (!map._frtFreehandLine) map._frtFreehandLine = api;
       return btnEl;
@@ -1839,6 +1896,8 @@ function renderMapHtml(opts = {}) {
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
+
+      if (!map._frtNextId) map._frtNextId = 1;
 
       var rulerBtn = makeRuler(map, ctrlPos);
       var textBtn = makeTextTool(map, ctrlPos);
@@ -1852,8 +1911,198 @@ function renderMapHtml(opts = {}) {
       var angledRectBtn = makeAngledRectTool(map, ctrlPos);
       var freehandLineBtn = makeFreehandLineTool(map, ctrlPos);
 
-      // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn].forEach(function (b) {
+      // ── frtManager — Select / Delete / Undo / Redo ──
+      // Надстройка над текущими инструментами, не меняет их внутреннюю
+      // структуру. Select = queryRenderedFeatures по frt-слоям;
+      // Delete = удаляет из features[] того инструмента, которому
+      // принадлежит выбранная фича (по _frtId);
+      // Undo/Redo через стек.
+      if (!map._frtManager) {
+        map._frtManager = {
+          selectedId: null,
+          undoStack: [],
+          redoStack: [],
+          // запоминаем удалённые фичи для undo
+          // удаление: { tool, id, feature }
+          _deleted: [],
+          _added: [],
+        };
+      }
+      var mgr = map._frtManager;
+
+      // Select — toggle подсветки по клику на фиче
+      var selectBtn = btn('Выбрать', '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M9.4 2.2 5.28 21.78l4.91-3.13 3.84 4.82 1.68-1.37-3.69-4.62 8.78-2.9L9.4 2.2Zm1.48 4.85 5.72 11.58-5.18 1.72 2.12-6.89-5.79-.22 3.13-6.19Z" fill="#5f6368"/></svg>', function () {
+        selectClick();
+        selectBtn.classList.toggle('maplibregl-ctrl-active');
+      });
+
+      var deleteBtn = btn('Удалить', '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM8 9h8v10H8V9zm7.5-5-1-1h-5l-1 1H5v2h14V4h-3.5z" fill="#5f6368"/></svg>', function () {
+        if (mgr.selectedId) { deleteFeature(mgr.selectedId); mgr.selectedId = null; }
+      });
+
+      var undoBtn = btn('Отменить', '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z" fill="#5f6368"/></svg>', function () { undo(); });
+
+      var redoBtn = btn('Вернуть', '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M11.5 8c-4.65 0-8.58 3.03-9.97 7.22l2.37.78C5.95 12.31 8.96 10 12.5 10c1.96 0 3.73.72 5.12 1.88L14 15.5h9v-9l-3.6 3.6C16.55 8.99 14.15 8 11.5 8z" fill="#5f6368"/></svg>', function () { redo(); });
+
+      var dlGeoBtn = btn('Скачать GeoJSON', '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+        '<path fill="none" d="M0 0h24v24H0z"/><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>', function () { exportGeoJSON(); });
+
+      // ── Select: click на карте → queryRenderedFeatures по frt-слоям ──
+      function selectClick() {
+        mgr.selectedId = null;
+        map.getCanvas().style.cursor = 'pointer';
+        map.once('click', function (e) {
+          map.getCanvas().style.cursor = '';
+          var layers = map.getStyle().layers || [];
+          var frtLayers = [];
+          for (var i = 0; i < layers.length; i++) {
+            var l = layers[i];
+            if (l.id.indexOf('frt-') === 0 && l.id.indexOf('-select') < 0) frtLayers.push(l.id);
+          }
+          if (!frtLayers.length) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          var feats = map.queryRenderedFeatures(e.point, { layers: frtLayers });
+          if (!feats || !feats.length) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          // берём самую верхнюю фичу на клике
+          var top = feats[0];
+          var fid = top.properties && top.properties._frtId;
+          if (!fid) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          mgr.selectedId = fid;
+          highlightFeature(fid);
+        });
+      }
+
+      // ── Delete: найти фичу по id и удалить через removeById ──
+      function deleteFeature(id) {
+        var tools = [
+          map._frtLineString,
+          map._frtPolygon,
+          map._frtRectangle,
+          map._frtCircle,
+          map._frtFreehand,
+          map._frtAngledRect,
+          map._frtFreehandLine,
+        ];
+        for (var ti = 0; ti < tools.length; ti++) {
+          var t = tools[ti];
+          if (!t) continue;
+          if (t.removeById && t.removeById(id)) {
+            // сохраняем для undo (только что удалённую фичу)
+            var all = t.getFeatures();
+            // ищем фичу по id среди всех — но она уже удалена. Используем saved.
+            // Нам нужно запомнить фичу ДО удаления. Пока не делаем undo.
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // ── Undo/Redo (заглушки — будут реализованы позже) ──
+      function undo() {
+        // TODO: undo через стек
+      }
+
+      function redo() {
+        // TODO: redo
+      }
+
+      function highlightFeature(id) {
+        clearHighlight();
+        // TODO: overlay-слой для подсветки
+      }
+      function clearHighlight() {
+        // TODO: убрать overlay
+      }
+
+      function exportGeoJSON() {
+        var tools = [
+          { api: map._frtLineString, normalize: function (f) { return f; } },
+          { api: map._frtPolygon, normalize: function (f) { return f; } },
+          { api: map._frtRectangle, normalize: function (f) {
+              if (f._frtId && f.c && f.d) {
+                var minLng = Math.min(f.c.lng, f.d.lng), maxLng = Math.max(f.c.lng, f.d.lng);
+                var minLat = Math.min(f.c.lat, f.d.lat), maxLat = Math.max(f.c.lat, f.d.lat);
+                return { type: 'Feature', properties: { _frtId: f._frtId },
+                  geometry: { type: 'Polygon', coordinates: [[
+                    [minLng, minLat], [maxLng, minLat], [maxLng, maxLat], [minLng, maxLat], [minLng, minLat]
+                  ]] } };
+              }
+              return null;
+            } },
+          { api: map._frtCircle, normalize: function (f) {
+              if (f._frtId && f.c && f.r) {
+                // экспорт круга как аппроксимированный полигон (64 сегмента)
+                var segments = 64;
+                var coords = [];
+                var lat = f.c.lat, lng = f.c.lng;
+                var r = f.r;
+                for (var a = 0; a < 2 * Math.PI; a += 2 * Math.PI / segments) {
+                  var dlng = r * Math.sin(a) / Math.cos(lat * Math.PI / 180);
+                  var dlat = r * Math.cos(a);
+                  coords.push([lng + dlng, lat + dlat]);
+                }
+                coords.push(coords[0]);
+                return { type: 'Feature', properties: { _frtId: f._frtId },
+                  geometry: { type: 'Polygon', coordinates: [coords] } };
+              }
+              return null;
+            } },
+          { api: map._frtFreehand, normalize: function (f) {
+              if (f._frtId && f.pts) {
+                var ring = f.pts.slice(); ring.push(ring[0]);
+                return { type: 'Feature', properties: { _frtId: f._frtId },
+                  geometry: { type: 'Polygon', coordinates: [ring] } };
+              }
+              return null;
+            } },
+          { api: map._frtAngledRect, normalize: function (f) { return f; } },
+          { api: map._frtFreehandLine, normalize: function (f) {
+              if (f._frtId && f.pts) {
+                return { type: 'Feature', properties: { _frtId: f._frtId },
+                  geometry: { type: 'LineString', coordinates: f.pts } };
+              }
+              return null;
+            } },
+        ];
+        var all = [];
+        for (var ti = 0; ti < tools.length; ti++) {
+          var t = tools[ti];
+          if (!t.api) continue;
+          var fa = t.api.getFeatures();
+          for (var fi = 0; fi < fa.length; fi++) {
+            var n = t.normalize(fa[fi]);
+            if (n) all.push(n);
+          }
+        }
+        // + DOM-маркеры точки
+        if (window.MapsRender && window.MapsRender.frtGetPoints) {
+          var pts = window.MapsRender.frtGetPoints(map);
+          for (var pi = 0; pi < pts.length; pi++) {
+            all.push({ type: 'Feature', properties: { _tool: 'point' },
+              geometry: { type: 'Point', coordinates: [pts[pi].lng, pts[pi].lat] } });
+          }
+        }
+        // text-инструмент тоже
+        if (map._frtTextTool) {
+          var txts = map._frtTextTool.getFeatures ? map._frtTextTool.getFeatures() : [];
+          for (var ti2 = 0; ti2 < txts.length; ti2++) all.push(txts[ti2]);
+        }
+        var blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: all }, null, 2)], { type: 'application/geo+json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.download = 'map-features.geojson';
+        a.href = url;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // Прячем кнопки рисования, оставляем только toggle
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, selectBtn, deleteBtn, undoBtn, redoBtn, dlGeoBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -1862,10 +2111,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
