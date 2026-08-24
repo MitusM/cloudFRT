@@ -1123,6 +1123,112 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Прямоугольник на карту (rectangle) — своя, по мотивам terra-draw rectangle ──
+    // Drag: клик → тащишь → отпускаешь (два угла).
+    // Стили из terra-draw defaultMeasureControlOptions:
+    // fill #EDEFF0 / 0.7, outline #666666 / 2.
+    function makeRectangleTool(map, ctrlPos) {
+      if (map._frtRectDone) return;
+      map._frtRectDone = true;
+
+      var active = { is: false };
+      var start = null; // {lng, lat} первого угла
+      var current = null; // {lng, lat} при перетаскивании
+      var rect = null; // {c,d} зафиксированного прямоугольника
+      var L = { fill: 'frt-rect-fill', outline: 'frt-rect-outline' };
+      var S = { fill: 'frt-rect-fill-src' };
+
+      // иконка — прямоугольник с двумя угловыми точками (заимствован из terra-draw rectangle.svg)
+      var btnEl = btn('Прямоугольник', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<rect x="15" y="15" width="70" height="70" rx="12" fill="none" stroke="#5f6368" stroke-width="4"/>' +
+        '<circle cx="20" cy="20" r="5" fill="#5f6368"/>' +
+        '<circle cx="80" cy="80" r="5" fill="#5f6368"/></svg>',
+        function () { toggle(); });
+
+      function rectFC(a, b) {
+        if (!a || !b) return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[]] } };
+        var minX = Math.min(a.lng, b.lng), maxX = Math.max(a.lng, b.lng);
+        var minY = Math.min(a.lat, b.lat), maxY = Math.max(a.lat, b.lat);
+        return {
+          type: 'Feature', properties: {},
+          geometry: { type: 'Polygon', coordinates: [[ [minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY] ]] }
+        };
+      }
+      function ensureLayers() {
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: rectFC(null, null) });
+        if (!map.getLayer(L.fill)) {
+          map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
+            paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
+        }
+        if (!map.getLayer(L.outline)) {
+          map.addLayer({ id: L.outline, type: 'line', source: S.fill,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+      }
+      function update(sw, ne) {
+        if (!map.isStyleLoaded()) { map.once('style.load', function () { update(sw, ne); }); return; }
+        ensureLayers();
+        var s = map.getSource(S.fill);
+        if (s) s.setData(sw && ne ? rectFC(sw, ne) : rect ? rectFC(rect.c, rect.d) : rectFC(null, null));
+      }
+      function mapMousedown(e) {
+        if (!active.is) return;
+        if (e.originalEvent && e.originalEvent.button !== 0) return;
+        start = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        current = start;
+        rect = null;
+        map.getCanvas().style.cursor = 'crosshair';
+        update(start, start);
+      }
+      function mapMousemove(e) {
+        if (!active.is || !start) return;
+        current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        update(start, current);
+      }
+      function mapMouseup() {
+        if (!active.is || !start) return;
+        rect = { c: start, d: current || start };
+        start = null; current = null;
+        map.getCanvas().style.cursor = 'crosshair';
+        update(null, null);
+        deactivate();
+      }
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        map.on('mousedown', mapMousedown);
+        map.on('mousemove', mapMousemove);
+        map.on('mouseup', mapMouseup);
+        rect = null; start = null; current = null;
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        map.off('mousedown', mapMousedown);
+        map.off('mousemove', mapMousemove);
+        map.off('mouseup', mapMouseup);
+        ['fill', 'outline'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
+        if (map.getSource(S.fill)) map.removeSource(S.fill);
+        start = null; current = null; rect = null;
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+      function toggle() { active.is ? deactivate() : activate(); }
+      map.on('style.load', function () { if (active.is) update(); });
+
+      var api = {
+        activate: activate,
+        deactivate: deactivate,
+        toggle: toggle,
+        setBounds: function (c, d) { rect = { c: c, d: d }; update(null, null); },
+        reset: function () { rect = null; update(null, null); },
+      };
+      if (!map._frtRectangle) map._frtRectangle = api;
+      return btnEl;
+    }
+
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
@@ -1133,9 +1239,10 @@ function renderMapHtml(opts = {}) {
       var markerBtn = makeMarkerTool(map, ctrlPos);
       var lineBtn = makeLineStringTool(map, ctrlPos);
       var polygonBtn = makePolygonTool(map, ctrlPos);
+      var rectBtn = makeRectangleTool(map, ctrlPos);
 
       // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) {
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -1144,10 +1251,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
