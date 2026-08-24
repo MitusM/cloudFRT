@@ -199,6 +199,90 @@ function renderMapHtml(opts = {}) {
 
     // ── Текст на карту: своя кнопка «T», свой попап-ввод, рендер symbol-слоем ──
     // Не зависит от terra-draw. Форма ввода — красивый popup (не prompt).
+    // ── Точка на карту: кнопка → клик → маркер через addMarkers (готовый) ──
+    // Заимствует маркер из MapsRender.addPoints/addMarkers (красная капля с
+    // белой обводкой + попап + тултип), не изобретает свой пин.
+    // Работает на обеих картах (Standard + Satellite), не зависит от terra-draw.
+    function makePointTool(map, ctrlPos) {
+      if (map._frtPointToolDone) return;
+      map._frtPointToolDone = true;
+
+      var active = false;
+
+      function onClick(e) {
+        if (!active) return;
+        var lng = e.lngLat.lng;
+        var lat = e.lngLat.lat;
+        // маркер как у terra-draw point — синий кружок #3f97e0, а не красная капля
+        var el = document.createElement('div');
+        el.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#3f97e0;' +
+          'border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2);cursor:pointer;';
+        var mk = new maplibregl.Marker({ element: el })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML('<small>Точка</small>'))
+          .addTo(map);
+        if (!map._frtPointMarkers) map._frtPointMarkers = [];
+        map._frtPointMarkers.push(mk);
+      }
+
+      var hintEl = null;
+      function activate() {
+        if (active) {
+          active = false;
+          map.getContainer().style.cursor = '';
+          if (hintEl) { hintEl.remove(); hintEl = null; }
+          map.off('click', onClick);
+          return;
+        }
+        active = true;
+        map.getContainer().style.cursor = 'crosshair';
+        hintEl = document.createElement('div');
+        hintEl.textContent = 'Кликните на карте, чтобы поставить точку';
+        hintEl.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);' +
+          'background:rgba(0,0,0,.7);color:#fff;padding:4px 12px;border-radius:6px;' +
+          'font:13px sans-serif;pointer-events:none;z-index:99;';
+        map.getContainer().appendChild(hintEl);
+        map.on('click', onClick);
+      }
+
+      // иконка кнопки — заимствована из terra-draw measure-add-point-button (круг-мишень)
+      var btnEl = btn('Поставить точку', '<svg viewBox="0 0 100 100" width="20" height="20" fill="#5f6368" style="display:block;margin:2px auto;">' +
+        '<path d="M50 37.45c-6.89 0-12.55 5.66-12.55 12.549 0 6.89 5.66 12.55 12.55 12.55 6.655 0 12.112-5.294 12.48-11.862a3.5 3.5 0 0 0 .07-.688 3.5 3.5 0 0 0-.07-.691C62.11 42.74 56.653 37.45 50 37.45m0 7c3.107 0 5.55 2.442 5.55 5.549s-2.443 5.55-5.55 5.55-5.55-2.443-5.55-5.55S46.892 44.45 50 44.45"/></svg>', function () {
+        activate();
+        btnEl.classList.toggle('maplibregl-ctrl-active');
+      });
+      map.addControl({ onAdd: function () { return ctrlGroup([btnEl]); }, onRemove: function () {} }, ctrlPos);
+
+      // публичный API для управления точками (независимо от addMarkers)
+      if (!window.MapsRender.frtGetPoints) {
+        window.MapsRender.frtGetPoints = function (map) {
+          if (!map || !map._frtPointMarkers) return [];
+          return map._frtPointMarkers.map(function (mk) {
+            var ll = mk.getLngLat();
+            return { lng: ll.lng, lat: ll.lat };
+          });
+        };
+        window.MapsRender.frtClearPoints = function (map) {
+          if (!map || !map._frtPointMarkers) return;
+          map._frtPointMarkers.forEach(function (m) { m.remove(); });
+          map._frtPointMarkers = [];
+        };
+        window.MapsRender.frtSetPoints = function (map, points) {
+          if (!map) return;
+          window.MapsRender.frtClearPoints(map);
+          (points || []).forEach(function (p) {
+            var el = document.createElement('div');
+            el.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#3f97e0;' +
+              'border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2);cursor:pointer;';
+            var mk = new maplibregl.Marker({ element: el })
+              .setLngLat([p.lng, p.lat])
+              .addTo(map);
+            map._frtPointMarkers.push(mk);
+          });
+        };
+      }
+    }
+
     function makeTextTool(map, ctrlPos) {
       if (map._frtTextToolDone) return;
       map._frtTextToolDone = true;
@@ -910,6 +994,8 @@ function renderMapHtml(opts = {}) {
       makeGeocoder(map, opt);
       // текстовые подписи — своя кнопка «Т» в правой панели
       makeTextTool(map, ctrlPosition);
+      // точка — своя кнопка, заимствует маркер из addMarkers
+      makePointTool(map, ctrlPosition);
       // terradraw — рисование + измерения. Инициализируем после загрузки стиля.
       // При каждом style.load (переключение Стандартная↔Спутник) TerraDraw
       // теряет source/layer — удаляем старый control и создаём новый.
