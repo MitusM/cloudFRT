@@ -918,6 +918,7 @@ function renderMapHtml(opts = {}) {
       map._frtLineStringDone = true;
 
       var active = { is: false };
+      var features = []; // завершённые линии
       var coords = []; // [[lng,lat], …]
       var L = { line: 'frt-linestring-line', pts: 'frt-linestring-points' };
       var S = { line: 'frt-linestring-line-src', pts: 'frt-linestring-points-src' };
@@ -927,41 +928,38 @@ function renderMapHtml(opts = {}) {
         function () { toggle(); });
 
       function lineFC() {
-        return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
+        var all = features.slice();
+        if (coords.length > 1) {
+          all.push({ type: 'Feature', id: '_current', properties: {}, geometry: { type: 'LineString', coordinates: coords } });
+        }
+        return { type: 'FeatureCollection', features: all };
       }
       function pointsFC() {
         return {
           type: 'FeatureCollection',
           features: coords.map(function (c, i) {
-            return { type: 'Feature', id: String(i), properties: {}, geometry: { type: 'Point', coordinates: c } };
+            return { type: 'Feature', id: '_pts_' + i, properties: {}, geometry: { type: 'Point', coordinates: c } };
           })
         };
       }
-      function ensureSources() {
+      function ensureLayers() {
         if (!map.getSource(S.line)) map.addSource(S.line, { type: 'geojson', data: lineFC() });
         if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
-      }
-      function ensureLayers() {
-        ensureSources();
         if (!map.getLayer(L.line)) {
           map.addLayer({ id: L.line, type: 'line', source: S.line,
             paint: { 'line-color': '#666666', 'line-width': 2 } });
         }
-        if (!map.getLayer(L.pts) && coords.length) {
+        if (!map.getLayer(L.pts)) {
           map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
             paint: { 'circle-radius': 3, 'circle-color': '#FFFFFF',
               'circle-stroke-width': 1, 'circle-stroke-color': '#666666' } });
         }
       }
       function update() {
-        if (!map.isStyleLoaded()) {
-          map.once('style.load', update);
-          return;
-        }
+        if (!map.isStyleLoaded()) { map.once('style.load', update); return; }
         ensureLayers();
-        var ls = map.getSource(S.line); var ps = map.getSource(S.pts);
-        if (ls) ls.setData(lineFC());
-        if (ps) ps.setData(pointsFC());
+        var ls = map.getSource(S.line); if (ls) ls.setData(lineFC());
+        var ps = map.getSource(S.pts); if (ps) ps.setData(pointsFC());
       }
       function mapClick(e) {
         if (!active.is) return;
@@ -972,13 +970,20 @@ function renderMapHtml(opts = {}) {
         if (!active.is) return;
         // убираем лишнюю вершину от dblclick-клика
         if (coords.length) coords.pop();
+        commit();
+        update();
         deactivate();
+      }
+      function commit() {
+        if (coords.length > 1) {
+          features.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords.slice() } });
+        }
+        coords.length = 0;
       }
       function activate() {
         active.is = true;
         map.getCanvas().style.cursor = 'crosshair';
         if (map.doubleClickZoom) map.doubleClickZoom.disable();
-        coords.length = 0;
         map.on('click', mapClick);
         map.on('dblclick', mapDblClick);
         update();
@@ -990,20 +995,16 @@ function renderMapHtml(opts = {}) {
         if (map.doubleClickZoom) map.doubleClickZoom.enable();
         map.off('click', mapClick);
         map.off('dblclick', mapDblClick);
-        ['line', 'pts'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
-        [S.line, S.pts].forEach(function (k) { if (map.getSource(k)) map.removeSource(k); });
-        coords.length = 0;
+        if (coords.length) { commit(); update(); }
         btnEl.classList.remove('maplibregl-ctrl-active');
       }
       function toggle() { active.is ? deactivate() : activate(); }
       map.on('style.load', function () { if (active.is) update(); });
-      // публичный API (по аналогии с map._frtRuler)
       var api = {
-        activate: activate,
-        deactivate: deactivate,
-        toggle: toggle,
+        activate: activate, deactivate: deactivate, toggle: toggle,
         addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
-        reset: function () { coords.length = 0; update(); },
+        reset: function () { features.length = 0; coords.length = 0; update(); },
+        getFeatures: function () { return features.slice(); },
       };
       if (!map._frtLineString) map._frtLineString = api;
       return btnEl;
@@ -1019,9 +1020,10 @@ function renderMapHtml(opts = {}) {
       map._frtPolygonDone = true;
 
       var active = { is: false };
-      var coords = []; // [[lng,lat], …]
+      var features = []; // завершённые полигоны
+      var coords = []; // текущие вершины [[lng,lat], …]
       var L = { fill: 'frt-polygon-fill', outline: 'frt-polygon-outline', pts: 'frt-polygon-points' };
-      var S = { fill: 'frt-polygon-fill-src', outline: 'frt-polygon-outline-src', pts: 'frt-polygon-points-src' };
+      var S = { fill: 'frt-polygon-fill-src', pts: 'frt-polygon-points-src' };
 
       // иконка — полигон с вершинами (заимствована из terra-draw polygon.svg)
       var btnEl = btn('Полигон', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
@@ -1034,25 +1036,25 @@ function renderMapHtml(opts = {}) {
         '<circle cx="75" cy="75" r="5" fill="#5f6368"/></svg>',
         function () { toggle(); });
 
-      function polygonFC() {
-        // замыкаем: первая точка в конец, чтобы полигон замкнулся
-        var ring = coords.concat([coords[0]]);
-        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+      function fc() {
+        var all = features.slice();
+        if (coords.length > 2) {
+          var ring = coords.concat([coords[0]]);
+          all.push({ type: 'Feature', id: '_current', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } });
+        }
+        return { type: 'FeatureCollection', features: all };
       }
       function pointsFC() {
         return {
           type: 'FeatureCollection',
           features: coords.map(function (c, i) {
-            return { type: 'Feature', id: String(i), properties: {}, geometry: { type: 'Point', coordinates: c } };
+            return { type: 'Feature', id: '_pts_' + i, properties: {}, geometry: { type: 'Point', coordinates: c } };
           })
         };
       }
-      function ensureSources() {
-        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: polygonFC() });
-        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
-      }
       function ensureLayers() {
-        ensureSources();
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: fc() });
+        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
         if (!map.getLayer(L.fill)) {
           map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
             paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
@@ -1061,21 +1063,25 @@ function renderMapHtml(opts = {}) {
           map.addLayer({ id: L.outline, type: 'line', source: S.fill,
             paint: { 'line-color': '#666666', 'line-width': 2 } });
         }
-        if (!map.getLayer(L.pts) && coords.length) {
+        if (!map.getLayer(L.pts)) {
           map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
             paint: { 'circle-radius': 3, 'circle-color': '#FAFAFA',
               'circle-stroke-width': 1, 'circle-stroke-color': '#666666' } });
         }
       }
       function update() {
-        if (!map.isStyleLoaded()) {
-          map.once('style.load', update);
-          return;
-        }
+        if (!map.isStyleLoaded()) { map.once('style.load', update); return; }
         ensureLayers();
-        var fs = map.getSource(S.fill); var ps = map.getSource(S.pts);
-        if (fs) fs.setData(polygonFC());
-        if (ps) ps.setData(pointsFC());
+        var fs = map.getSource(S.fill); if (fs) fs.setData(fc());
+        var ps = map.getSource(S.pts); if (ps) ps.setData(pointsFC());
+      }
+      function commit() {
+        if (coords.length > 2) {
+          var ring = coords.slice();
+          ring.push(ring[0]);
+          features.push({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } });
+        }
+        coords.length = 0;
       }
       function mapClick(e) {
         if (!active.is) return;
@@ -1084,15 +1090,15 @@ function renderMapHtml(opts = {}) {
       }
       function mapDblClick(e) {
         if (!active.is) return;
-        // убираем лишнюю вершину от dblclick-клика
         if (coords.length) coords.pop();
+        commit();
+        update();
         deactivate();
       }
       function activate() {
         active.is = true;
         map.getCanvas().style.cursor = 'crosshair';
         if (map.doubleClickZoom) map.doubleClickZoom.disable();
-        coords.length = 0;
         map.on('click', mapClick);
         map.on('dblclick', mapDblClick);
         update();
@@ -1104,20 +1110,17 @@ function renderMapHtml(opts = {}) {
         if (map.doubleClickZoom) map.doubleClickZoom.enable();
         map.off('click', mapClick);
         map.off('dblclick', mapDblClick);
-        ['fill', 'outline', 'pts'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
-        [S.fill, S.pts].forEach(function (k) { if (map.getSource(k)) map.removeSource(k); });
-        coords.length = 0;
+        if (coords.length) { commit(); update(); }
         btnEl.classList.remove('maplibregl-ctrl-active');
       }
       function toggle() { active.is ? deactivate() : activate(); }
       map.on('style.load', function () { if (active.is) update(); });
 
       var api = {
-        activate: activate,
-        deactivate: deactivate,
-        toggle: toggle,
+        activate: activate, deactivate: deactivate, toggle: toggle,
         addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
-        reset: function () { coords.length = 0; update(); },
+        reset: function () { features.length = 0; coords.length = 0; update(); },
+        getFeatures: function () { return features.slice(); },
       };
       if (!map._frtPolygon) map._frtPolygon = api;
       return btnEl;
