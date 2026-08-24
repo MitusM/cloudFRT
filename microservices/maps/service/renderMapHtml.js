@@ -1126,6 +1126,158 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Прямоугольник (rectangle) — pointerdown/pointermove/pointerup ──
+    // MapLibre GL использует PointerEvents для dragPan, не MouseEvents.
+    // Поэтому mousedown/capture не перехватывает pointerdown MapLibre.
+    // Используем pointerdown на canvas (capture) + pointermove/pointerup
+    // на document — так перехватываем до MapLibre.
+    // Координаты через unproject + getBoundingClientRect.
+    // Стили: fill #EDEFF0 / 0.7, outline #666666 / 2.
+    function makeRectangleTool(map, ctrlPos) {
+      if (map._frtRectDone) return;
+      map._frtRectDone = true;
+
+      var active = { is: false };
+      var features = [];
+      var dragStart = null;
+      var dragCurrent = null;
+
+      var L = { fill: 'frt-rect-fill', outline: 'frt-rect-outline' };
+      var S = { fill: 'frt-rect-fill-src' };
+
+      var btnEl = btn('Прямоугольник', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<rect x="15" y="15" width="70" height="70" rx="12" fill="none" stroke="#5f6368" stroke-width="4"/>' +
+        '<circle cx="20" cy="20" r="5" fill="#5f6368"/>' +
+        '<circle cx="80" cy="80" r="5" fill="#5f6368"/></svg>',
+        function () { toggle(); });
+
+      function makeRectFeat(c, d) {
+        if (!c || !d) return null;
+        var minX = Math.min(c.lng, d.lng), maxX = Math.max(c.lng, d.lng);
+        var minY = Math.min(c.lat, d.lat), maxY = Math.max(c.lat, d.lat);
+        return {
+          type: 'Feature', properties: {},
+          geometry: { type: 'Polygon', coordinates: [[
+            [minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]
+          ]]}
+        };
+      }
+
+      function fc() {
+        var all = features.map(function(f) { return makeRectFeat(f.c, f.d); }).filter(Boolean);
+        if (dragStart && dragCurrent) {
+          var cur = makeRectFeat(dragStart, dragCurrent);
+          if (cur) { cur.id = '_current'; all.push(cur); }
+        }
+        return { type: 'FeatureCollection', features: all };
+      }
+
+      function ensureLayers() {
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: fc() });
+        if (!map.getLayer(L.fill)) {
+          map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
+            paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
+        }
+        if (!map.getLayer(L.outline)) {
+          map.addLayer({ id: L.outline, type: 'line', source: S.fill,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+      }
+
+      function update() {
+        if (!map.isStyleLoaded()) { map.once('style.load', update); return; }
+        ensureLayers();
+        var s = map.getSource(S.fill);
+        if (s) s.setData(fc());
+      }
+
+      function rebuild() {
+        if (!features.length && !(dragStart && dragCurrent)) return;
+        update();
+      }
+      map.on('style.load', rebuild);
+      if (map.isStyleLoaded && map.isStyleLoaded()) rebuild();
+
+      function pointLngLat(e) {
+        var r = map.getContainer().getBoundingClientRect();
+        return map.unproject([e.clientX - r.left, e.clientY - r.top]);
+      }
+
+      var canvas = null;
+
+      function onPointerdown(e) {
+        if (!active.is) return;
+        if (e.button !== 0) return;
+        // preventDefault + capture — единственный способ блокировать
+        // pointerdown MapLibre (dragPan.disable не всегда срабатывает)
+        e.preventDefault();
+        var ll = pointLngLat(e);
+        dragStart = { lng: ll.lng, lat: ll.lat };
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        document.addEventListener('pointermove', onPointermove);
+        document.addEventListener('pointerup', onPointerup);
+        update();
+      }
+
+      function onPointermove(e) {
+        if (!active.is || !dragStart) return;
+        e.preventDefault();
+        var ll = pointLngLat(e);
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        update();
+      }
+
+      function onPointerup(e) {
+        if (!active.is || !dragStart) return;
+        document.removeEventListener('pointermove', onPointermove);
+        document.removeEventListener('pointerup', onPointerup);
+        var ll = pointLngLat(e);
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        // клик без перетаскивания — игнор
+        if (dragStart.lng === dragCurrent.lng && dragStart.lat === dragCurrent.lat) {
+          dragStart = null; dragCurrent = null;
+          update();
+          return;
+        }
+        features.push({ c: dragStart, d: dragCurrent });
+        dragStart = null;
+        dragCurrent = null;
+        update();
+      }
+
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        if (map.dragPan) map.dragPan.disable();
+        canvas = map.getCanvas();
+        // pointerdown с capture=true перехватывает до MapLibre
+        canvas.addEventListener('pointerdown', onPointerdown, true);
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        if (map.dragPan) map.dragPan.enable();
+        document.removeEventListener('pointermove', onPointermove);
+        document.removeEventListener('pointerup', onPointerup);
+        if (canvas) canvas.removeEventListener('pointerdown', onPointerdown, true);
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+
+      function toggle() { active.is ? deactivate() : activate(); }
+
+      var api = {
+        activate: activate, deactivate: deactivate, toggle: toggle,
+        reset: function () { features.length = 0; dragStart = null; dragCurrent = null; update(); },
+        getFeatures: function () { return features.slice(); },
+      };
+      if (!map._frtRectangle) map._frtRectangle = api;
+      return btnEl;
+    }
+
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
@@ -1136,9 +1288,10 @@ function renderMapHtml(opts = {}) {
       var markerBtn = makeMarkerTool(map, ctrlPos);
       var lineBtn = makeLineStringTool(map, ctrlPos);
       var polygonBtn = makePolygonTool(map, ctrlPos);
+      var rectBtn = makeRectangleTool(map, ctrlPos);
 
       // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) {
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -1147,10 +1300,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
