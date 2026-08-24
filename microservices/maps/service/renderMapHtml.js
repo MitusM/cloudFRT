@@ -1278,6 +1278,167 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Круг (circle) — pointerdown/pointermove/pointerup ──
+    // Drag от центра (pointerdown) до края (pointerup). Аппроксимируется
+    // полигоном из 64 сегментов. Как rectangle, но геометрия — круг.
+    // Стили: fill #EDEFF0 / 0.7, outline #666666 / 2.
+    function makeCircleTool(map, ctrlPos) {
+      if (map._frtCircleDone) return;
+      map._frtCircleDone = true;
+
+      var active = { is: false };
+      var features = [];
+      var dragStart = null;
+      var dragCurrent = null;
+
+      var L = { fill: 'frt-circle-fill', outline: 'frt-circle-outline' };
+      var S = { fill: 'frt-circle-fill-src' };
+
+      var btnEl = btn('Круг', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<circle cx="50" cy="50" r="38" fill="none" stroke="#5f6368" stroke-width="4"/>' +
+        '<line x1="35" y1="50" x2="65" y2="50" stroke="#5f6368" stroke-width="2"/>' +
+        '<line x1="50" y1="35" x2="50" y2="65" stroke="#5f6368" stroke-width="2"/></svg>',
+        function () { toggle(); });
+
+      function makeCircleFeat(c, r) {
+        if (!c || r == null) return null;
+        var seg = 64;
+        var latRad = c.lat * Math.PI / 180;
+        var cosLat = Math.cos(latRad);
+        var ring = [];
+        for (var i = 0; i <= seg; i++) {
+          var a = (2 * Math.PI * i) / seg;
+          var dx = r * Math.cos(a) / cosLat;
+          var dy = r * Math.sin(a);
+          ring.push([c.lng + dx, c.lat + dy]);
+        }
+        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+      }
+
+      function radius() {
+        if (!dragStart || !dragCurrent) return null;
+        var latRad = (dragStart.lat + dragCurrent.lat) / 2 * Math.PI / 180;
+        var cosLat = Math.cos(latRad);
+        var dlng = (dragCurrent.lng - dragStart.lng) * cosLat;
+        var dlat = dragCurrent.lat - dragStart.lat;
+        return Math.sqrt(dlng * dlng + dlat * dlat);
+      }
+
+      function fc() {
+        var all = features.filter(function(f) { return f.c != null; })
+          .map(function(f) { return makeCircleFeat(f.c, f.r); }).filter(Boolean);
+        var r = radius();
+        if (dragStart && r != null && r > 0) {
+          var cur = makeCircleFeat(dragStart, r);
+          if (cur) { cur.id = '_current'; all.push(cur); }
+        }
+        return { type: 'FeatureCollection', features: all };
+      }
+
+      function ensureLayers() {
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: fc() });
+        if (!map.getLayer(L.fill)) {
+          map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
+            paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
+        }
+        if (!map.getLayer(L.outline)) {
+          map.addLayer({ id: L.outline, type: 'line', source: S.fill,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+      }
+
+      function update() {
+        if (!map.isStyleLoaded()) { map.once('style.load', update); return; }
+        ensureLayers();
+        var s = map.getSource(S.fill);
+        if (s) s.setData(fc());
+      }
+
+      function rebuild() {
+        if (!features.length && !(dragStart && dragCurrent)) return;
+        update();
+      }
+      map.on('style.load', rebuild);
+      if (map.isStyleLoaded && map.isStyleLoaded()) rebuild();
+
+      function pointLngLat(e) {
+        var r = map.getContainer().getBoundingClientRect();
+        return map.unproject([e.clientX - r.left, e.clientY - r.top]);
+      }
+
+      var canvas = null;
+
+      function onPointerdown(e) {
+        if (!active.is) return;
+        if (e.button !== 0) return;
+        e.preventDefault();
+        var ll = pointLngLat(e);
+        dragStart = { lng: ll.lng, lat: ll.lat };
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        document.addEventListener('pointermove', onPointermove);
+        document.addEventListener('pointerup', onPointerup);
+        update();
+      }
+
+      function onPointermove(e) {
+        if (!active.is || !dragStart) return;
+        e.preventDefault();
+        var ll = pointLngLat(e);
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        update();
+      }
+
+      function onPointerup(e) {
+        if (!active.is || !dragStart) return;
+        document.removeEventListener('pointermove', onPointermove);
+        document.removeEventListener('pointerup', onPointerup);
+        var ll = pointLngLat(e);
+        dragCurrent = { lng: ll.lng, lat: ll.lat };
+        var r = radius();
+        // клик без перетаскивания — игнор
+        if (r == null || r === 0) {
+          dragStart = null; dragCurrent = null;
+          update();
+          return;
+        }
+        features.push({ c: dragStart, r: r });
+        dragStart = null;
+        dragCurrent = null;
+        update();
+      }
+
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        if (map.dragPan) map.dragPan.disable();
+        canvas = map.getCanvas();
+        canvas.addEventListener('pointerdown', onPointerdown, true);
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        if (map.dragPan) map.dragPan.enable();
+        document.removeEventListener('pointermove', onPointermove);
+        document.removeEventListener('pointerup', onPointerup);
+        if (canvas) canvas.removeEventListener('pointerdown', onPointerdown, true);
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+
+      function toggle() { active.is ? deactivate() : activate(); }
+
+      var api = {
+        activate: activate, deactivate: deactivate, toggle: toggle,
+        reset: function () { features.length = 0; dragStart = null; dragCurrent = null; update(); },
+        getFeatures: function () { return features.slice(); },
+      };
+      if (!map._frtCircle) map._frtCircle = api;
+      return btnEl;
+    }
+
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
@@ -1289,9 +1450,10 @@ function renderMapHtml(opts = {}) {
       var lineBtn = makeLineStringTool(map, ctrlPos);
       var polygonBtn = makePolygonTool(map, ctrlPos);
       var rectBtn = makeRectangleTool(map, ctrlPos);
+      var circleBtn = makeCircleTool(map, ctrlPos);
 
       // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) {
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -1300,10 +1462,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
