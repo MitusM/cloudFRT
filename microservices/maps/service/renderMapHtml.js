@@ -282,6 +282,99 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Маркер на карту: кнопка → клик → маркер-пин (как terra-draw marker) ──
+    // Заимствует иконку из terra-draw CSS (marker-grey.svg, капля с кольцом) и
+    // стиль marker-режима (markerUrl, markerWidth/Height 27×27, anchor bottom).
+    // Свой инструмент: работает на обеих картах (Standard + Satellite),
+    // не зависит от terra-draw. Клик ставит маркер, повторный клик по кнопке —
+    // выход из режима.
+    function makeMarkerTool(map, ctrlPos) {
+      if (map._frtMarkerToolDone) return;
+      map._frtMarkerToolDone = true;
+
+      var active = false;
+
+      // капля-пин из terra-draw marker-grey.svg (fill #5f6368 — серый)
+      var PIN = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+        '<path d="M 50.001528,3.3861402e-7 C 30.763177,3.3861402e-7 15,15.718144 15,34.901534 c 0,7.432782 2.373565,14.339962 6.391689,20.019029 l 24.338528,42.073163 c 3.40849,4.452814 5.674917,3.607154 8.509014,-0.23458 L 81.083105,51.075788 C 81.625418,50.0948 82.050328,49.050173 82.421327,47.983517 84.078241,43.936622 85.000002,39.521943 85,34.901534 85,15.718144 69.23988,3.3861402e-7 50.001528,3.3861402e-7 Z m 0,16.35400066138598 c 10.359296,0 18.597616,8.21783 18.597618,18.547533 0,10.329703 -8.238322,18.544487 -18.597618,18.544487 -10.359299,0 -18.600672,-8.214784 -18.600672,-18.544487 0,-10.329703 8.241373,-18.547533 18.600672,-18.547533 z" fill="#5f6368"/></svg>';
+
+      function pinEl() {
+        var el = document.createElement('div');
+        el.innerHTML = PIN;
+        var svg = el.firstChild;
+        svg.style.cssText = 'width:27px;height:27px;display:block;' +
+          'filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));cursor:pointer;';
+        return svg;
+      }
+
+      function onClick(e) {
+        if (!active) return;
+        var lng = e.lngLat.lng;
+        var lat = e.lngLat.lat;
+        // anchor bottom — остриё капли указывает точно на точку
+        var mk = new maplibregl.Marker({ element: pinEl(), anchor: 'bottom' })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<small>Маркер</small>'))
+          .addTo(map);
+        if (!map._frtMarkerMarkers) map._frtMarkerMarkers = [];
+        map._frtMarkerMarkers.push(mk);
+      }
+
+      var hintEl = null;
+      function activate() {
+        if (active) {
+          active = false;
+          map.getContainer().style.cursor = '';
+          if (hintEl) { hintEl.remove(); hintEl = null; }
+          map.off('click', onClick);
+          return;
+        }
+        active = true;
+        map.getContainer().style.cursor = 'crosshair';
+        hintEl = document.createElement('div');
+        hintEl.textContent = 'Кликните на карте, чтобы поставить маркер';
+        hintEl.style.cssText = 'position:absolute;top:8px;left:50%;transform:translateX(-50%);' +
+          'background:rgba(0,0,0,.7);color:#fff;padding:4px 12px;border-radius:6px;' +
+          'font:13px sans-serif;pointer-events:none;z-index:99;';
+        map.getContainer().appendChild(hintEl);
+        map.on('click', onClick);
+      }
+
+      // иконка кнопки — заимствована из terra-draw add-marker-button (капля-пин)
+      var btnEl = btn('Поставить маркер', '<svg viewBox="0 0 100 100" width="20" height="20" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M 50.001528,3.3861402e-7 C 30.763177,3.3861402e-7 15,15.718144 15,34.901534 c 0,7.432782 2.373565,14.339962 6.391689,20.019029 l 24.338528,42.073163 c 3.40849,4.452814 5.674917,3.607154 8.509014,-0.23458 L 81.083105,51.075788 C 81.625418,50.0948 82.050328,49.050173 82.421327,47.983517 84.078241,43.936622 85.000002,39.521943 85,34.901534 85,15.718144 69.23988,3.3861402e-7 50.001528,3.3861402e-7 Z m 0,16.35400066138598 c 10.359296,0 18.597616,8.21783 18.597618,18.547533 0,10.329703 -8.238322,18.544487 -18.597618,18.544487 -10.359299,0 -18.600672,-8.214784 -18.600672,-18.544487 0,-10.329703 8.241373,-18.547533 18.600672,-18.547533 z" fill="#5f6368"/></svg>', function () {
+        activate();
+        btnEl.classList.toggle('maplibregl-ctrl-active');
+      });
+
+      // публичный API (по аналогии с frtGetPoints)
+      if (!window.MapsRender.frtGetMarkers) {
+        window.MapsRender.frtGetMarkers = function (map) {
+          if (!map || !map._frtMarkerMarkers) return [];
+          return map._frtMarkerMarkers.map(function (mk) {
+            var ll = mk.getLngLat();
+            return { lng: ll.lng, lat: ll.lat };
+          });
+        };
+        window.MapsRender.frtClearMarkers = function (map) {
+          if (!map || !map._frtMarkerMarkers) return;
+          map._frtMarkerMarkers.forEach(function (m) { m.remove(); });
+          map._frtMarkerMarkers = [];
+        };
+        window.MapsRender.frtSetMarkers = function (map, markers) {
+          if (!map) return;
+          window.MapsRender.frtClearMarkers(map);
+          (markers || []).forEach(function (p) {
+            var mk = new maplibregl.Marker({ element: pinEl(), anchor: 'bottom' })
+              .setLngLat([p.lng, p.lat])
+              .addTo(map);
+            map._frtMarkerMarkers.push(mk);
+          });
+        };
+      }
+      return btnEl;
+    }
+
     function makeTextTool(map, ctrlPos) {
       if (map._frtTextToolDone) return;
       map._frtTextToolDone = true;
@@ -814,6 +907,222 @@ function renderMapHtml(opts = {}) {
       return btnEl;
     }
 
+    // ── Линия на карту (linestring) — своя, по мотивам terra-draw linestring ──
+    // Клики ставят вершины → рисуется ломаная (LineString). Двойной клик или
+    // повторный клик по кнопке завершает линию. БЕЗ подписей расстояний
+    // (в отличие от Линейки — там измерения). Стили из terra-draw
+    // defaultMeasureControlOptions: lineStringColor #666666 width 2,
+    // closingPoint белый с серой обводкой #666666.
+    function makeLineStringTool(map, ctrlPos) {
+      if (map._frtLineStringDone) return;
+      map._frtLineStringDone = true;
+
+      var active = { is: false };
+      var coords = []; // [[lng,lat], …]
+      var L = { line: 'frt-linestring-line', pts: 'frt-linestring-points' };
+      var S = { line: 'frt-linestring-line-src', pts: 'frt-linestring-points-src' };
+
+      var btnEl = btn('Линия', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="M 32.550781 11 C 25.66107 11 20 16.66107 20 23.550781 C 20 27.437229 21.802247 30.929893 24.609375 33.238281 L 14.482422 54.166016 C 13.851157 54.066215 13.209283 54 12.550781 54 C 5.66107 54 -2.2838852e-07 59.66107 0 66.550781 C -2.283885e-07 73.440493 5.6610701 79.09961 12.550781 79.099609 C 19.201807 79.099609 24.655831 73.811706 25.029297 67.248047 A 3.5 3.5 0 0 0 25.099609 66.550781 A 3.5 3.5 0 0 0 25.029297 65.853516 C 24.833675 62.412816 23.233085 59.332019 20.804688 57.169922 L 31.048828 36 C 31.542777 36.060026 32.041623 36.099609 32.550781 36.099609 C 37.164226 36.09961 41.197796 33.554133 43.363281 29.804688 L 61.169922 34.511719 C 62.104293 40.357275 67.120053 44.895548 73.171875 45.080078 L 80.177734 66.435547 C 77.052276 68.726678 75 72.41156 75 76.550781 C 75 83.440493 80.66107 89.09961 87.550781 89.099609 C 94.201808 89.09961 99.655828 83.811706 100.0293 77.248047 A 3.5 3.5 0 0 0 100.09961 76.550781 A 3.5 3.5 0 0 0 100.0293 75.853516 C 99.656101 69.289604 94.201991 64 87.550781 64 C 87.283728 64 87.022869 64.02231 86.759766 64.039062 L 79.955078 43.296875 C 83.40598 41.206484 85.787338 37.500471 86.029297 33.248047 A 3.5 3.5 0 0 0 86.099609 32.550781 A 3.5 3.5 0 0 0 86.029297 31.853516 C 85.656104 25.289604 80.201991 20 73.550781 20 C 68.451047 20 64.032035 23.105987 62.076172 27.511719 L 45.056641 23.011719 A 3.5 3.5 0 0 0 45.029297 22.853516 C 44.656104 16.289604 39.201991 11 32.550781 11 z M 32.550781 18 C 35.657412 18 38.099609 20.444151 38.099609 23.550781 C 38.099609 26.657412 35.657412 29.099609 32.550781 29.099609 C 29.444151 29.099609 27 26.657412 27 23.550781 C 27 20.444151 29.444151 18 32.550781 18 z M 73.550781 27 C 76.657412 27 79.099609 29.444151 79.099609 32.550781 C 79.099609 35.657412 76.657412 38.099609 73.550781 38.099609 C 70.444151 38.099609 68 35.657412 68 32.550781 C 68 29.444151 70.444151 27 73.550781 27 z M 12.550781 61 C 15.657411 61 18.099609 63.444151 18.099609 66.550781 C 18.099609 69.657411 15.657411 72.099609 12.550781 72.099609 C 9.444151 72.099609 6.9999999 69.657412 7 66.550781 C 6.9999999 63.444151 9.444151 61 12.550781 61 z M 87.550781 71 C 90.657412 71 93.099609 73.444151 93.099609 76.550781 C 93.099609 79.657412 90.657412 82.099609 87.550781 82.099609 C 84.444151 82.099609 82 79.657412 82 76.550781 C 82 73.444151 84.444151 71 87.550781 71 z" fill="#5f6368"/></svg>',
+        function () { toggle(); });
+
+      function lineFC() {
+        return { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } };
+      }
+      function pointsFC() {
+        return {
+          type: 'FeatureCollection',
+          features: coords.map(function (c, i) {
+            return { type: 'Feature', id: String(i), properties: {}, geometry: { type: 'Point', coordinates: c } };
+          })
+        };
+      }
+      function ensureSources() {
+        if (!map.getSource(S.line)) map.addSource(S.line, { type: 'geojson', data: lineFC() });
+        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
+      }
+      function ensureLayers() {
+        ensureSources();
+        if (!map.getLayer(L.line)) {
+          map.addLayer({ id: L.line, type: 'line', source: S.line,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+        if (!map.getLayer(L.pts) && coords.length) {
+          map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
+            paint: { 'circle-radius': 3, 'circle-color': '#FFFFFF',
+              'circle-stroke-width': 1, 'circle-stroke-color': '#666666' } });
+        }
+      }
+      function update() {
+        if (!map.isStyleLoaded()) {
+          map.once('style.load', update);
+          return;
+        }
+        ensureLayers();
+        var ls = map.getSource(S.line); var ps = map.getSource(S.pts);
+        if (ls) ls.setData(lineFC());
+        if (ps) ps.setData(pointsFC());
+      }
+      function mapClick(e) {
+        if (!active.is) return;
+        coords.push([e.lngLat.lng, e.lngLat.lat]);
+        update();
+      }
+      function mapDblClick(e) {
+        if (!active.is) return;
+        // убираем лишнюю вершину от dblclick-клика
+        if (coords.length) coords.pop();
+        deactivate();
+      }
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        coords.length = 0;
+        map.on('click', mapClick);
+        map.on('dblclick', mapDblClick);
+        update();
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        map.off('click', mapClick);
+        map.off('dblclick', mapDblClick);
+        ['line', 'pts'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
+        [S.line, S.pts].forEach(function (k) { if (map.getSource(k)) map.removeSource(k); });
+        coords.length = 0;
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+      function toggle() { active.is ? deactivate() : activate(); }
+      map.on('style.load', function () { if (active.is) update(); });
+      // публичный API (по аналогии с map._frtRuler)
+      var api = {
+        activate: activate,
+        deactivate: deactivate,
+        toggle: toggle,
+        addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
+        reset: function () { coords.length = 0; update(); },
+      };
+      if (!map._frtLineString) map._frtLineString = api;
+      return btnEl;
+    }
+
+    // ── Полигон на карту (polygon) — своя, по мотивам terra-draw polygon ──
+    // Клики ставят вершины, двойной клик замыкает полигон.
+    // Стили из terra-draw defaultMeasureControlOptions:
+    // fillColor #EDEFF0, fillOpacity 0.7, outlineColor #666666 outlineWidth 2,
+    // closingPoint #FAFAFA с обводкой #666666.
+    function makePolygonTool(map, ctrlPos) {
+      if (map._frtPolygonDone) return;
+      map._frtPolygonDone = true;
+
+      var active = { is: false };
+      var coords = []; // [[lng,lat], …]
+      var L = { fill: 'frt-polygon-fill', outline: 'frt-polygon-outline', pts: 'frt-polygon-points' };
+      var S = { fill: 'frt-polygon-fill-src', outline: 'frt-polygon-outline-src', pts: 'frt-polygon-points-src' };
+
+      // иконка — полигон с вершинами (заимствована из terra-draw polygon.svg)
+      var btnEl = btn('Полигон', '<svg viewBox="0 0 100 100" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<polygon points="35,70 15,40 35,20 70,20 88,45 75,75" fill="none" stroke="#5f6368" stroke-width="4" stroke-linejoin="round"/>' +
+        '<circle cx="35" cy="70" r="5" fill="#5f6368"/>' +
+        '<circle cx="15" cy="40" r="5" fill="#5f6368"/>' +
+        '<circle cx="35" cy="20" r="5" fill="#5f6368"/>' +
+        '<circle cx="70" cy="20" r="5" fill="#5f6368"/>' +
+        '<circle cx="88" cy="45" r="5" fill="#5f6368"/>' +
+        '<circle cx="75" cy="75" r="5" fill="#5f6368"/></svg>',
+        function () { toggle(); });
+
+      function polygonFC() {
+        // замыкаем: первая точка в конец, чтобы полигон замкнулся
+        var ring = coords.concat([coords[0]]);
+        return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+      }
+      function pointsFC() {
+        return {
+          type: 'FeatureCollection',
+          features: coords.map(function (c, i) {
+            return { type: 'Feature', id: String(i), properties: {}, geometry: { type: 'Point', coordinates: c } };
+          })
+        };
+      }
+      function ensureSources() {
+        if (!map.getSource(S.fill)) map.addSource(S.fill, { type: 'geojson', data: polygonFC() });
+        if (!map.getSource(S.pts)) map.addSource(S.pts, { type: 'geojson', data: pointsFC() });
+      }
+      function ensureLayers() {
+        ensureSources();
+        if (!map.getLayer(L.fill)) {
+          map.addLayer({ id: L.fill, type: 'fill', source: S.fill,
+            paint: { 'fill-color': '#EDEFF0', 'fill-opacity': 0.7 } });
+        }
+        if (!map.getLayer(L.outline)) {
+          map.addLayer({ id: L.outline, type: 'line', source: S.fill,
+            paint: { 'line-color': '#666666', 'line-width': 2 } });
+        }
+        if (!map.getLayer(L.pts) && coords.length) {
+          map.addLayer({ id: L.pts, type: 'circle', source: S.pts,
+            paint: { 'circle-radius': 3, 'circle-color': '#FAFAFA',
+              'circle-stroke-width': 1, 'circle-stroke-color': '#666666' } });
+        }
+      }
+      function update() {
+        if (!map.isStyleLoaded()) {
+          map.once('style.load', update);
+          return;
+        }
+        ensureLayers();
+        var fs = map.getSource(S.fill); var ps = map.getSource(S.pts);
+        if (fs) fs.setData(polygonFC());
+        if (ps) ps.setData(pointsFC());
+      }
+      function mapClick(e) {
+        if (!active.is) return;
+        coords.push([e.lngLat.lng, e.lngLat.lat]);
+        update();
+      }
+      function mapDblClick(e) {
+        if (!active.is) return;
+        // убираем лишнюю вершину от dblclick-клика
+        if (coords.length) coords.pop();
+        deactivate();
+      }
+      function activate() {
+        active.is = true;
+        map.getCanvas().style.cursor = 'crosshair';
+        if (map.doubleClickZoom) map.doubleClickZoom.disable();
+        coords.length = 0;
+        map.on('click', mapClick);
+        map.on('dblclick', mapDblClick);
+        update();
+        btnEl.classList.add('maplibregl-ctrl-active');
+      }
+      function deactivate() {
+        active.is = false;
+        map.getCanvas().style.cursor = '';
+        if (map.doubleClickZoom) map.doubleClickZoom.enable();
+        map.off('click', mapClick);
+        map.off('dblclick', mapDblClick);
+        ['fill', 'outline', 'pts'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
+        [S.fill, S.pts].forEach(function (k) { if (map.getSource(k)) map.removeSource(k); });
+        coords.length = 0;
+        btnEl.classList.remove('maplibregl-ctrl-active');
+      }
+      function toggle() { active.is ? deactivate() : activate(); }
+      map.on('style.load', function () { if (active.is) update(); });
+
+      var api = {
+        activate: activate,
+        deactivate: deactivate,
+        toggle: toggle,
+        addPoint: function (lnglat) { if (!active.is) activate(); coords.push([lnglat.lng, lnglat.lat]); update(); },
+        reset: function () { coords.length = 0; update(); },
+      };
+      if (!map._frtPolygon) map._frtPolygon = api;
+      return btnEl;
+    }
+
     function makeToolsPanel(map, ctrlPos) {
       if (map._frtToolsPanelDone) return;
       map._frtToolsPanelDone = true;
@@ -821,9 +1130,12 @@ function renderMapHtml(opts = {}) {
       var rulerBtn = makeRuler(map, ctrlPos);
       var textBtn = makeTextTool(map, ctrlPos);
       var pointBtn = makePointTool(map, ctrlPos);
+      var markerBtn = makeMarkerTool(map, ctrlPos);
+      var lineBtn = makeLineStringTool(map, ctrlPos);
+      var polygonBtn = makePolygonTool(map, ctrlPos);
 
       // прячем кнопки, оставляем только toggle
-      [rulerBtn, textBtn, pointBtn].forEach(function (b) {
+      [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) {
         b.style.display = 'none';
       });
 
@@ -832,10 +1144,10 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
-      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn]); }, onRemove: function () {} }, ctrlPos);
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
