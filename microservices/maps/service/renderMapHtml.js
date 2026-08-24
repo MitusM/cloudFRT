@@ -1124,8 +1124,7 @@ function renderMapHtml(opts = {}) {
     }
 
     // ── Прямоугольник на карту (rectangle) — своя, по мотивам terra-draw rectangle ──
-    // Drag: mousedown на canvas → тащишь → mouseup. События на canvas + document
-    // (надёжнее, чем map.on('mousedown'), т.к. MapLibre может перехватывать mousemove).
+    // Drag: клик → тащишь → отпускаешь (два угла).
     // Стили из terra-draw defaultMeasureControlOptions:
     // fill #EDEFF0 / 0.7, outline #666666 / 2.
     function makeRectangleTool(map, ctrlPos) {
@@ -1172,70 +1171,52 @@ function renderMapHtml(opts = {}) {
         var s = map.getSource(S.fill);
         if (s) s.setData(sw && ne ? rectFC(sw, ne) : rect ? rectFC(rect.c, rect.d) : rectFC(null, null));
       }
-
-      var canvas = null;
-
-      function onMousedown(e) {
+      function mapMousedown(e) {
         if (!active.is) return;
-        if (e.button !== 0) return;
-        e.preventDefault();
-        var lngLat = map.unproject([e.clientX, e.clientY]);
-        start = { lng: lngLat.lng, lat: lngLat.lat };
+        if (e.originalEvent && e.originalEvent.button !== 0) return;
+        start = { lng: e.lngLat.lng, lat: e.lngLat.lat };
         current = start;
         rect = null;
+        map.getCanvas().style.cursor = 'crosshair';
         update(start, start);
-        document.addEventListener('mousemove', onMousemove);
-        document.addEventListener('mouseup', onMouseup);
       }
-      function onMousemove(e) {
+      function mapMousemove(e) {
         if (!active.is || !start) return;
-        e.preventDefault();
-        var lngLat = map.unproject([e.clientX, e.clientY]);
-        current = { lng: lngLat.lng, lat: lngLat.lat };
+        current = { lng: e.lngLat.lng, lat: e.lngLat.lat };
         update(start, current);
       }
-      function onMouseup(e) {
+      function mapMouseup() {
         if (!active.is || !start) return;
-        document.removeEventListener('mousemove', onMousemove);
-        document.removeEventListener('mouseup', onMouseup);
-        var lngLat = map.unproject([e.clientX, e.clientY]);
-        current = { lng: lngLat.lng, lat: lngLat.lat };
-        // просто клик без перетаскивания — очищаем
-        if (start.lng === current.lng && start.lat === current.lat) {
-          start = null; current = null;
-          update(null, null);
-          return;
-        }
-        rect = { c: start, d: current };
+        rect = { c: start, d: current || start };
         start = null; current = null;
-        update(null, null);
-        // выходим из режима рисования, но слои не трогаем
+        // exit drawing mode, НО НЕ удаляем слои — прямоугольник остаётся видимым
         active.is = false;
+        map.getCanvas().style.cursor = '';
         if (map.doubleClickZoom) map.doubleClickZoom.enable();
-        if (map.dragPan) map.dragPan.enable();
-        canvas.removeEventListener('mousedown', onMousedown);
+        map.off('mousedown', mapMousedown);
+        map.off('mousemove', mapMousemove);
+        map.off('mouseup', mapMouseup);
         btnEl.classList.remove('maplibregl-ctrl-active');
+        update(null, null);
       }
-
       function activate() {
         active.is = true;
         map.getCanvas().style.cursor = 'crosshair';
         if (map.doubleClickZoom) map.doubleClickZoom.disable();
-        if (map.dragPan) map.dragPan.disable();
-        canvas = map.getCanvas();
-        canvas.addEventListener('mousedown', onMousedown);
+        map.on('mousedown', mapMousedown);
+        map.on('mousemove', mapMousemove);
+        map.on('mouseup', mapMouseup);
         rect = null; start = null; current = null;
-        update(null, null);
+        update(null, null); // сразу очищаем старый прямоугольник
         btnEl.classList.add('maplibregl-ctrl-active');
       }
       function deactivate() {
         active.is = false;
         map.getCanvas().style.cursor = '';
         if (map.doubleClickZoom) map.doubleClickZoom.enable();
-        if (map.dragPan) map.dragPan.enable();
-        document.removeEventListener('mousemove', onMousemove);
-        document.removeEventListener('mouseup', onMouseup);
-        if (canvas) canvas.removeEventListener('mousedown', onMousedown);
+        map.off('mousedown', mapMousedown);
+        map.off('mousemove', mapMousemove);
+        map.off('mouseup', mapMouseup);
         ['fill', 'outline'].forEach(function (k) { if (map.getLayer(L[k])) map.removeLayer(L[k]); });
         if (map.getSource(S.fill)) map.removeSource(S.fill);
         start = null; current = null; rect = null;
