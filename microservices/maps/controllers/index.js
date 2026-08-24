@@ -204,7 +204,7 @@ const endpoints = async (app) => {
   // через MapsRender.setPoints.
   app.get('/maps/map', async (req, res) => {
     try {
-      const mapHtml = renderMapHtml({ containerId: 'poi-map', heightPx: 600 })
+      const mapHtml = renderMapHtml({ containerId: 'poi-map', heightPx: 900 })
       const renderResp = await res.app.ask('render', {
         server: {
           action: 'html',
