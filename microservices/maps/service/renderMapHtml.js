@@ -251,8 +251,6 @@ function renderMapHtml(opts = {}) {
         activate();
         btnEl.classList.toggle('maplibregl-ctrl-active');
       });
-      map.addControl({ onAdd: function () { return ctrlGroup([btnEl]); }, onRemove: function () {} }, ctrlPos);
-
       // публичный API для управления точками (независимо от addMarkers)
       if (!window.MapsRender.frtGetPoints) {
         window.MapsRender.frtGetPoints = function (map) {
@@ -281,6 +279,7 @@ function renderMapHtml(opts = {}) {
           });
         };
       }
+      return btnEl;
     }
 
     function makeTextTool(map, ctrlPos) {
@@ -377,7 +376,7 @@ function renderMapHtml(opts = {}) {
         activate();
         btnEl.classList.toggle('maplibregl-ctrl-active');
       });
-      map.addControl({ onAdd: function () { return ctrlGroup([btnEl]); }, onRemove: function () {} }, ctrlPos);
+      return btnEl;
     }
 
     // ── Вспомогательные контролы (compass/ruler) — self-contained, без внешних ──
@@ -803,7 +802,6 @@ function renderMapHtml(opts = {}) {
       }
       function toggle() { active.is ? deactivate() : activate(); }
       map.on('style.load', () => { if (active.is) update(); });
-      map.addControl({ onAdd: () => ctrlGroup([btnEl]), onRemove: () => {} }, position);
       // публичный API (для интеграций/тестов): активировать + добавить точку
       const api = {
         activate: activate,
@@ -813,6 +811,31 @@ function renderMapHtml(opts = {}) {
         reset: function () { coords.length = 0; update(); },
       };
       if (!map._frtRuler) map._frtRuler = api;
+      return btnEl;
+    }
+
+    function makeToolsPanel(map, ctrlPos) {
+      if (map._frtToolsPanelDone) return;
+      map._frtToolsPanelDone = true;
+
+      var rulerBtn = makeRuler(map, ctrlPos);
+      var textBtn = makeTextTool(map, ctrlPos);
+      var pointBtn = makePointTool(map, ctrlPos);
+
+      // прячем кнопки, оставляем только toggle
+      [rulerBtn, textBtn, pointBtn].forEach(function (b) {
+        b.style.display = 'none';
+      });
+
+      var open = false;
+      var toggleBtn = btn('Инструменты', '<svg viewBox="0 0 24 24" width="23" height="23" fill="currentColor">' +
+        '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
+        open = !open;
+        toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
+        [rulerBtn, textBtn, pointBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+      });
+
+      map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, rulerBtn, textBtn, pointBtn]); }, onRemove: function () {} }, ctrlPos);
     }
 
     // ── Поиск мест (maplibre-gl-geocoder) ──
@@ -984,18 +1007,15 @@ function renderMapHtml(opts = {}) {
       const ctrlPosition = opt.controlsPosition || 'top-right';
       if (!opt.hideControls) {
         makeCompass(map, ctrlPosition);
-        makeRuler(map, ctrlPosition);
         // выбор вида карты — Стандартная/Спутниковая (опция styles, по умолч. вкл.)
         if (opt.styles !== false) makeStyles(map, ctrlPosition, opt);
         // экспорт в PNG — кнопка скачивания (работает на обеих стилях)
         if (opt.export !== false) makeExport(map, ctrlPosition, opt);
+        // инструменты: Линейка, Текст, Точка — в одной раскрывающейся панели
+        makeToolsPanel(map, ctrlPosition);
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);
-      // текстовые подписи — своя кнопка «Т» в правой панели
-      makeTextTool(map, ctrlPosition);
-      // точка — своя кнопка, заимствует маркер из addMarkers
-      makePointTool(map, ctrlPosition);
       // terradraw — рисование + измерения. Инициализируем после загрузки стиля.
       // При каждом style.load (переключение Стандартная↔Спутник) TerraDraw
       // теряет source/layer — удаляем старый control и создаём новый.
