@@ -6,13 +6,65 @@
 import * as mapsService from '../service/mapsService.js'
 import * as placePhotoCache from '../service/placePhotoCache.js'
 import { renderMapHtml } from '../service/renderMapHtml.js'
-import { renderMapPng } from '../service/ogExport.js'
+import { rateLimitMiddleware } from '../service/rateLimit.js'
 import path from 'path'
 import fs from 'fs'
 import pkg from 'app-root-path'
 
 const appRoot = pkg.path
 const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
+
+// Публичные браузерные эндпоинты карты (geocode/pois) доступны всем, поэтому
+// (а) дёргать их напрямую может любой. Чтобы отсечь часть нелегитимного
+// трафика (скрипты, чужие сайты), комбинируем:
+//   1) rate-limit по IP (Redis INCR)
+//   2) проверка источника Referer/Origin — только наши домены
+// CSRF для этих эндпоинтов не применяем: геокодер с публичной карты не шлёт
+// токен, а у анонима он и так есть — проверка сломала бы поиск без реальной
+// защиты. Это НЕ пуленепробиваемая защита (Referer/Origin подделываются),
+// но режет случайные и скриптовые обращения.
+const ALLOWED_ORIGINS = [
+  'dev.frt.su',
+  'cloud.frt.su',
+  'localhost',
+  '127.0.0.1',
+]
+const ALLOWED_SCHEMES = ['http:', 'https:']
+
+// Разрешить, если Origin/Referer отсутствует (внутренний RPC/curl с нашего хоста)
+// или указывает на наш домен. Прямые сторонние запросы с чужим Origin бьём.
+function looksInternal(req) {
+  const origin = req.headers.origin
+  const referer = req.headers.referer
+  const src = origin || referer
+  if (!src) return true // нет Origin/Referer — считаем внутренним (curl с хоста, RPC)
+  try {
+    const u = new URL(src)
+    if (!ALLOWED_SCHEMES.includes(u.protocol)) return false
+    const host = (u.hostname || '').toLowerCase()
+    return ALLOWED_ORIGINS.some((d) => host === d || host.endsWith('.' + d))
+  } catch (e) {
+    return false
+  }
+}
+
+// Docker/микросервисная шина: RPC maps:og и сервис-2-сервис не ходят сюда,
+// но для безопасности внешних публичных браузерных эндпоинтов проверяем источник.
+function assertInternal(req, res) {
+  if (looksInternal(req)) return true
+  res.status(403).json({ error: 'forbidden' })
+  return false
+}
+
+// CSRF-проверка НЕ применяется к публичным эндпоинтам карты: геокодер не
+// шлёт токен, а у анонима он и так есть — проверка сломала бы поиск без
+// реальной защиты. Rate-limit + Origin если нужно. Для авторизованных
+// мутирующих роутов maps CSRF добавлять отдельно (как в users/trips).
+
+// Лимиты для публичных эндпоинтов (защита от скриптового долбления).
+// geocode — поиск (дорогой Nominatim/Overpass), pois — лёгкий, но по bbox.
+const RL_GEOCODE = rateLimitMiddleware({ keyPrefix: 'rl:geocode', windowMs: 60 * 1000, max: 30 })
+const RL_POIS = rateLimitMiddleware({ keyPrefix: 'rl:pois', windowMs: 60 * 1000, max: 60 })
 
 const endpoints = async (app) => {
   // POST /maps/search — поиск мест (OSM Nominatim / Google)
@@ -34,8 +86,12 @@ const endpoints = async (app) => {
   // Сначала наши SearchPlace (OrientDB), фолбэк — Nominatim; найденное
   // сохраняем в SearchPlace (наполнение БД своими POI). Возвращает GeoJSON
   // FeatureCollection { type, features:[{type,geometry:{Point,[lng,lat]},properties}] }
-  app.post('/maps/geocode', async (req, res) => {
+  app.post('/maps/geocode', RL_GEOCODE, async (req, res) => {
     try {
+      // источник (Referer/Origin). CSRF не применяем — геокодер с публичной
+      // карты не шлёт токен, а у анонима он и так есть; rate-limit + Origin
+      // режут скриптовый и с чужих сайтов трафик.
+      if (!assertInternal(req, res)) return
       const { query, lang } = req.body || {}
       if (!query || typeof query !== 'string') {
         return res.status(400).json({ type: 'FeatureCollection', features: [] })
@@ -69,8 +125,10 @@ const endpoints = async (app) => {
   })
 
   // GET /maps/pois — POI по категории в bbox
-  app.get('/maps/pois', async (req, res) => {
+  app.get('/maps/pois', RL_POIS, async (req, res) => {
     try {
+      // GET — не мутирует, CSRF не нужен; проверяем только источник.
+      if (!assertInternal(req, res)) return
       const { category, south, west, north, east, limit } = req.query
       if (!category) return res.status(400).json({ error: 'category required' })
       const bbox = {
@@ -171,30 +229,6 @@ const endpoints = async (app) => {
     } catch (err) {
       console.log('⚡ err::maps:resolve-url', err)
       res.status(err.status || 500).json({ error: err.message || 'resolve failed' })
-    }
-  })
-
-  // GET /maps/og — серверный рендер карты в PNG (для OG-превью поездок).
-  // Вспомогательный HTTP-вариант RPC action `maps:og` (для отладки). trips
-  // вызывает maps:og по шине и возвращает PNG клиенту через /trips/:id/og-image.
-  // Query: markers (JSON-массив [{lat,lng,name}]), width, height, language.
-  app.get('/maps/og', async (req, res) => {
-    try {
-      let markers = []
-      if (req.query.markers) {
-        try { markers = JSON.parse(req.query.markers) } catch (e) { markers = [] }
-      }
-      const png = await renderMapPng({
-        markers,
-        width: req.query.width ? parseInt(req.query.width) : 1200,
-        height: req.query.height ? parseInt(req.query.height) : 630,
-        language: req.query.language || 'ru',
-      })
-      // microservice res (Response) — сериализует в JSON; Gateway по __frtBase64
-      // декодирует в Buffer и отдаёт бинарный PNG с заголовком image/png.
-      res.json({ __frtBase64: png.toString('base64'), contentType: 'image/png' })    } catch (err) {
-      console.log('⚡ err::maps:og', err)
-      res.status(500).json({ error: err.message || 'internal' })
     }
   })
 

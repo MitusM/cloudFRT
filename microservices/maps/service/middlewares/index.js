@@ -7,12 +7,15 @@
 'use strict'
 
 // публичные пути — их не режем по session.auth
+// ВАЖНО: /maps/og НЕ публичный — HTTP-вариант рендера OG доступен только
+// авторизованным (а фактически ходит через RPC maps:og по шине, HTTP-роут
+// удалён). Серверный рендер (headless Chromium, ~6-28с) — тупящая мишень для
+// DoS, поэтому наружу не открыт.
 const PUBLIC_PATHS = [
   '/maps/',
   '/maps/map',
   '/maps/geocode',
   '/maps/pois',
-  '/maps/og',
 ]
 
 const middlewares = (app) => {
