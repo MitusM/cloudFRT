@@ -8,6 +8,7 @@ import * as placePhotoCache from '../service/placePhotoCache.js'
 import { renderMapHtml } from '../service/renderMapHtml.js'
 import { renderMapPng } from '../service/ogExport.js'
 import path from 'path'
+import fs from 'fs'
 import pkg from 'app-root-path'
 
 const appRoot = pkg.path
@@ -235,28 +236,29 @@ const endpoints = async (app) => {
     }
   })
 
-  // GET /maps/ — заглушка/заготовка. Позже здесь юзер будет работать с картой.
-  // Пока возвращает метаданные МС и список доступных авторизованных эндпоинтов,
-  // чтобы корень `/maps/` не висел (HTTP 000), а отдавал осмысленный ответ.
+  // GET /maps/ — полноценная HTML-страница интерактивной карты, где юзер работает
+  // (рисует гео-объекты, добавляет точки/маркеры/текст, экспортирует GeoJSON).
+  // Использует собственный шаблон view/index.html (самодостаточная страница, без
+  // общего layout от render МС). В него подставляется renderMapHtml() — та же карта
+  // с инструментами рисования, что и на /maps/map.
+  // Доступен всем (см. PUBLIC_PATHS в service/middlewares/index.js).
   app.get('/maps/', async (req, res) => {
-    res.json({
-      service: 'maps',
-      name: 'maps',
-      provider: 'openstreetmap',
-      message: 'maps API — провайдер гео-данных (OSM). Здесь будет рабочая точка пользователя с картой.',
-      endpoints: [
-        'POST /maps/search',
-        'POST /maps/geocode',
-        'GET /maps/pois',
-        'POST /maps/autocomplete',
-        'GET /maps/details/:placeId',
-        'GET /maps/place-photo/:placeId',
-        'GET /maps/place-photo/:placeId/bytes',
-        'GET /maps/reverse',
-        'POST /maps/resolve-url',
-        'GET /maps/map',
-      ],
-    })
+    try {
+      const mapHtml = renderMapHtml({
+        containerId: 'poi-map',
+        heightPx: 640,
+        center: [85.9789, 51.9299], // Горно-Алтайск (Горный Алтай), порядок [lng, lat]
+        zoom: 12,
+      })
+      const file = await fs.promises.readFile(path.join(appRoot, process.env.VIEW_DIR, '..', 'index.html'), 'utf8')
+      const html = file
+        .replace('{{ title }}', 'Интерактивная карта | Maps')
+        .replace('{{ mapHtml | safe }}', mapHtml)
+      res.status(200).end(html)
+    } catch (err) {
+      console.log('⚡ err::maps:/ (корень)', err)
+      res.status(500).json({ error: 'internal' })
+    }
   })
 
   return app

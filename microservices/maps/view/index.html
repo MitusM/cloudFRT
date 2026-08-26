@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>{{ title }}</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: #f6f7f9;
+      }
+      #poi-map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    {{ mapHtml | safe }}
+
+    <script>
+      // Карта на всю видимую область браузера.
+      (function () {
+        function boot() {
+          if (typeof window.MapsRender === 'undefined' || !window.MapsRender.createMap || !window.maplibregl) {
+            return setTimeout(boot, 200);
+          }
+          // renderMapHtml вешает inline height на контейнер — снимаем его,
+          // чтобы CSS (#poi-map height:100%) растянул карту на весь viewport.
+          var el = document.getElementById('poi-map');
+          if (el) el.style.height = '';
+          window.MapsRender.createMap('poi-map', {
+            center: [85.9789, 51.9299], // Горно-Алтайск, [lng, lat]
+            zoom: 12,
+            markerColor: '#e11d48'
+          });
+        }
+        boot();
+      })();
+    </script>
+  </body>
+</html>

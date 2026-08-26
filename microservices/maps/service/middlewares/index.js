@@ -8,6 +8,7 @@
 
 // публичные пути — их не режем по session.auth
 const PUBLIC_PATHS = [
+  '/maps/',
   '/maps/map',
   '/maps/geocode',
   '/maps/pois',
