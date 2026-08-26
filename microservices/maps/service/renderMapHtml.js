@@ -2321,7 +2321,7 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });)
+        [selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
       });
 
       map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn]); }, onRemove: function () {} }, ctrlPos);
