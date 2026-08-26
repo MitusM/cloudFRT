@@ -54,7 +54,6 @@ function renderMapHtml(opts = {}) {
   const html = `
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
 <link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.css" />
-<link rel="stylesheet" href="https://unpkg.com/@watergis/maplibre-gl-terradraw@1.15.3/dist/maplibre-gl-terradraw.css" />
 <style>
   .maplibregl-ctrl-active { background-color: #fbc412 !important; }
   .maplibregl-ctrl-active:hover { background-color: #e5b010 !important; }
@@ -63,7 +62,6 @@ function renderMapHtml(opts = {}) {
 <script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.js"></script>
 <script src="https://unpkg.com/maplibre-gl-map-to-image@1.2.0/dist/maplibre-gl-map-to-image.min.js"></script>
-<script src="https://unpkg.com/@watergis/maplibre-gl-terradraw@1.15.3/dist/maplibre-gl-terradraw.umd.js"></script>
 <script>
   // ── Общий рендер карты (maps:map) — данные подставляет вызывающий МС ──
   (function () {
@@ -139,37 +137,8 @@ function renderMapHtml(opts = {}) {
       }
     }
 
-    // ── Maplibre-gl-terradraw — рисование + измерения (CDN UMD, watergis) ──
-    // Все режимы кроме Valhalla (требует сервер маршрутизации).
-    // Опция opts.terradraw=false отключает. Пересоздаётся при style.load.
-    function initTerradraw(map, opt) {
-      var Mc = window.MaplibreTerradrawControl && window.MaplibreTerradrawControl.MaplibreMeasureControl;
-      if (!Mc) {
-        console.warn('[maps:map] terradraw not loaded (CDN?)');
-        return;
-      }
-      try {
-        var draw = new Mc({
-          modes: [
-            'point', 'marker', 'linestring', 'polyline',
-            'polygon', 'rectangle', 'angled-rectangle', 'circle',
-            'freehand', 'freehand-linestring',
-            'select', 'delete-selection', 'delete', 'undo', 'redo', 'download'
-          ],
-          open: true,
-          measureUnitType: 'metric',
-          distancePrecision: 2,
-          areaPrecision: 2,
-        });
-        map.addControl(draw, 'top-left');
-        map._frtTerradraw = draw;
-      } catch (err) {
-        console.error('[maps:map] terradraw init error:', err);
-      }
-    }
-
     // ── Текстовый слой (source 'frt-text-source', symbol 'frt-text-label') ──
-    // Общая функция, доступна и из initTerradraw, и из makeTextTool.
+    // Используется makeTextTool'ом для пересоздания слоя при style.load.
     function frtRenderTextLayer(map) {
       try { if (map.getLayer('frt-text-label')) map.removeLayer('frt-text-label'); } catch (e) {}
       try { if (map.getSource('frt-text-source')) map.removeSource('frt-text-source'); } catch (e) {}
@@ -217,10 +186,15 @@ function renderMapHtml(opts = {}) {
         var el = document.createElement('div');
         el.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#3f97e0;' +
           'border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2);cursor:pointer;';
+        // точка — id для Select/Delete
+        var _id = 'frt-pt-' + map._frtNextId++;
+        el.dataset.frtTool = 'point';
+        el.dataset.frtId = _id;
         var mk = new maplibregl.Marker({ element: el })
           .setLngLat([lng, lat])
           .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML('<small>Точка</small>'))
           .addTo(map);
+        mk._frtId = _id;
         if (!map._frtPointMarkers) map._frtPointMarkers = [];
         map._frtPointMarkers.push(mk);
       }
@@ -257,7 +231,7 @@ function renderMapHtml(opts = {}) {
           if (!map || !map._frtPointMarkers) return [];
           return map._frtPointMarkers.map(function (mk) {
             var ll = mk.getLngLat();
-            return { lng: ll.lng, lat: ll.lat };
+            return { lng: ll.lng, lat: ll.lat, _frtId: mk._frtId };
           });
         };
         window.MapsRender.frtClearPoints = function (map) {
@@ -272,9 +246,13 @@ function renderMapHtml(opts = {}) {
             var el = document.createElement('div');
             el.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#3f97e0;' +
               'border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.2);cursor:pointer;';
+            var _id = 'frt-pt-' + map._frtNextId++;
+            el.dataset.frtTool = 'point';
+            el.dataset.frtId = _id;
             var mk = new maplibregl.Marker({ element: el })
               .setLngLat([p.lng, p.lat])
               .addTo(map);
+            mk._frtId = _id;
             map._frtPointMarkers.push(mk);
           });
         };
@@ -312,10 +290,15 @@ function renderMapHtml(opts = {}) {
         var lng = e.lngLat.lng;
         var lat = e.lngLat.lat;
         // anchor bottom — остриё капли указывает точно на точку
-        var mk = new maplibregl.Marker({ element: pinEl(), anchor: 'bottom' })
+        var el = pinEl();
+        var _id = 'frt-mk-' + map._frtNextId++;
+        el.dataset.frtTool = 'marker';
+        el.dataset.frtId = _id;
+        var mk = new maplibregl.Marker({ element: el, anchor: 'bottom' })
           .setLngLat([lng, lat])
           .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML('<small>Маркер</small>'))
           .addTo(map);
+        mk._frtId = _id;
         if (!map._frtMarkerMarkers) map._frtMarkerMarkers = [];
         map._frtMarkerMarkers.push(mk);
       }
@@ -353,7 +336,7 @@ function renderMapHtml(opts = {}) {
           if (!map || !map._frtMarkerMarkers) return [];
           return map._frtMarkerMarkers.map(function (mk) {
             var ll = mk.getLngLat();
-            return { lng: ll.lng, lat: ll.lat };
+            return { lng: ll.lng, lat: ll.lat, _frtId: mk._frtId };
           });
         };
         window.MapsRender.frtClearMarkers = function (map) {
@@ -365,9 +348,14 @@ function renderMapHtml(opts = {}) {
           if (!map) return;
           window.MapsRender.frtClearMarkers(map);
           (markers || []).forEach(function (p) {
-            var mk = new maplibregl.Marker({ element: pinEl(), anchor: 'bottom' })
+            var el = pinEl();
+            var _id = 'frt-mk-' + map._frtNextId++;
+            el.dataset.frtTool = 'marker';
+            el.dataset.frtId = _id;
+            var mk = new maplibregl.Marker({ element: el, anchor: 'bottom' })
               .setLngLat([p.lng, p.lat])
               .addTo(map);
+            mk._frtId = _id;
             map._frtMarkerMarkers.push(mk);
           });
         };
@@ -421,7 +409,7 @@ function renderMapHtml(opts = {}) {
           map._frtTextFeatures.push({
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [lngLat.lng, lngLat.lat] },
-            properties: { text: t }
+            properties: { text: t, _frtId: 'frt-txt-' + map._frtNextId++ }
           });
           rebuild();
           close();
@@ -1011,6 +999,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i].properties && features[i].properties._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtLineString) map._frtLineString = api;
       return btnEl;
@@ -1133,6 +1123,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i].properties && features[i].properties._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtPolygon) map._frtPolygon = api;
       return btnEl;
@@ -1294,6 +1286,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i]._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtRectangle) map._frtRectangle = api;
       return btnEl;
@@ -1465,6 +1459,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i]._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtCircle) map._frtCircle = api;
       return btnEl;
@@ -1611,6 +1607,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i]._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtFreehand) map._frtFreehand = api;
       return btnEl;
@@ -1749,6 +1747,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i].properties && features[i].properties._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtAngledRect) map._frtAngledRect = api;
       return btnEl;
@@ -1888,6 +1888,8 @@ function renderMapHtml(opts = {}) {
           }
           return false;
         },
+        getById: function (id) { for (var i = 0; i < features.length; i++) { if (features[i]._frtId === id) return features[i]; } return null; },
+        restore: function (obj) { if (obj) { features.push(obj); update(); } }
       };
       if (!map._frtFreehandLine) map._frtFreehandLine = api;
       return btnEl;
@@ -1931,8 +1933,8 @@ function renderMapHtml(opts = {}) {
       var mgr = map._frtManager;
 
       // Select — toggle подсветки по клику на фиче
-      var selectBtn = btn('Выбрать', '<svg viewBox="0 0 24 24" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
-        '<path d="M9.4 2.2 5.28 21.78l4.91-3.13 3.84 4.82 1.68-1.37-3.69-4.62 8.78-2.9L9.4 2.2Zm1.48 4.85 5.72 11.58-5.18 1.72 2.12-6.89-5.79-.22 3.13-6.19Z" fill="#5f6368"/></svg>', function () {
+      var selectBtn = btn('Выбрать', '<svg viewBox="0 -960 960 960" width="23" height="23" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:2px auto;">' +
+        '<path d="m320-410 79-110h170L320-716v306ZM551-80 406-392 240-160v-720l560 440H516l144 309-109 51ZM399-520Z" fill="#5f6368"/></svg>', function () {
         selectClick();
         selectBtn.classList.toggle('maplibregl-ctrl-active');
       });
@@ -1957,26 +1959,162 @@ function renderMapHtml(opts = {}) {
         map.getCanvas().style.cursor = 'pointer';
         map.once('click', function (e) {
           map.getCanvas().style.cursor = '';
+          var oe = e.originalEvent;
+
+          // 1) DOM-объекты (точка / маркер): клик по их элементу с data-frt-id
+          if (oe && oe.clientX !== undefined) {
+            var hitEl = document.elementFromPoint(oe.clientX, oe.clientY);
+            var fid_ = hitEl && (hitEl.dataset ? (hitEl.dataset.frtId || (hitEl.closest && hitEl.closest('[data-frt-id]') && hitEl.closest('[data-frt-id]').dataset.frtId)) : null);
+            if (hitEl && hitEl.dataset && hitEl.dataset.frtId) fid_ = hitEl.dataset.frtId;
+            if (fid_) {
+              mgr.selectedId = fid_;
+              // геометрия = точка в координатах объекта
+              var g = null;
+              if (hitEl.dataset && hitEl.dataset.frtTool === 'point') {
+                // найти в _frtPointMarkers по id
+                var pts = map._frtPointMarkers || [];
+                for (var pi = 0; pi < pts.length; pi++) {
+                  if (pts[pi]._frtId === fid_) { var ll = pts[pi].getLngLat(); g = { type: 'Point', coordinates: [ll.lng, ll.lat] }; break; }
+                }
+              } else if (hitEl.dataset && hitEl.dataset.frtTool === 'marker') {
+                var mks = map._frtMarkerMarkers || [];
+                for (var mi = 0; mi < mks.length; mi++) {
+                  if (mks[mi]._frtId === fid_) { var ll2 = mks[mi].getLngLat(); g = { type: 'Point', coordinates: [ll2.lng, ll2.lat] }; break; }
+                }
+              }
+              if (g) highlightFeature(fid_, g);
+              return;
+            }
+          }
+
           var layers = map.getStyle().layers || [];
           var frtLayers = [];
           for (var i = 0; i < layers.length; i++) {
             var l = layers[i];
             if (l.id.indexOf('frt-') === 0 && l.id.indexOf('-select') < 0) frtLayers.push(l.id);
           }
-          if (!frtLayers.length) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          if (!frtLayers.length) { clearHighlight(); return; }
           var feats = map.queryRenderedFeatures(e.point, { layers: frtLayers });
-          if (!feats || !feats.length) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          if (!feats || !feats.length) { clearHighlight(); return; }
           // берём самую верхнюю фичу на клике
           var top = feats[0];
           var fid = top.properties && top.properties._frtId;
-          if (!fid) { selectBtn.classList.remove('maplibregl-ctrl-active'); return; }
+          if (!fid) { clearHighlight(); return; }
           mgr.selectedId = fid;
-          highlightFeature(fid);
+          highlightFeature(fid, top.geometry);
         });
+      }
+
+      // ── Undo/Redo (удаления). Запись в стеке = { undo: fn, redo: fn } ──
+      function pushUndo(record) {
+        mgr.undoStack.push(record);
+        if (mgr.undoStack.length > 100) mgr.undoStack.shift();
+        mgr.redoStack = [];
+      }
+
+      function undo() {
+        var rec = mgr.undoStack.pop();
+        if (!rec) return;
+        clearHighlight();
+        mgr.selectedId = null;
+        // выполнить отмену (восстановить объект)
+        if (rec.undo) rec.undo();
+        // положить запись в redoStack
+        mgr.redoStack.push({ undo: rec.redo, redo: rec.undo });
+      }
+
+      function redo() {
+        var rec = mgr.redoStack.pop();
+        if (!rec) return;
+        clearHighlight();
+        mgr.selectedId = null;
+        if (rec.undo) rec.undo();
+        mgr.undoStack.push({ undo: rec.redo, redo: rec.undo });
       }
 
       // ── Delete: найти фичу по id и удалить через removeById ──
       function deleteFeature(id) {
+        // 1) DOM-точки (_frtPointMarkers)
+        if (map._frtPointMarkers) {
+          for (var pp = 0; pp < map._frtPointMarkers.length; pp++) {
+            var mp = map._frtPointMarkers[pp];
+            if (mp._frtId === id) {
+              var elP = mp.getElement ? mp.getElement() : null;
+              var llP = mp.getLngLat();
+              mp.remove();
+              map._frtPointMarkers.splice(pp, 1);
+              pushUndo({
+                undo: (function (theEl, theId, lng, lat) {
+                  return function () {
+                    var mk = new maplibregl.Marker({ element: theEl }).setLngLat([lng, lat]).addTo(map);
+                    mk._frtId = theId;
+                    map._frtPointMarkers.push(mk);
+                  };
+                })(elP, id, llP.lng, llP.lat),
+                redo: (function (theId) {
+                  return function () { deleteFeature(theId); };
+                })(id)
+              });
+              clearHighlight();
+              mgr.selectedId = null;
+              return true;
+            }
+          }
+        }
+        // 2) DOM-маркеры (_frtMarkerMarkers)
+        if (map._frtMarkerMarkers) {
+          for (var mm = 0; mm < map._frtMarkerMarkers.length; mm++) {
+            var mkm = map._frtMarkerMarkers[mm];
+            if (mkm._frtId === id) {
+              var elM = mkm.getElement ? mkm.getElement() : null;
+              var llM = mkm.getLngLat();
+              mkm.remove();
+              map._frtMarkerMarkers.splice(mm, 1);
+              pushUndo({
+                undo: (function (theEl, theId, lng, lat) {
+                  return function () {
+                    var mk = new maplibregl.Marker({ element: theEl, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
+                    mk._frtId = theId;
+                    map._frtMarkerMarkers.push(mk);
+                  };
+                })(elM, id, llM.lng, llM.lat),
+                redo: (function (theId) {
+                  return function () { deleteFeature(theId); };
+                })(id)
+              });
+              clearHighlight();
+              mgr.selectedId = null;
+              return true;
+            }
+          }
+        }
+        // 3) текстовые подписи (_frtTextFeatures)
+        if (map._frtTextFeatures) {
+          for (var tt = 0; tt < map._frtTextFeatures.length; tt++) {
+            var tf = map._frtTextFeatures[tt];
+            if (tf.properties && tf.properties._frtId === id) {
+              var savedFeat = tf;
+              map._frtTextFeatures.splice(tt, 1);
+              var rebuildText = function () {
+                if (map._frtTextTool && map._frtTextTool.rebuild) map._frtTextTool.rebuild();
+                else frtRenderTextLayer(map);
+              };
+              rebuildText();
+              pushUndo({
+                undo: (function (feat) {
+                  return function () { map._frtTextFeatures.push(feat); rebuildText(); };
+                })(savedFeat),
+                redo: (function (theId) {
+                  return function () { deleteFeature(theId); };
+                })(id)
+              });
+              clearHighlight();
+              mgr.selectedId = null;
+              return true;
+            }
+          }
+        }
+        // 4) геометрические инструменты (removeById)
         var tools = [
           map._frtLineString,
           map._frtPolygon,
@@ -1989,32 +2127,94 @@ function renderMapHtml(opts = {}) {
         for (var ti = 0; ti < tools.length; ti++) {
           var t = tools[ti];
           if (!t) continue;
-          if (t.removeById && t.removeById(id)) {
-            // сохраняем для undo (только что удалённую фичу)
-            var all = t.getFeatures();
-            // ищем фичу по id среди всех — но она уже удалена. Используем saved.
-            // Нам нужно запомнить фичу ДО удаления. Пока не делаем undo.
+          var featObj = (t.getById && t.getById(id)) || null;
+          if (featObj && t.removeById && t.removeById(id)) {
+            var theTool = t;
+            pushUndo({
+              undo: (function (tool, feat) {
+                return function () { if (tool.restore) tool.restore(feat); };
+              })(theTool, featObj),
+              redo: (function (tool, theId) {
+                return function () { if (tool.removeById) tool.removeById(theId); };
+              })(theTool, id)
+            });
+            clearHighlight();
+            mgr.selectedId = null;
             return true;
           }
         }
         return false;
       }
 
-      // ── Undo/Redo (заглушки — будут реализованы позже) ──
-      function undo() {
-        // TODO: undo через стек
-      }
-
-      function redo() {
-        // TODO: redo
-      }
-
-      function highlightFeature(id) {
+      function highlightFeature(id, geometry) {
         clearHighlight();
-        // TODO: overlay-слой для подсветки
+        if (!geometry) return;
+
+        // Формируем координаты для подсветки: line + vertex points
+        var lineCoords = null;
+        var vertexPts = [];
+        if (geometry.type === 'LineString') {
+          lineCoords = geometry.coordinates;
+          vertexPts = geometry.coordinates;
+        } else if (geometry.type === 'Polygon') {
+          var ring = geometry.coordinates[0];
+          lineCoords = ring;
+          vertexPts = ring;
+        } else if (geometry.type === 'Point') {
+          vertexPts = [geometry.coordinates];
+        }
+        if (!lineCoords && !vertexPts.length) return;
+
+        var selId = 'frt-select';
+        try { if (map.getLayer(selId)) map.removeLayer(selId); } catch (e) {}
+        try { if (map.getSource(selId)) map.removeSource(selId); } catch (e) {}
+
+        var lineLayerId = 'frt-select-line';
+        var ptsLayerId = 'frt-select-pts';
+        try { if (map.getLayer(lineLayerId)) map.removeLayer(lineLayerId); } catch (e) {}
+        try { if (map.getLayer(ptsLayerId)) map.removeLayer(ptsLayerId); } catch (e) {}
+        try { if (map.getSource('frt-select-src')) map.removeSource('frt-select-src'); } catch (e) {}
+        try { if (map.getSource('frt-select-pts-src')) map.removeSource('frt-select-pts-src'); } catch (e) {}
+
+        var feats = [];
+        if (lineCoords) {
+          feats.push({ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: lineCoords } });
+        }
+
+        var fc = { type: 'FeatureCollection', features: feats };
+        var ptsFC = { type: 'FeatureCollection', features: vertexPts.map(function (c) {
+          return { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: c } };
+        }) };
+
+        if (!map.getSource('frt-select-src')) {
+          map.addSource('frt-select-src', { type: 'geojson', data: fc });
+        } else {
+          map.getSource('frt-select-src').setData(fc);
+        }
+        if (!map.getSource('frt-select-pts-src')) {
+          map.addSource('frt-select-pts-src', { type: 'geojson', data: ptsFC });
+        } else {
+          map.getSource('frt-select-pts-src').setData(ptsFC);
+        }
+
+        if (lineCoords && !map.getLayer(lineLayerId)) {
+          map.addLayer({ id: lineLayerId, type: 'line', source: 'frt-select-src',
+            paint: { 'line-color': '#3f97e0', 'line-width': 2.5 } });
+        }
+        if (!map.getLayer(ptsLayerId)) {
+          map.addLayer({ id: ptsLayerId, type: 'circle', source: 'frt-select-pts-src',
+            paint: { 'circle-radius': 4, 'circle-color': '#FFFFFF',
+              'circle-stroke-width': 2, 'circle-stroke-color': '#3f97e0' } });
+        }
       }
+
       function clearHighlight() {
-        // TODO: убрать overlay
+        var ids = ['frt-select-line', 'frt-select-pts'];
+        for (var i = 0; i < ids.length; i++) {
+          try { if (map.getLayer(ids[i])) map.removeLayer(ids[i]); } catch (e) {}
+        }
+        try { if (map.getSource('frt-select-src')) map.removeSource('frt-select-src'); } catch (e) {}
+        try { if (map.getSource('frt-select-pts-src')) map.removeSource('frt-select-pts-src'); } catch (e) {}
       }
 
       function exportGeoJSON() {
@@ -2081,15 +2281,25 @@ function renderMapHtml(opts = {}) {
         if (window.MapsRender && window.MapsRender.frtGetPoints) {
           var pts = window.MapsRender.frtGetPoints(map);
           for (var pi = 0; pi < pts.length; pi++) {
-            all.push({ type: 'Feature', properties: { _tool: 'point' },
+            var pProps = { _tool: 'point' };
+            if (pts[pi]._frtId) pProps._frtId = pts[pi]._frtId;
+            all.push({ type: 'Feature', properties: pProps,
               geometry: { type: 'Point', coordinates: [pts[pi].lng, pts[pi].lat] } });
           }
         }
-        // text-инструмент тоже
-        if (map._frtTextTool) {
-          var txts = map._frtTextTool.getFeatures ? map._frtTextTool.getFeatures() : [];
-          for (var ti2 = 0; ti2 < txts.length; ti2++) all.push(txts[ti2]);
+        // + DOM-маркеры (пин)
+        if (window.MapsRender && window.MapsRender.frtGetMarkers) {
+          var mks = window.MapsRender.frtGetMarkers(map);
+          for (var mi2 = 0; mi2 < mks.length; mi2++) {
+            var mProps = { _tool: 'marker' };
+            if (mks[mi2]._frtId) mProps._frtId = mks[mi2]._frtId;
+            all.push({ type: 'Feature', properties: mProps,
+              geometry: { type: 'Point', coordinates: [mks[mi2].lng, mks[mi2].lat] } });
+          }
         }
+        // text-инструмент тоже (фичи живут в map._frtTextFeatures)
+        var txts = map._frtTextFeatures || [];
+        for (var ti2 = 0; ti2 < txts.length; ti2++) all.push(txts[ti2]);
         var blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: all }, null, 2)], { type: 'application/geo+json' });
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
@@ -2111,7 +2321,7 @@ function renderMapHtml(opts = {}) {
         '<path d="M0 0h24v24H0z" fill="none"/><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 4.3 7.2c-1.4 2.5-.9 5.5 1.3 7.6 1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1 1.1-1.2z"/></svg>', function () {
         open = !open;
         toggleBtn.classList.toggle('maplibregl-ctrl-active', open);
-        [rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, selectBtn, deleteBtn, undoBtn, redoBtn, dlGeoBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });
+        [selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn].forEach(function (b) { b.style.display = open ? '' : 'none'; });)
       });
 
       map.addControl({ onAdd: function () { return ctrlGroup([toggleBtn, selectBtn, deleteBtn, undoBtn, redoBtn, rulerBtn, textBtn, pointBtn, markerBtn, lineBtn, polygonBtn, rectBtn, circleBtn, freehandBtn, angledRectBtn, freehandLineBtn, dlGeoBtn]); }, onRemove: function () {} }, ctrlPos);
@@ -2295,22 +2505,6 @@ function renderMapHtml(opts = {}) {
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);
-      // terradraw — рисование + измерения. Инициализируем после загрузки стиля.
-      // При каждом style.load (переключение Стандартная↔Спутник) TerraDraw
-      // теряет source/layer — удаляем старый control и создаём новый.
-      // TerraDraw: если стиль уже загружен — стартуем сразу. При смене стиля
-      // (Standard↔Satellite) пересоздаём через style.load. Один обработчик.
-      if (opt.terradraw !== false) {
-        function tdRestart() {
-          if (map._frtTerradraw) {
-            try { map.removeControl(map._frtTerradraw); } catch (e) {}
-            map._frtTerradraw = null;
-          }
-          initTerradraw(map, opt);
-        }
-        if (map.isStyleLoaded && map.isStyleLoaded()) tdRestart();
-        map.on('style.load', tdRestart);
-      }
       // локализация подписей — применяем, когда стиль загружен, и переживаем
       // перезагрузку стиля (style.load / styledata). Без этого getStyle() пуст.
       const applyOnce = () => {
@@ -2384,17 +2578,6 @@ function renderMapHtml(opts = {}) {
         map.fitBounds(bounds, { padding: opt.pad, maxZoom: opt.maxZoom });
       }
       return map;
-    };
-
-    // ── TerraDraw API (рисование + измерения) ──
-    window.MapsRender.getDrawData = function (map) {
-      return (map && map._frtTerradraw) ? map._frtTerradraw.getData() : null;
-    };
-    window.MapsRender.clearDraw = function (map) {
-      if (map && map._frtTerradraw) map._frtTerradraw.clear();
-    };
-    window.MapsRender.setDrawData = function (map, geojson) {
-      if (map && map._frtTerradraw) map._frtTerradraw.setData(geojson);
     };
   })();
 </script>`.trim()
