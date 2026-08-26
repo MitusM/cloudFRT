@@ -23,12 +23,17 @@ const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 // токен, а у анонима он и так есть — проверка сломала бы поиск без реальной
 // защиты. Это НЕ пуленепробиваемая защита (Referer/Origin подделываются),
 // но режет случайные и скриптовые обращения.
-const ALLOWED_ORIGINS = [
-  'dev.frt.su',
-  'cloud.frt.su',
-  'localhost',
-  '127.0.0.1',
-]
+//
+// Лимиты и разрешённые домены вынесены в .env (см. ниже). Дефолты на случай
+// отсутствия env-переменных: окно 60с, geocode 30/мин, pois 60/мин.
+const RL_WINDOW_MS = process.env.RL_WINDOW_MS ? parseInt(process.env.RL_WINDOW_MS, 10) : 60000
+const RL_GEOCODE_MAX = process.env.RL_GEOCODE_MAX ? parseInt(process.env.RL_GEOCODE_MAX, 10) : 30
+const RL_POIS_MAX = process.env.RL_POIS_MAX ? parseInt(process.env.RL_POIS_MAX, 10) : 60
+// Список доменов из env (через запятую). Поддомены разрешаются автоматически.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'dev.frt.su,cloud.frt.su,localhost,127.0.0.1')
+  .split(',')
+  .map((d) => d.trim().toLowerCase())
+  .filter(Boolean)
 const ALLOWED_SCHEMES = ['http:', 'https:']
 
 // Разрешить, если Origin/Referer отсутствует (внутренний RPC/curl с нашего хоста)
@@ -63,8 +68,8 @@ function assertInternal(req, res) {
 
 // Лимиты для публичных эндпоинтов (защита от скриптового долбления).
 // geocode — поиск (дорогой Nominatim/Overpass), pois — лёгкий, но по bbox.
-const RL_GEOCODE = rateLimitMiddleware({ keyPrefix: 'rl:geocode', windowMs: 60 * 1000, max: 30 })
-const RL_POIS = rateLimitMiddleware({ keyPrefix: 'rl:pois', windowMs: 60 * 1000, max: 60 })
+const RL_GEOCODE = rateLimitMiddleware({ keyPrefix: 'rl:geocode', windowMs: RL_WINDOW_MS, max: RL_GEOCODE_MAX })
+const RL_POIS = rateLimitMiddleware({ keyPrefix: 'rl:pois', windowMs: RL_WINDOW_MS, max: RL_POIS_MAX })
 
 const endpoints = async (app) => {
   // POST /maps/search — поиск мест (OSM Nominatim / Google)
