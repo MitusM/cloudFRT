@@ -28,7 +28,7 @@ const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 // Лимиты и разрешённые домены вынесены в .env (см. ниже). Дефолты на случай
 // отсутствия env-переменных: окно 60с, geocode 30/мин, pois 60/мин.
 const RL_WINDOW_MS = process.env.RL_WINDOW_MS ? parseInt(process.env.RL_WINDOW_MS, 10) : 60000
-const RL_GEOCODE_MAX = process.env.RL_GEOCODE_MAX ? parseInt(process.env.RL_GEOCODE_MAX, 10) : 30
+const RL_GEOCODE_MAX = process.env.RL_GEOCODE_MAX ? parseInt(process.env.RL_GEOCODE_MAX, 10) : 20
 const RL_POIS_MAX = process.env.RL_POIS_MAX ? parseInt(process.env.RL_POIS_MAX, 10) : 60
 // Список доменов из env (через запятую). Поддомены разрешаются автоматически.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'dev.frt.su,cloud.frt.su,localhost,127.0.0.1')
