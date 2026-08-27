@@ -38,6 +38,11 @@
 function renderMapHtml(opts = {}) {
   const markerColor = opts.markerColor || '#e11d48'
   const center = Array.isArray(opts.center) ? opts.center : [37.62, 55.75]
+  // Токен для публичных гео-эндпоинтов (geocode/pois). Если передан — вшивается
+  // в window._frtMapToken, и клиентский fetch geocode/pois шлёт его в заголовке
+  // X-Maps-Token. Пустая строка/undefined = не вшиваем (страница без токена,
+  // поиск мест будет отклонён сервером).
+  const token = typeof opts.token === 'string' ? opts.token : ''
   const zoom = typeof opts.zoom === 'number' ? opts.zoom : 5
   const heightPx = typeof opts.heightPx === 'number' ? opts.heightPx : 900
   const styleUrl = opts.styleUrl || 'https://tiles.openfreemap.org/styles/liberty'
@@ -67,6 +72,9 @@ function renderMapHtml(opts = {}) {
   (function () {
     window.MapsRender = window.MapsRender || {};
 
+    // Токен для публичных гео-эндпоинтов (geocode/pois): клиентские fetch
+    // шлют его в заголовке X-Maps-Token. Без токена сервер отклоняет поиск.
+    window._frtMapToken = ${token ? JSON.stringify(token) : 'null'};
     // нормализация опций с чувствительными к типам значениями из бэкенда
     const DEFAULTS = {
       center: ${JSON.stringify(center)},
@@ -2345,7 +2353,11 @@ function renderMapHtml(opts = {}) {
           const features = [];
           return fetch('/maps/geocode', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              // Токен для публичной гео-защиты (HMAC+TTL), вшит сервером в window
+              'X-Maps-Token': window._frtMapToken || '',
+            },
             body: JSON.stringify({
               query: config.query,
               lang: window.MapsRender && window.MapsRender.getLang ? window.MapsRender.getLang() : undefined,

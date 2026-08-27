@@ -7,6 +7,7 @@ import * as mapsService from '../service/mapsService.js'
 import * as placePhotoCache from '../service/placePhotoCache.js'
 import { renderMapHtml } from '../service/renderMapHtml.js'
 import { rateLimitMiddleware } from '../service/rateLimit.js'
+import { signToken, verifyToken, getSecret } from '../service/geoToken.js'
 import path from 'path'
 import fs from 'fs'
 import pkg from 'app-root-path'
@@ -71,6 +72,42 @@ function assertInternal(req, res) {
 const RL_GEOCODE = rateLimitMiddleware({ keyPrefix: 'rl:geocode', windowMs: RL_WINDOW_MS, max: RL_GEOCODE_MAX })
 const RL_POIS = rateLimitMiddleware({ keyPrefix: 'rl:pois', windowMs: RL_WINDOW_MS, max: RL_POIS_MAX })
 
+// ---- Токен для публичных гео-эндпоинтов (HMAC+TTL, сессия+IP) ----
+// Секрет подписи (MAPS_TOKEN_SECRET или фолбэк ENCRYPTION_KEY). Если секрета
+// нет — публичные гео-эндпоинты работают БЕЗ токена (fail-open), но на проде
+// MAPS_TOKEN_SECRET должен быть задан (см. .env.example). TTL по умолчанию 5 мин.
+const GEO_TOKEN_TTL_MS = process.env.MAPS_TOKEN_TTL_MS ? parseInt(process.env.MAPS_TOKEN_TTL_MS, 10) : 5 * 60 * 1000
+
+// IP из заголовка (за nginx) или сокета — тот же источник, что и в rate-limit,
+// чтобы привязка токена к IP не расходилась с реальным IP запроса.
+function clientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() ||
+    req.ip || req.connection?.remoteAddress || 'unknown'
+}
+// Session id: session.auth и sessionID есть у каждого (даже анонима) —
+// express-session с saveUninitialized:true создаёт сессию всем.
+function sessionIdOf(req) {
+  return (req.session && (req.session.id || req.sessionID)) || 'anon'
+}
+// Выдать токен для встраивания в страницу.
+function issueGeoToken(req) {
+  const secret = getSecret()
+  if (!secret) return ''
+  return signToken({ sessionId: sessionIdOf(req), ip: clientIp(req), secret, ttlMs: GEO_TOKEN_TTL_MS })
+}
+// Middleware проверки токена для публичных гео-эндпоинтов. Идёт ПОСЛЕ
+// assertInternal (источник) и rate-limit. Без валидного токена — 403.
+function requireGeoToken(req, res, next) {
+  const secret = getSecret()
+  // Нет секрета → не защищаем (fail-open), но логируем разово на старте
+  if (!secret) return next()
+  const token = req.headers['x-maps-token'] || ''
+  if (verifyToken(token, { sessionId: sessionIdOf(req), ip: clientIp(req), secret })) {
+    return next()
+  }
+  res.status(403).json({ error: 'forbidden: invalid or expired token' })
+}
+
 const endpoints = async (app) => {
   // POST /maps/search — поиск мест (OSM Nominatim / Google)
   app.post('/maps/search', async (req, res) => {
@@ -91,7 +128,7 @@ const endpoints = async (app) => {
   // Сначала наши SearchPlace (OrientDB), фолбэк — Nominatim; найденное
   // сохраняем в SearchPlace (наполнение БД своими POI). Возвращает GeoJSON
   // FeatureCollection { type, features:[{type,geometry:{Point,[lng,lat]},properties}] }
-  app.post('/maps/geocode', RL_GEOCODE, async (req, res) => {
+  app.post('/maps/geocode', RL_GEOCODE, requireGeoToken, async (req, res) => {
     try {
       // источник (Referer/Origin). CSRF не применяем — геокодер с публичной
       // карты не шлёт токен, а у анонима он и так есть; rate-limit + Origin
@@ -130,7 +167,7 @@ const endpoints = async (app) => {
   })
 
   // GET /maps/pois — POI по категории в bbox
-  app.get('/maps/pois', RL_POIS, async (req, res) => {
+  app.get('/maps/pois', RL_POIS, requireGeoToken, async (req, res) => {
     try {
       // GET — не мутирует, CSRF не нужен; проверяем только источник.
       if (!assertInternal(req, res)) return
@@ -244,7 +281,7 @@ const endpoints = async (app) => {
   // через MapsRender.setPoints.
   app.get('/maps/map', async (req, res) => {
     try {
-      const mapHtml = renderMapHtml({ containerId: 'poi-map', heightPx: 900 })
+      const mapHtml = renderMapHtml({ containerId: 'poi-map', heightPx: 900, token: issueGeoToken(req) })
       const renderResp = await res.app.ask('render', {
         server: {
           action: 'html',
@@ -288,6 +325,7 @@ const endpoints = async (app) => {
         heightPx: 640,
         center: [85.9789, 51.9299], // Горно-Алтайск (Горный Алтай), порядок [lng, lat]
         zoom: 12,
+        token: issueGeoToken(req),
       })
       const file = await fs.promises.readFile(path.join(appRoot, process.env.VIEW_DIR, '..', 'index.html'), 'utf8')
       const html = file

@@ -102,7 +102,9 @@
       north: bbox.north, east: bbox.east,
       limit: 80
     });
-    fetch('/maps/pois?' + qs.toString())
+    fetch('/maps/pois?' + qs.toString(), {
+      headers: { 'X-Maps-Token': window._frtMapToken || '' }
+    })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (data) {
         var pois = (data && data.pois) || [];
