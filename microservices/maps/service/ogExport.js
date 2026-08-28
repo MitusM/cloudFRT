@@ -110,6 +110,9 @@ async function renderMapPng(opts = {}) {
           styleUrl: 'https://tiles.openfreemap.org/styles/liberty',
           center: ${JSON.stringify(center || [85.9789, 51.9299])},
           zoom: ${JSON.stringify(zoom)},
+          // OG-рендер — статичная PNG для шаринга в соцсетях: панель
+          // «Инструменты» (редактор) не нужна, отключаем editor.
+          editor: false,
         });
         if (!map) { signal(false, { error: 'no-map' }); return; }
         if (MARKERS.length) {
