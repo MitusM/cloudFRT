@@ -9,13 +9,20 @@ HTTP-CRUD: это тонкая обёртка над **Redis**, которая �
 ## Возможности
 
 - **`cache:get`** — прочитать значение по ключу (вернёт `null`, если ключа нет)
-- **`cache:set`** — записать значение по ключу (обычно это `JSON.stringify` данных)
-- **`cache:multi`** — батч-операции за один RPC (например, несколько `get` подряд)
+- **`cache:set`** — записать значение по ключу; опциональный `ttl` (сек) — с TTL или бессрочно
+- **`cache:ttl`** — получить остаточное время жизни ключа, сек (`-2` = нет ключа, `-1` = без TTL)
+- **`cache:multi`** — батч-операции за один RPC (например, несколько `get`/`set` подряд)
 - **`cache:del`** — удалить ключи **по паттерну** (`users:list:**`), через `scanStream`
 
-Поверх Redis добавляет одну осмысленную абстракцию: удаление **по паттерну** —
-удобно, когда кэш связан с сущностью (`users:list:*`), и после изменения сущности
-нужно сбросить все её варианты кэша одним вызовом.
+Поверх Redis добавляет две осмысленные абстракции:
+
+1. **Удаление по паттерну** — удобно, когда кэш связан с сущностью
+   (`users:list:*`), и после изменения сущности нужно сбросить все её
+   варианты кэша одним вызовом.
+2. **Опциональный TTL** — `cache:set` принимает `ttl` (сек). Без `ttl`
+   ключ хранится бессрочно (прежнее поведение), с `ttl` — истекает.
+   Это базовый кирпич для **Missing-кэша** (кэширования отрицательных
+   результатов коротким временем жизни, см. ниже).
 
 ## Механика использования (по шине)
 
@@ -38,7 +45,7 @@ const { status, response } = await res.app.ask('cache', {
 const value = response.value      // null, если ключа нет
 ```
 
-### `cache:set`
+### `cache:set` (с опциональным TTL)
 
 ```js
 await res.app.ask('cache', {
@@ -48,10 +55,23 @@ await res.app.ask('cache', {
       options: { db: 1 },
       key: 'users:list:1',          // ключ
       val: JSON.stringify(users),   // значение (уже сериализованное)
+      ttl: 3600,                    // опционально: секунд до истечения (без ttl — бессрочно)
     },
   },
 })
 // ответ: { status: 200, response: { value: 'OK' } }
+```
+
+### `cache:ttl` (остаточное время жизни)
+
+```js
+const { response } = await res.app.ask('cache', {
+  server: {
+    action: 'cache:ttl',
+    meta: { options: { db: 1 }, list: 'users:list:1' },
+  },
+})
+// response.value: 3599 (сек) | -1 (ключ есть, без TTL) | -2 (ключа нет)
 ```
 
 ### `cache:multi`
@@ -92,6 +112,41 @@ await res.app.ask('cache', {
 > Это унаследованная особенность сигнатур — при использовании сверяться с
 > фактическими вызовами в `geo`, `users`, `article`, `country`.
 
+## Missing-кэш (кэширование «данных нет»)
+
+Паттерн для дорогих источников (внешние API, БД): когда результата **нет**
+(пустой список), кэшировать сам факт отсутствия коротким TTL, чтобы не
+долбить источник повторными запросами на каждый «холодный» ключ.
+
+Договорённость (на стороне потребителя):
+- **пустой результат** → писать маркер `__EMPTY__` с **коротким** TTL (например 60 сек)
+- **есть данные** → писать `JSON.stringify(data)` с **длинным** TTL (например 3600 сек)
+- при чтении: `value === '__EMPTY__'` → отдавать пустой список без похода в БД
+
+Пример из `geo` (справочники стран/регионов/городов):
+
+```js
+const EMPTY = '__EMPTY__'
+let list = response.value
+if (list !== null) {
+  listCities = list === EMPTY ? [] : JSON.parse(list)
+} else {
+  listCities = await db.cities(id)
+  const isEmpty = Array.isArray(listCities) && listCities.length === 0
+  await res.app.ask('cache', {
+    server: { action: 'cache:set', meta: {
+      options: { db: 2 },
+      key: 'cities:' + id,
+      val: isEmpty ? EMPTY : JSON.stringify(listCities),
+      ttl: isEmpty ? 60 : 3600,
+    }},
+  })
+}
+```
+
+Так отрицательный ответ живёт в Redis недолго (защита от дыр), но не
+заставляет каждый раз снова ходить в источник.
+
 ## Номера Redis-BD (db)
 
 `options.db` выбирает логическую БД внутри одного Redis-инстанса:
@@ -106,12 +161,12 @@ await res.app.ask('cache', {
 ```
 cache/
 ├── index.js                    # точка входа, name='cache' на шине (+ Redis)
-├── action/                     # RPC-экшены: cache:get/set/multi/del
+├── action/                     # RPC-экшены: cache:get/set/multi/del/ttl
 ├── controllers/                # HTTP-роуты — ПУСТО (только middleware)
 ├── service/
 │   ├── cacheServices.js        # класс Redis (обёртка над ioredis) — ядро МС
-│   ├── middlewares/index.js    # авторизация /cache/:endpoint (req.session.auth)
-│   └── ...                     # connect.js, viewsServices, errorServices (не используются)
+│   ├── errorServices.js        # обработка ошибок шины
+│   └── middlewares/index.js    # авторизация /cache/:endpoint (req.session.auth)
 ├── view/                       # шаблоны (не задействовано: HTTP-эндпоинтов нет)
 └── lang/ru.json                # словарь (используется контроллером)
 ```
@@ -143,11 +198,9 @@ nodemon --watch . ./index.js   # dev (перезапуск при правке)
 | `TIMED_OUT` | Таймаут RPC, мс (по умолчанию 5000) | — |
 | `VIEW_DIR` | Каталог шаблонов (fail-fast; фактически не рендерится) | ✅ (для fail-fast) |
 
-> 🔎 Остальные переменные в `.env` (`MYSQL_*`, `PG_*`, `DIALECT`, `HOST`,
-> `DATABASE`, `USER`, `SALT`, `CACHE`) — **унаследованы от `geo`** и cache
-> не использует. `connect.js` (Postgres/Sequelize) тоже остался от копипаста —
-> в работе кэш-МС не участвует. Это кандидат на чистку (не трогается без явного
-> решения).
+> 🔎 `VIEW_DIR` используется только для fail-fast (фактически не рендерится).
+> Остальных переменных в `.env` больше нет — мёртвые geo-переменные (MYSQL_*,
+> PG_*, SALT, CACHE) были удалены при чистке МС 28.08.2026.
 
 ## Авторизация
 

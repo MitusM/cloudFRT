@@ -41,8 +41,27 @@ class Redis {
     }
   }
 
-  set(key, value) {
+  /**
+   * Записать значение. Опциональный `ttl` (секунды) — если передан,
+   * ключ истекает; иначе хранится бессрочно (поведение по умолчанию,
+   * обратно совместимо с прежним cache:set).
+   * @param {string} key
+   * @param {string|any} value
+   * @param {number} [ttl] seconds
+   */
+  set(key, value, ttl) {
+    if (ttl && Number.isInteger(ttl) && ttl > 0) {
+      return this.redis.set(key, value, 'EX', ttl)
+    }
     return this.redis.set(key, value)
+  }
+
+  /**
+   * Остаточное время жизни ключа, сек. -2 = ключ отсутствует, -1 = без TTL.
+   * @param {string} key
+   */
+  ttl(key) {
+    return this.redis.ttl(key)
   }
 
   pipeline() {

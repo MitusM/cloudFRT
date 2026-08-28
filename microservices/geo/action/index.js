@@ -23,20 +23,24 @@ const action = async (app) => {
        * @returns {Boolean | Object} null - if no result or Object if the data is in redis
        */
       let country = response.value
+      /** Договорённый маркер Missing-кэша: данных нет, но мы это запомнили */
+      const EMPTY = '__EMPTY__'
       /** Если данные есть в Redis заносим в переменную и отдаём клиенту */
       if (country !== null) {
-        listCountry = JSON.parse(country)
+        listCountry = country === EMPTY ? [] : JSON.parse(country)
       } else {
-        /** Если данных нет, то запрашиваем в БД и заносим в Redis */
+        /** Если данных нет, то запрашиваем в БД */
         listCountry = await client.countryList()
-        //TODO: status, response не использованы в коде. Игнорить или использовать?
-        const { status, response } = await res.app.ask('cache', {
+        /** Missing-кэш: пустой результат кэшируем на короткий TTL, иначе на длинный */
+        const isEmpty = Array.isArray(listCountry) && listCountry.length === 0
+        await res.app.ask('cache', {
           server: {
             action: 'cache:set',
             meta: {
               options: { db: 2 },
               key: 'country',
-              val: JSON.stringify(listCountry),
+              val: isEmpty ? EMPTY : JSON.stringify(listCountry),
+              ttl: isEmpty ? 60 : 3600,
             },
           },
         })
@@ -47,7 +51,7 @@ const action = async (app) => {
       })
     } catch (err) {
       console.log('⚡ err::geo:division', err)
-      process.exit(err)
+      res.json({ error: err.message })
     }
   })
 

@@ -56,21 +56,24 @@ const endpoints = async (app) => {
        * @returns {Boolean | Object} null - if no result or Object if the data is in redis
        */
         let country = response.value
+        /** Договорённый маркер Missing-кэша: данных нет, но мы это запомнили */
+        const EMPTY = '__EMPTY__'
         /** Если данные есть в Redis заносим в переменную и отдаём клиенту */
         if (country !== null) {
-          listRegions = JSON.parse(country)
+          listRegions = country === EMPTY ? [] : JSON.parse(country)
         } else {
-          /** Если данных нет, то запрашиваем в БД и заносим в Redis */
+          /** Если данных нет, то запрашиваем в БД */
           listRegions = await db.regions(id)
-
-          //TODO: status, response не использованы в коде. Игнорить или использовать?
-          const { status, response } = await res.app.ask('cache', {
+          /** Missing-кэш: пустой результат кэшируем на короткий TTL, иначе на длинный */
+          const isEmpty = Array.isArray(listRegions) && listRegions.length === 0
+          await res.app.ask('cache', {
             server: {
               action: 'cache:set',
               meta: {
                 options: { db: 2 },
                 key: 'regions:' + id,
-                val: JSON.stringify(listRegions),
+                val: isEmpty ? EMPTY : JSON.stringify(listRegions),
+                ttl: isEmpty ? 60 : 3600,
               },
             },
           })
@@ -106,21 +109,24 @@ const endpoints = async (app) => {
        * @returns {Boolean | Object} null - if no result or Object if the data is in redis
        */
         let cities = response.value
+        /** Договорённый маркер Missing-кэша: данных нет, но мы это запомнили */
+        const EMPTY = '__EMPTY__'
         /** Если данные есть в Redis заносим в переменную и отдаём клиенту */
         if (cities !== null) {
-          listCities = JSON.parse(cities)
+          listCities = cities === EMPTY ? [] : JSON.parse(cities)
         } else {
-          /** Если данных нет, то запрашиваем в БД и заносим в Redis */
+          /** Если данных нет, то запрашиваем в БД */
           listCities = await db.cities(id)
-
-          //TODO: status, response не использованы в коде. Игнорить или использовать?
-          const { status, response } = await res.app.ask('cache', {
+          /** Missing-кэш: пустой результат кэшируем на короткий TTL, иначе на длинный */
+          const isEmpty = Array.isArray(listCities) && listCities.length === 0
+          await res.app.ask('cache', {
             server: {
               action: 'cache:set',
               meta: {
                 options: { db: 2 },
                 key: 'cities:' + id,
-                val: JSON.stringify(listCities),
+                val: isEmpty ? EMPTY : JSON.stringify(listCities),
+                ttl: isEmpty ? 60 : 3600,
               },
             },
           })
