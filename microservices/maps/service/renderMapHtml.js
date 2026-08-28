@@ -27,10 +27,15 @@
 //              language?='auto' (язык подписей карты),
 //              fitBoundsPadding?=48, fitBoundsMaxZoom?=14,
 //              controlsPosition?='top-right', hideControls?=false,
-//              styles?=true (переключатель Стандартная/Спутниковая в тулбаре) }
+//              styles?=true (переключатель Стандартная/Спутниковая в тулбаре),
+//              editor?=true (панель «Инструменты»: линейка/текст/точка/маркер/
+//                            рисование фигур/Select/Delete/Undo/Redo/экспорт GeoJSON;
+//                            editor:false — карта «только просмотр» без панели) }
 //
-// Тулбар-контролы (addControl): 🧭 компас (bearing→0), 📏 линейка (клики →
-// ломаная с подписями расстояний), 🏷 тултип при наведении на маркер (имя места).
+// Тулбар-контролы (addControl): 🧭 компас (bearing→0), 🛰 виды (стандарт/спутник),
+// 🏷 тултип при наведении на маркер (имя места). Всё это — постоянные контролы;
+// линейка + редактор гео-объектов прячутся в раскрывающуюся панель «Инструменты»
+// (editor, по умолчанию свёрнута; editor:false — полностью скрыть).
 // Self-contained (по мотивам @mapbox-controls/*, совместимы с MapLibre GL),
 // без внешних npm-зависимостей.
 // === === === === === === === === === === === ===
@@ -83,6 +88,7 @@ function renderMapHtml(opts = {}) {
       styleUrl: '${styleUrl}',
       pad: 48,
       maxZoom: 14,
+      editor: true,
     };
 
     // собрать опции (числа страхуем от NaN)
@@ -2512,8 +2518,10 @@ function renderMapHtml(opts = {}) {
         if (opt.styles !== false) makeStyles(map, ctrlPosition, opt);
         // экспорт в PNG — кнопка скачивания (работает на обеих стилях)
         if (opt.export !== false) makeExport(map, ctrlPosition, opt);
-        // инструменты: Линейка, Текст, Точка — в одной раскрывающейся панели
-        makeToolsPanel(map, ctrlPosition);
+        // инструменты: Линейка, Текст, Точка, рисование, Select/Delete/Undo/Redo,
+        // экспорт GeoJSON — в одной раскрывающейся панели «Инструменты»
+        // (опция editor: false — карта «только просмотр», без панели)
+        if (opt.editor !== false) makeToolsPanel(map, ctrlPosition);
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);
