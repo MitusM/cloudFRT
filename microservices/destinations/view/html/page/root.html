@@ -1,0 +1,25 @@
+{# ============================================================
+   page/root.html — корневой хаб /destinations/
+   Данные (data):
+     title, description,
+     countries: [{slug, title, level}] — верхнеуровневые направления
+   ============================================================ #}
+
+<h1 class="dest-h1">{{ h1 | default(title) }}</h1>
+{% if description %}<p class="dest-desc">{{ description }}</p>{% endif %}
+
+{% if countries and countries.length %}
+<h2 class="dest-h2">Направления</h2>
+<ul class="dest-children">
+  {% for c in countries %}
+  <li>
+    <a class="dest-child" href="{{ c.url }}">
+      <span class="lv">{{ c.level }}</span>
+      <span class="t">{{ c.title }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>Раздел наполняется.</p>
+{% endif %}

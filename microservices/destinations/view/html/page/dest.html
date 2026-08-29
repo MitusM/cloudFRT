@@ -1,0 +1,59 @@
+{# ============================================================
+   page/dest.html — страница места/хаба (destinations)
+   Данные (data):
+     title, description, image, h1,
+     breadcrumb: [{name, url, current}],   // от корня к текущему
+     children: [{slug, title, level}],     // достопримечательности/подместа
+     content:  HTML контент хаба (safe),
+     links:    [{url, title}] — блок перелинковки (похожие/туры/где жить)
+   ============================================================ #}
+
+{# ---------- Хлебные крошки ---------- #}
+{% if breadcrumb %}
+<nav class="dest-breadcrumb" aria-label="breadcrumb">
+  <ol>
+    {% for crumb in breadcrumb %}
+    <li>
+      {% if crumb.current %}
+      <span aria-current="page">{{ crumb.name }}</span>
+      {% else %}
+      <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+
+{# ---------- H1 и описание ---------- #}
+<h1 class="dest-h1">{{ h1 }}</h1>
+{% if description %}<p class="dest-desc">{{ description }}</p>{% endif %}
+{% if image %}<p><img src="{{ image }}" alt="{{ h1 }}" loading="lazy" /></p>{% endif %}
+
+{# ---------- Контент хаба ---------- #}
+{% if content %}<div class="dest-content">{{ content | safe }}</div>{% endif %}
+
+{# ---------- Подместа / достопримечательности (для хабов) ---------- #}
+{% if children and children.length %}
+<h2 class="dest-h2">{% if level == 'country' %}Направления{% elif level == 'region' %}Места и достопримечательности{% else %}Что посмотреть{% endif %}</h2>
+<ul class="dest-children">
+  {% for child in children %}
+  <li>
+    <a class="dest-child" href="{{ child.url }}">
+      <span class="lv">{{ child.level }}</span>
+      <span class="t">{{ child.title }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{# ---------- Блок перелинковки (этап 4) ---------- #}
+{% if links and links.length %}
+<div class="dest-links">
+  <h2 class="dest-h2">Полезное</h2>
+  {% for link in links %}
+  <a class="dest-link" href="{{ link.url }}">{{ link.title }}</a>
+  {% endfor %}
+</div>
+{% endif %}
