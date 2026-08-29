@@ -9,15 +9,33 @@
 // Рендер через МС render (Nunjucks, action 'html').
 // Этап 2: публичные SEO-страницы (хабы + хлебные крошки + BreadcrumbList schema).
 // === === === === === === === === === === === ===
+import 'dotenv/config' // важнo: загрузить .env ПЕРВЫМ (до создания CacheRedis ниже)
 import path from 'path'
 import pkg from 'app-root-path'
 import dotenv from 'dotenv'
 import { Model } from '../service/modelServices.js'
+import { validateDestInput, normalizeSlug } from '../service/validation.js'
+import { Cache } from '../service/cacheServices.js'
 
 const appRoot = pkg.path
 dotenv.config()
 const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 const APP_URL = process.env.APP_URL || 'https://cloud.frt.su'
+
+// Кэш публичных SEO-страниц (Redis). Ключи 'destPage:<path>'
+// ioredis подключается в конструкторе (метод .connect() не нужен).
+const CacheRedis = new Cache({ db: 0 })
+const CACHE_TTL = 300 // сек, публичный кэш страниц
+
+// Инвалидировать кэш всех публичных страниц (при записи узла проще сбросить всё,
+// чем трекать затронутые пути — список путей невелик на старте)
+function invalidatePageCache() {
+  try {
+    return CacheRedis.delPattern('destPage:*')
+  } catch (e) {
+    return Promise.resolve()
+  }
+}
 
 const errorHandler = (res, message, status = 404) => {
   return res.status(status).json({ message })
@@ -68,6 +86,10 @@ const endpoints = async (app) => {
   /** ---------- (RU) Корневой хаб: все направления верхнего уровня ---------- */
   app.get('/destinations/', async (req, res) => {
     try {
+      // кэш: пробуем сначала из Redis
+      const cached = await CacheRedis.get('destPage:__root__')
+      if (cached) return res.status(200).end(cached)
+
       // корни дерева = места без родителя (out('PART_OF').size() = 0)
       const roots = await db.queryAll(
         `SELECT @rid as rid, slug, title, h1, level, image, priority
@@ -101,6 +123,8 @@ const endpoints = async (app) => {
           meta: { dir: templateDir, page: 'index.html', data },
         },
       })
+      // кэшировать публичную страницу
+      CacheRedis.set('destPage:__root__', response.html, CACHE_TTL)
       res.status(200).end(response.html)
     } catch (err) {
       console.log('⚡ err::destinations root', err)
@@ -120,6 +144,11 @@ const endpoints = async (app) => {
       if (!slugs.length) {
         return errorHandler(res, 'Not found')
       }
+
+      // кэш публичной страницы
+      const cacheKey = `destPage:${slugs.join('/')}`
+      const cachedHtml = await CacheRedis.get(cacheKey)
+      if (cachedHtml) return res.status(200).end(cachedHtml)
 
       const dest = await db.getByPath(slugs)
       if (!dest) {
@@ -160,6 +189,8 @@ const endpoints = async (app) => {
           meta: { dir: templateDir, page: 'index.html', data },
         },
       })
+      // кэшировать публичную страницу (ключ = путь)
+      CacheRedis.set(`destPage:${slugs.join('/')}`, response.html, CACHE_TTL)
       res.status(200).end(response.html)
     } catch (err) {
       console.log('⚡ err::destinations path', err)
@@ -167,27 +198,111 @@ const endpoints = async (app) => {
     }
   })
 
-  /** --------- Admin-CRUD (этап 3, заготовка) --------- */
+  /** --------- Admin-CRUD (этап 3, REST) ---------*/
+  // список всех узлов
+  app.get('/destinations/admin/', async (req, res) => {
+    try {
+      const limit = req.query.limit
+      const offset = req.query.offset
+      const list = await db.listAll(limit, offset)
+      return res.status(200).json({ destinations: list })
+    } catch (err) {
+      console.log('⚡ err::destinations admin list', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // один узел по RID
+  app.get('/destinations/admin/:rid', async (req, res) => {
+    try {
+      const rid = req.params.rid
+      if (!rid) return errorHandler(res, 'rid обязателен', 400)
+      const dest = await db.getByRid(rid)
+      if (!dest) return errorHandler(res, 'Not found')
+      return res.status(200).json({ dest })
+    } catch (err) {
+      console.log('⚡ err::destinations admin get', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // создать узел
   app.post('/destinations/admin/create', async (req, res) => {
     try {
-      const { slug, title, h1, level, description, content, lat, lng, image, is_hub, priority, parentRid } = req.body || {}
-      if (!slug || !title) return errorHandler(res, 'slug и title обязательны', 400)
+      const body = req.body || {}
+      const { ok, errors, clean } = validateDestInput(body, { requireTitle: true })
+      if (!ok) return errorHandler(res, { errors }, 400)
+
+      // уникальность slug (внутри родителя или глобально)
+      const dup = await db.slugExists(clean.slug, clean.parentRid)
+      if (dup) return errorHandler(res, { errors: ['slug уже занят в этом разделе'] }, 409)
+
       const result = await db.createDest({
-        slug, title, h1, level, description, content, lat, lng, image, is_hub, priority, parentRid,
+        slug: clean.slug,
+        title: clean.title,
+        h1: clean.h1,
+        level: clean.level,
+        description: clean.description,
+        content: clean.content,
+        lat: clean.lat,
+        lng: clean.lng,
+        image: clean.image,
+        is_hub: clean.is_hub,
+        priority: clean.priority,
+        parentRid: clean.parentRid,
       })
-      return res.status(200).json(result)
+      if (!result.done) return errorHandler(res, result.err || 'Ошибка создания', 500)
+
+      // инвалидировать кэш публичных страниц
+      await invalidatePageCache()
+      return res.status(201).json({ done: true, rid: result.dest && result.dest['@rid'] })
     } catch (err) {
       console.log('⚡ err::destinations create', err)
       return errorHandler(res, 'Server error', 500)
     }
   })
 
-  app.delete('/destinations/admin/delete-:rid(.*)', async (req, res) => {
+  // обновить узел
+  app.put('/destinations/admin/:rid', async (req, res) => {
+    try {
+      const body = req.body || {}
+      const rid = req.params.rid
+      if (!rid) return errorHandler(res, 'rid обязателен', 400)
+
+      const { ok, errors, clean } = validateDestInput(body, { requireTitle: false })
+      if (!ok) return errorHandler(res, { errors }, 400)
+
+      // если меняется slug — проверить уникальность
+      if (clean.slug) {
+        const dup = await db.slugExists(clean.slug, clean.parentRid)
+        if (dup) return errorHandler(res, { errors: ['slug уже занят в этом разделе'] }, 409)
+      }
+
+      const result = await db.updateDest(rid, clean)
+      // если меняется родитель — перенести в дереве
+      if (clean.parentRid !== undefined) {
+        await db.moveDest(rid, clean.parentRid)
+      }
+
+      // инвалидировать кэш публичных страниц
+      await invalidatePageCache()
+      return res.status(200).json({ done: true, updated: result.updated })
+    } catch (err) {
+      console.log('⚡ err::destinations update', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // удалить узел
+  app.delete('/destinations/admin/:rid', async (req, res) => {
     try {
       const rid = req.params.rid
       if (!rid) return errorHandler(res, 'rid обязателен', 400)
-      const result = await db.deleteDest(rid)
-      return res.status(200).json(result)
+      // удалить рёбра и вершину
+      await db.command(`DELETE EDGE PART_OF WHERE out = ${rid} OR in = ${rid}`)
+      await db.deleteDest(rid)
+      await invalidatePageCache()
+      return res.status(200).json({ done: true })
     } catch (err) {
       console.log('⚡ err::destinations delete', err)
       return errorHandler(res, 'Server error', 500)

@@ -103,6 +103,8 @@ class Model extends PDO {
     // экранировать строку для инлайна в SQL (одинарные кавычки)
     const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
     const num = (v, d) => (v == null || v === '' ? d : v)
+    // content — тип EMBEDDED: пустое значение/null, не строка (иначе OValidationException)
+    const embed = (v) => (v == null || v === '' ? 'null' : sq(v))
 
     const loc = lat != null && lng != null
       ? `ST_GeomFromText('POINT(${num(lng, 0)} ${num(lat, 0)})')`
@@ -113,7 +115,7 @@ class Model extends PDO {
       `CREATE VERTEX Dest SET
         slug = ${sq(slug)}, title = ${sq(title)}, h1 = ${sq(h1 || title)},
         level = ${sq(level || 'place')}, description = ${sq(description || '')},
-        content = ${sq(content || '')}, image = ${sq(image || '')},
+        content = ${embed(content)}, image = ${sq(image || '')},
         is_hub = ${is_hub === undefined ? true : !!is_hub},
         priority = ${num(priority, 0.5)}, created = sysdate()${locSql}`
     )
@@ -125,6 +127,80 @@ class Model extends PDO {
       await this.create('PART_OF', dest['@rid'], parentRid)
     }
     return { done: true, dest }
+  }
+
+  // --- Список всех узлов (админ) ---
+  async listAll(limit = 100, offset = 0) {
+    const lim = parseInt(limit, 10) || 100
+    const off = parseInt(offset, 10) || 0
+    return this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, is_hub, priority, image, created
+       FROM Dest ORDER BY created DESC SKIP ${off} LIMIT ${lim}`
+    )
+  }
+
+  // --- Узел по RID (админ) ---
+  async getByRid(rid) {
+    return this.queryOne(`SELECT *, @rid as rid FROM ${rid}`)
+  }
+
+  // --- Проверка: существует ли slug (внутри родителя или глобально) ---
+  async slugExists(slug, parentRid) {
+    const s = String(slug).replace(/'/g, "\\'")
+    if (parentRid) {
+      const r = await this.queryOne(
+        `SELECT @rid FROM Dest WHERE slug = '${s}' AND ${parentRid} IN out('PART_OF')`
+      )
+      return !!r
+    }
+    const r = await this.queryOne(`SELECT @rid FROM Dest WHERE slug = '${s}'`)
+    return !!r
+  }
+
+  // --- Обновить узел (безопасно: белый список полей + ЭКРАН-пингование) ---
+  // Поля, которые можно менять. Безопасно от SQL-инъекции (нельзя произвольный set).
+  async updateDest(rid, fields) {
+    const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'is_hub', 'priority']
+    const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
+    const num = (v) => (v == null ? 'null' : String(v))
+    // content — EMBEDDED: пустое → null
+    const embed = (v) => (v == null || v === '' ? 'null' : sq(v))
+    const set = []
+
+    for (const key of ALLOWED) {
+      if (fields[key] === undefined) continue
+      if (key === 'content') {
+        set.push(`content = ${embed(fields[key])}`)
+      } else if (key === 'priority' || key === 'is_hub') {
+        if (key === 'is_hub') {
+          set.push(`is_hub = ${fields[key] ? true : false}`)
+        } else {
+          const n = parseFloat(fields[key])
+          set.push(`priority = ${Number.isNaN(n) ? 0.5 : n}`)
+        }
+      } else {
+        set.push(`${key} = ${sq(fields[key])}`)
+      }
+    }
+
+    // координаты
+    if (fields.lat != null && fields.lng != null) {
+      set.push(`location = ST_GeomFromText('POINT(${num(fields.lng)} ${num(fields.lat)})')`)
+    }
+
+    if (!set.length) return { done: true, updated: 0 }
+    const res = await this.command(`UPDATE ${rid} SET ${set.join(', ')}`)
+    return { done: true, updated: (res && res.length) || 0 }
+  }
+
+  // --- Сменить родителя: удалить старые PART_OF из узла, добавить новое ---
+  async moveDest(rid, newParentRid) {
+    // удалить все текущие рёбра PART_OF, где rid — исходящий (ребёнок)
+    await this.command(`DELETE EDGE PART_OF WHERE out = ${rid}`)
+    if (newParentRid) {
+      await this.create('PART_OF', rid, newParentRid)
+    }
+    return { done: true }
   }
 
   // --- Найти узел по slug (внутри родителя или глобально) ---
