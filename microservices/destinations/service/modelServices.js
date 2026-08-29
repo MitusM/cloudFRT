@@ -314,6 +314,64 @@ class Model extends PDO {
     return (r && r.links) || null
   }
 
+  // ---- Sitemap: все узлы дерева с полным путём и приоритетом ----
+  // Возвращает [{ slug, title, level, priority, path:[rids] }] для каждого узла.
+  async getSitemapTree() {
+    const rows = await this.queryAll(
+      `SELECT @rid as rid, slug, title, level, priority, is_hub, $path AS path FROM (
+        TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
+      )`
+    )
+    // slugMap по всему дереву
+    const all = await this.queryAll(
+      `SELECT @rid as rid, slug FROM (
+        TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
+      )`
+    )
+    const slugMap = {}
+    for (const n of all) {
+      const key = String(n.rid)
+      slugMap[key] = n.slug
+      const m = key.match(/#\d+:\d+/)
+      if (m) slugMap[m[0]] = n.slug
+    }
+    // собрать полный путь по $path
+    return rows.map((r) => ({
+      slug: r.slug,
+      title: r.title,
+      level: r.level,
+      priority: r.priority,
+      is_hub: r.is_hub,
+      // путь: от корня до узла (включительно), via slugMap
+      path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
+    }))
+  }
+
+  // ---- Статьи /stati/ связанные с местом (этап 6) ----
+  // Сначала по рёбрам HAS_ARTICLE (Dest → Article), затем fallback на статьи,
+  // у которых url блога совпадает. Возвращает [{ url, title }].
+  async getRelatedArticles(rid, limit = 6) {
+    const lim = parseInt(limit, 10) || 6
+    // статьи через ребро HAS_ARTICLE
+    const viaEdge = await this.queryAll(
+      `SELECT out('HAS_ARTICLE').url AS url, out('HAS_ARTICLE').title AS title
+       FROM ${rid} WHERE out('HAS_ARTICLE').size() > 0`
+    )
+    if (viaEdge && viaEdge.length) {
+      const urls = viaEdge[0].url
+      const titles = viaEdge[0].title
+      if (Array.isArray(urls)) {
+        return urls.slice(0, lim).map((u, i) => {
+          // title может быть EMBEDDED map {ru: '..'} или строкой
+          let t = (Array.isArray(titles) && titles[i]) || 'Читать далее'
+          if (t && typeof t === 'object') t = t.ru || t.en || t._ || Object.values(t)[0] || 'Читать далее'
+          return { url: `/stati/${String(u).replace(/^\/+/, '')}`, title: String(t) }
+        })
+      }
+    }
+    return []
+  }
+
   async getSettings() {
     return this.queryOne('SELECT * FROM Settings WHERE microservice="destinations"')
   }

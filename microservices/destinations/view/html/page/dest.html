@@ -84,3 +84,15 @@
   {% endfor %}
 </div>
 {% endif %}
+
+{# ---------- Статьи /stati/ по месту (этап 6: блог как машина ссылок) ---------- #}
+{% if articles and articles.length %}
+<div class="dest-links">
+  <h2 class="dest-h2">Читайте ещё</h2>
+  <ul style="list-style:none;padding:0;margin:0">
+  {% for a in articles %}
+    <li style="margin:6px 0"><a class="dest-link" style="margin:0" href="{{ a.url }}">{{ a.title }}</a></li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}

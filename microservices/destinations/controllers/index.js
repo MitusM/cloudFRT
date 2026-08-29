@@ -152,6 +152,43 @@ const endpoints = async (app) => {
     }
   })
 
+  /** ---------- (RU) XML Sitemap по дереву с приоритетами (этап 6) ---------- */
+  app.get('/destinations/sitemap.xml', async (req, res) => {
+    try {
+      const tree = await db.getSitemapTree()
+
+      // Приоритет: выше для хабов/стран, ниже для достопримечательностей,
+      // но не меньше ~0.5 (все страницы ценны).
+      const LEVEL_PRIO = { country: 0.9, region: 0.8, place: 0.7, attraction: 0.6 }
+      const urls = tree
+        .filter((n) => n.path) // без корня самого? корень — отдельная страница, добавим своё
+        .map((n) => {
+          const base = (n.priority !== undefined && n.priority != null ? n.priority : LEVEL_PRIO[n.level]) || 0.6
+          const prio = Math.max(0.5, Math.min(1, Number(base)))
+          return { loc: `${APP_URL}/destinations/${n.path}`, prio, level: n.level }
+        })
+
+      // корневой хаб тоже в sitemap (0.9)
+      urls.unshift({ loc: `${APP_URL}/destinations/`, prio: 0.9, level: 'root' })
+
+      // собрать XML построчно (избегаем переноса внутри литерала)
+      const lines = [`<?xml version="1.0" encoding="UTF-8"?>`, '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+      for (const u of urls) {
+        lines.push('  <url>', `    <loc>${u.loc}</loc>`, `    <priority>${(u.prio || 0.6).toFixed(1)}</priority>`, '  </url>')
+      }
+      lines.push('</urlset>')
+      const xml = lines.join('\n')
+
+      // micromq-обвязка res не имеет .type()/.set() — отдаём как есть
+      res.status(200).end(xml)
+
+      res.status(200).type('application/xml').end(xml)
+    } catch (err) {
+      console.log('⚡ err::destinations sitemap', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
   /** ---------- (RU) Разбор слэш-пути /destinations/<...>/... ---------- */
   app.get('/destinations/(.*)', async (req, res) => {
     try {
@@ -228,6 +265,9 @@ const endpoints = async (app) => {
       const manualLinks = await db.getLinks(dest['@rid'])
       const links = normalizeManualLinks(manualLinks)
 
+      // статьи /stati/ по месту (этап 6: машина ссылок блога)
+      const related = await db.getRelatedArticles(dest['@rid'], 6)
+
       const data = {
         title: `${dest.title} — направления`,
         h1: dest.h1 || dest.title,
@@ -242,6 +282,7 @@ const endpoints = async (app) => {
         top_places: topPlaces,
         siblings,
         links: links,
+        articles: related,
         current_year: new Date().getFullYear(),
       }
 
