@@ -261,6 +261,59 @@ class Model extends PDO {
     return this.command(`DELETE VERTEX ${rid}`)
   }
 
+  // ============ ЭТАП 4: ПЕРЕЛИНКОВКА И ХАБЫ ============
+  //
+  // «Топ-места»: важные целевые места/достопримечательности из ВСЕГО поддерева
+  // узла (через уровни), чтобы дать прямые прыжки. Напр., хаб региона показывает
+  // Водопад Корбу напрямую, минуя промежуточный хаб Телецкого озера.
+  // Возвращает { places: [{rid,slug,title,level,priority,path:[rids]}], slugMap: {rid:slug} }.
+  // path — цепочка RID от хаба до узла (для сборки полного URL).
+  async getTopPlaces(rid, { levels = ['attraction', 'place'], limit = 12 } = {}) {
+    const lim = parseInt(limit, 10) || 12
+    const levelClause = levels.length ? `(${levels.map((l) => `level = '${l}'`).join(' OR ')})` : '1=1'
+    const places = await this.queryAll(
+      `SELECT @rid as rid, slug, title, level, priority, $path AS path FROM (
+        TRAVERSE in('PART_OF') FROM ${rid}
+      ) WHERE ${levelClause} ORDER BY priority DESC LIMIT ${lim}`
+    )
+    // карта rid→slug по всему поддереву (для промежуточных звеньев пути)
+    const all = await this.queryAll(
+      `SELECT @rid as rid, slug FROM (TRAVERSE in('PART_OF') FROM ${rid})`
+    )
+    const slugMap = {}
+    for (const n of all) {
+      const r = String(n.rid)
+      slugMap[r] = n.slug
+      slugMap[r.match(/#\d+:\d+/)?.[0]] = n.slug
+    }
+    return { places, slugMap }
+  }
+
+  // «Похожие места»: братья по дереву (same parent). Для достопримечательности -
+  // другие достопримечательности того же родителя.
+  // Двухшагово (IN с коллекцией слева не парсится): получить родителя → дети родителя.
+  async getSiblings(rid, limit = 8) {
+    const lim = parseInt(limit, 10) || 8
+    const parentRow = await this.queryOne(`SELECT out('PART_OF') AS p FROM ${rid}`)
+    const parents = (parentRow && parentRow.p) || []
+    if (!parents.length) return []
+    // берём родителей (обычно один), для каждого собираем детей
+    const parentsList = Array.isArray(parents) ? parents : [parents]
+    const out = await this.queryAll(
+      `SELECT @rid as rid, slug, title, level, priority FROM Dest
+       WHERE ${parentsList.map((p) => `${p['@rid'] || p} IN out('PART_OF')`).join(' OR ')}
+         AND @rid <> ${rid}
+       ORDER BY priority DESC LIMIT ${lim}`
+    )
+    return out
+  }
+
+  // Прочитать поле links (ручные блоки перелинковки) узла
+  async getLinks(rid) {
+    const r = await this.queryOne(`SELECT links FROM ${rid}`)
+    return (r && r.links) || null
+  }
+
   async getSettings() {
     return this.queryOne('SELECT * FROM Settings WHERE microservice="destinations"')
   }

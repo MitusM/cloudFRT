@@ -5,7 +5,9 @@
      breadcrumb: [{name, url, current}],   // от корня к текущему
      children: [{slug, title, level}],     // достопримечательности/подместа
      content:  HTML контент хаба (safe),
-     links:    [{url, title}] — блок перелинковки (похожие/туры/где жить)
+     links:    [{url, title}] — блок перелинковки (похожие/туры/где жить),
+     top_places: [{url, title, level}] — прямые ссылки на цели (через уровни),
+     siblings:  [{url, title, level}] — похожие места на том же уровне
    ============================================================ #}
 
 {# ---------- Хлебные крошки ---------- #}
@@ -33,6 +35,21 @@
 {# ---------- Контент хаба ---------- #}
 {% if content %}<div class="dest-content">{{ content | safe }}</div>{% endif %}
 
+{# ---------- Топ-места: прямые ссылки на цели через уровни (этап 4) ---------- #}
+{% if top_places and top_places.length %}
+<h2 class="dest-h2">Топ-места</h2>
+<ul class="dest-children">
+  {% for tp in top_places %}
+  <li>
+    <a class="dest-child" href="{{ tp.url }}">
+      <span class="lv">{{ tp.level }}</span>
+      <span class="t">{{ tp.title }}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
 {# ---------- Подместа / достопримечательности (для хабов) ---------- #}
 {% if children and children.length %}
 <h2 class="dest-h2">{% if level == 'country' %}Направления{% elif level == 'region' %}Места и достопримечательности{% else %}Что посмотреть{% endif %}</h2>
@@ -48,7 +65,17 @@
 </ul>
 {% endif %}
 
-{# ---------- Блок перелинковки (этап 4) ---------- #}
+{# ---------- Похожие места (братья, этап 4) ---------- #}
+{% if siblings and siblings.length %}
+<div class="dest-links">
+  <h2 class="dest-h2">Похожие места</h2>
+  {% for s in siblings %}
+  <a class="dest-link" href="{{ s.url }}">{{ s.title }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ---------- Блоки перелинковки (рукние links: где жить / тур; этап 4) ---------- #}
 {% if links and links.length %}
 <div class="dest-links">
   <h2 class="dest-h2">Полезное</h2>

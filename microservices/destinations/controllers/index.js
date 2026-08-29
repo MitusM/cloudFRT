@@ -80,6 +80,26 @@ function breadcrumbSchema(breadcrumb) {
   })}</script>`
 }
 
+// ---- Нормализовать ручные блоки перелинковки поля links ----
+// Структура поля: { где_жить: [{slug|url, title}], тур: [...], полезное: [...] }
+// На выходе плоский список {url, title} (сгруппированы заголовком в шаблоне не требуется).
+function normalizeManualLinks(links) {
+  if (!links || typeof links !== 'object') return []
+  const order = ['где_жить', 'тур', 'полезное', 'top_places', 'похожие']
+  const out = []
+  for (const key of order) {
+    const group = links[key]
+    if (!Array.isArray(group)) continue
+    for (const item of group) {
+      if (!item || typeof item !== 'object') continue
+      const title = item.title || item.name || ''
+      const url = item.url || (item.slug ? `/stati/${item.slug}` : item.path)
+      if (title && url) out.push({ title, url })
+    }
+  }
+  return out
+}
+
 const endpoints = async (app) => {
   const db = await app.options.db
 
@@ -168,6 +188,46 @@ const endpoints = async (app) => {
         url: `/destinations/${slugs.join('/')}/${k.slug}`,
       }))
 
+      // ===== ЭТАП 4: перелинковка =====
+      const basePath = `/destinations/${slugs.join('/')}`
+
+      // «Топ-места»: прямые ссылки на цели из всего поддерева (через уровни),
+      // чтобы дать SEO-вес, напр. Водопад Корбу из хаба Горного Алтая.
+      // Показываем только на хабах (не на чистой достопримечательности).
+      const isHub = dest.level !== 'attraction' && (dest.is_hub === undefined ? true : dest.is_hub)
+      let topPlaces = []
+      if (isHub) {
+        const { places, slugMap } = await db.getTopPlaces(dest['@rid'], { limit: 12 })
+        topPlaces = places
+          .filter((t) => {
+            // исключить сам хаб из топ-мест (не ссылаемся на текущую страницу)
+            return !(t.rid && String(t.rid) === String(dest['@rid']))
+          })
+          .map((t) => {
+            // path = массив RID от хаба до узла; первый элемент — сам хаб (basePath уже
+            // заканчивается хабом), поэтому подпуть = path без первого (и без самого узла,
+            // который добавляется отдельно)
+            const pathRids = (t.path || []).slice(1)
+            const subSlugs = pathRids.map((r) => slugMap[String(r)]).filter(Boolean)
+            const url = `${basePath}/${subSlugs.join('/')}`
+            return { title: t.title, level: t.level, url }
+          })
+      }
+
+      // «Похожие места»: братья по дереву. Для брата URL = up уровень + slug.
+      const sibs = await db.getSiblings(dest['@rid'], 8)
+      // родительский путь = basePath без последнего сегмента (текущий узел)
+      const parentPath = slugs.slice(0, -1).join('/')
+      const siblings = sibs.map((s) => ({
+        title: s.title,
+        level: s.level,
+        url: `/destinations/${parentPath}/${s.slug}`,
+      }))
+
+      // ручные блоки перелинковки (links поле узла): где жить / тур / кастом
+      const manualLinks = await db.getLinks(dest['@rid'])
+      const links = normalizeManualLinks(manualLinks)
+
       const data = {
         title: `${dest.title} — направления`,
         h1: dest.h1 || dest.title,
@@ -179,7 +239,9 @@ const endpoints = async (app) => {
         level: dest.level,
         content: dest.content && dest.content.html ? dest.content.html : (dest.content || ''),
         children,
-        links: [], // этап 4 — перелинковка
+        top_places: topPlaces,
+        siblings,
+        links: links,
         current_year: new Date().getFullYear(),
       }
 

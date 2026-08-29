@@ -48,6 +48,7 @@ ALTER PROPERTY Dest.is_hub DEFAULT true;
 CREATE PROPERTY Dest.priority DOUBLE;          -- приоритет в sitemap (0..1)
 CREATE PROPERTY Dest.location EMBEDDED;        -- координаты (ST_GeomFromText POINT)
 CREATE PROPERTY Dest.created DATETIME;         -- ТОЛЬКО toOrientDate(), не ISO
+CREATE PROPERTY Dest.links EMBEDDEDMAP;        -- ручные блоки перелинковки: { top_places:[{slug,title,url}], похожие:[...], где_жить:[...], тур:[...] } (этап 4)
 
 /* ---------- ИНДЕКСЫ Dest ---------- */
 CREATE INDEX Dest.slug_idx ON Dest (slug) NOTUNIQUE;
