@@ -1,0 +1,13 @@
+{
+  "name": "destinations",
+  "version": "1.0.0",
+  "description": "Гео-каталог мест (destinations) — SEO-структура frt.su",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": ""
+  },
+  "author": "MitusM",
+  "license": "MIT",
+  "dependencies": {}
+}
