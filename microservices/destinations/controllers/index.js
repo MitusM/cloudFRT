@@ -190,13 +190,19 @@ const endpoints = async (app) => {
   })
 
   /** ---------- (RU) Разбор слэш-пути /destinations/<...>/... ---------- */
-  app.get('/destinations/(.*)', async (req, res) => {
+  app.get('/destinations/(.*)', async (req, res, next) => {
     try {
       // путь после /destinations/ (парсим из req.path — (.*)-группа path-to-regexp v6
       // не отдаёт named-параметр в этом стеке, режем префикс сами)
       const fullPath = (req.path || '').replace(/^\/+/, '').split('/').filter(Boolean)
       // первый сегмент = 'destinations', остальное — дерево
       const slugs = fullPath.slice(1)
+
+      // /destinations/admin/* обрабатывается admin-маршрутами (объявлены ниже) —
+      // не пускать сюда как SEO-страницу (иначе 'Not found')
+      if (slugs[0] === 'admin') {
+        return next()
+      }
 
       if (!slugs.length) {
         return errorHandler(res, 'Not found')
