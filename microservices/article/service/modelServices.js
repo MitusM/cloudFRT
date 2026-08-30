@@ -86,6 +86,11 @@ class Model extends PDO {
     }
   }
 
+  /** Экранировать строку от SQL-инъекции для инлайна в запрос (одинарные кавычки) */
+  sq(v) {
+    return v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`
+  }
+
   getAll(limit = 10) {
     // ORDER BY created DESC
     return this.queryAll('SELECT @rid as rid, _id FROM article LIMIT ' + limit)
@@ -112,19 +117,37 @@ class Model extends PDO {
   }
 
   setCreated(table, obj, location) {
+    // Безопасность: номер-место передаётся инлайном в SQL → экранируем кавычки,
+    // допускаем только числа/пробел/запятую (координаты в формате "lng, lat").
+    const safeLoc = String(location || '').replace(/[^0-9.,\-\s]/g, '')
     return this.insert(
       'INSERT INTO ' +
         table +
         ' SET title=:title, country=:country, country_id=:country_id,img_upload=:img_upload, created=sysdate(), id=:id, content=:content, description=:description, url=:url, keyword=:keyword, searchable=:searchable, tags=:tags, config=:config, image=:image, main=:main, location=ST_GeomFromText("POINT(' +
-        location +
+        safeLoc +
         ')")',
       { params: { ...obj } },
     )
   }
 
+  // Допустимые значения для /article/validate (белый список классов и полей).
+  // Защита от SQL-инъекции: table/params приходят из body напрямую.
+  static SELECT_TABLES = ['Country', 'Territorial', 'City', 'article']
+
   select(table, params, value) {
+    // --- белый список таблиц ---
+    const tables = Model.SELECT_TABLES
+    if (!tables.includes(table)) {
+      throw new Error('select: недопустимая таблица ' + table)
+    }
+    // --- белый список полей (разрешаем печатаймые идентификаторы + точку для вложенных) ---
+    if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(params)) {
+      throw new Error('select: недопустимое поле ' + params)
+    }
+    // --- экранируем значение (double-quote для строкового литерала OrientSQL) ---
+    const safeValue = String(value == null ? '' : value).replace(/"/g, '\\"')
     return this.queryAll(
-      `SELECT ${params} FROM ${table} WHERE ${params} = "${value}"`,
+      `SELECT ${params} FROM ${table} WHERE ${params} = "${safeValue}"`,
     )
   }
 }

@@ -4,10 +4,11 @@ import dotenv from 'dotenv'
 import { createRequire } from 'module'
 
 import { Cache } from '../service/cacheServices.js'
+import { validateArticleInput } from '../service/validation.js'
+import { csrfOk } from '../service/csrf.js'
 
 // import Files from '../../../core/cloud/index.js'
 import File from '../core/images/index.js'
-import { stat } from 'fs/promises'
 
 const require = createRequire(import.meta.url)
 const appRoot = pkg.path
@@ -19,6 +20,17 @@ const templateDir = path.join(appRoot, process.env.VIEW_DIR || 'view/html/')
 
 const Redis = new Cache({ db: 1 })
 
+// === === === === === === === === === === === ===
+// Кэш-ключи (централизованы). Раньше были захардкожены строками по коду.
+//   settings:article   — настройки МС
+//   articlePage:Admin:* — кэшированные HTML-страницы админки
+// === === === === === === === === === === === ===
+const K = {
+  SETTINGS: 'settings:article',
+  PAGE_PATTERN: 'articlePage:Admin:*', // паттерн инвалидации страниц
+  page: (key) => `articlePage:Admin:${key}`, // ключ конкретной страницы
+}
+
 const errorHandler = (res, message) => {
   // get: {"message":{}}
   return res.status(200).json({ message: message })
@@ -28,7 +40,7 @@ const errorHandler = (res, message) => {
  * Удаляем страницы из кэша (Redis)
  * @returns {Promise }
  */
-let delCachePage = () => Redis.delPattern('article:Admin:*')
+let delCachePage = () => Redis.delPattern(K.PAGE_PATTERN)
 
 let extend = function () {
   let merged = {}
@@ -129,8 +141,8 @@ const endpoints = async (app) => {
       let articleQuota
       let page
       let multi = await Redis.multi()
-        .get('settings:article')
-        .get(`articlePage:Admin:${add}`)
+        .get(K.SETTINGS)
+        .get(K.page(add))
         .exec()
 
       let settings = JSON.parse(multi[0][1])
@@ -206,7 +218,7 @@ const endpoints = async (app) => {
       let settings
       let page = await Redis.multi()
         .get('settings:users')
-        .get('articlePage:Admin:settings')
+        .get(K.page('settings'))
         .exec()
 
       if (page[0][1] === null) {
@@ -238,7 +250,7 @@ const endpoints = async (app) => {
             },
           },
         })
-        Redis.set('article:Admin:settings', response.html)
+        Redis.set(K.page('settings'), response.html)
         page = response.html
       } else {
         page = page[1][1]
@@ -347,7 +359,7 @@ const endpoints = async (app) => {
   app.post('/article/validate', async (req, res) => {
     try {
       const body = req.body
-      if (body.csrf === req.session.csrfSecret) {
+      if (csrfOk(body, req)) {
         let valid = await db.select(body.type, body.params, body.value)
         let length = valid.length
         let obj = {
@@ -377,110 +389,52 @@ const endpoints = async (app) => {
       let add = req.params.add
       let table
 
-      if (body.csrf === req.session.csrfSecret) {
-        let obj = {}
-        switch (add) {
-          case 'country':
-            table = 'Country'
-            if (body.country === '') {
-              res.status(200).json({
-                insert: false,
-                message: lang.error.country,
-              })
-              return
-            }
-            break
-          case 'ate':
-            table = 'Territorial'
-            if (body.ate === '') {
-              res.status(200).json({
-                insert: false,
-                message: lang.error.ate,
-              })
-
-              return
-            }
-            break
-          case 'city':
-            table = 'City'
-            if (body.ate === '') {
-              res.status(200).json({
-                insert: false,
-                message: lang.error.city,
-              })
-              return
-            }
-            break
-          default:
-            table = false
-            break
-        }
-        if (body.title !== '') {
-          // let obj = {
-          //   title: { ru: body.title.trim() },
-          //   id: body.id,
-          //   content: { ru: body.content.trim() },
-          //   description: { ru: body.description },
-          //   url: body.url,
-          //   keyword: body.keyword,
-          //   searchable: body.searchable,
-          //   tags: { ru: body.tags },
-          //   country: body.country,
-          //   country_id: body.country_id,
-          //   main: body.main,
-          //   config: {
-          //     commented: body.comments,
-          //     likely: body.like,
-          //     views: body.numberViews,
-          //   },
-          //   image: {
-          //     folder: body.folder.trim(),
-          //     total_article: body.imageTotalArticle,
-          //     uploaded_total: body.upload_total,
-          //     image: body.image.join(', '),
-          //   },
-          //   img_upload: body.img_upload,
-          // }
-          obj.title = { ru: body.title.trim() }
-          obj.id = body.id
-          obj.content = { ru: body.content.trim() }
-          obj.description = { ru: body.description }
-          obj.url = body.url
-          obj.keyword = body.keyword
-          obj.searchable = body.searchable
-          obj.tags = { ru: body.tags }
-          obj.country = body.country
-          obj.country_id = body.country_id
-          obj.main = body.main
-          obj.config = {
-            commented: body.comments,
-            likely: body.like,
-            views: body.numberViews,
-          }
-          obj.image = {
-            folder: body.folder.trim(),
-            total_article: body.imageTotalArticle,
-            uploaded_total: body.upload_total,
-            image: body.image.join(', '),
-          }
-          img_upload = body.img_upload
-
-          let country = table
-            ? await db.setCreated(table, obj, body.location)
-            : table
-          console.log('⚡ country::', country)
-
-          if (country.done) {
-            res.status(201).json({ insert: true })
-          } else {
-            res.status(200).json({ insert: false })
-          }
-        } else {
-          //* TODO: Если нет title Заголовка
-        }
-      } else {
+      if (!csrfOk(body, req)) {
         // no CSRF protection
-        res.status(403).end('Forbidden')
+        return res.status(403).end('Forbidden')
+      }
+
+      // --- Определить таблицу по аддитиву + проверить обязательное дочернее поле ---
+      switch (add) {
+        case 'country':
+          table = 'Country'
+          if (body.country === '') {
+            return res.status(200).json({ insert: false, message: lang.error.country })
+          }
+          break
+        case 'ate':
+          table = 'Territorial'
+          if (body.ate === '') {
+            return res.status(200).json({ insert: false, message: lang.error.ate })
+          }
+          break
+        case 'city':
+          table = 'City'
+          if (body.ate === '') {
+            return res.status(200).json({ insert: false, message: lang.error.city })
+          }
+          break
+        default:
+          table = false
+          break
+      }
+
+      // --- Централизованная валидация полей (белый список + нормализация) ---
+      const { ok, errors, obj } = validateArticleInput(body)
+      if (!ok || !body.title || body.title.trim() === '') {
+        // title обязательный
+        if (!Object.prototype.hasOwnProperty.call(obj, 'title')) {
+          return res.status(200).json({ insert: false, message: lang.error.article || 'Не заполнен заголовок' })
+        }
+      }
+
+      let country = table ? await db.setCreated(table, obj, body.location) : table
+      console.log('⚡ country::', country)
+
+      if (country && country.done) {
+        return res.status(201).json({ insert: true })
+      } else {
+        return res.status(200).json({ insert: false })
       }
     } catch (err) {
       console.log('⚡ err::add', err)
@@ -491,7 +445,7 @@ const endpoints = async (app) => {
   app.put('/article/settings(.*)', async (req, res) => {
     try {
       const body = req.body
-      if (body.csrf === req.session.csrfSecret) {
+      if (csrfOk(body, req)) {
         let obj = {
           limit: body.limit,
           quota: body.quota,
@@ -500,9 +454,9 @@ const endpoints = async (app) => {
         /** Сохраняем или обновляем настройки в БД */
         let settings = await db.setSettings(obj)
         /** Сохраняем или обновляем настройки в Redis */
-        let setRedis = await Redis.set('settings:article', JSON.stringify(obj))
+        let setRedis = await Redis.set(K.SETTINGS, JSON.stringify(obj))
         /** Удаляем страницы из Redis - кэш */
-        let del = await Redis.delPattern('userPage:Admin:*')
+        let del = await Redis.delPattern(K.PAGE_PATTERN)
         // console.log('⚡ del::', del)
         let status = 201
         let message = {}
@@ -542,10 +496,7 @@ const endpoints = async (app) => {
     console.log('⚡ req.params::', req.params)
     try {
       const body = req.body
-      const authorized = req.session.auth
-      // console.log('⚡ body::', body)
-      // console.log('⚡ authorized::', authorized)
-      if (body.fields.csrf === req.session.csrfSecret && authorized === true) {
+      if (csrfOk(body, req) && req.session.auth === true) {
         let deleteFile = await new File().deleteArrayFiles(body.files)
         console.log('⚡ deleteFile::', deleteFile)
         let status = deleteFile === true ? 201 : 200
