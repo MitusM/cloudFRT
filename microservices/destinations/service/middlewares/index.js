@@ -21,11 +21,32 @@ const middlewares = (app) => {
     if (isPublicPath(path)) {
       return next()
     }
+    // /destinations/admin/* при отсутствии сессии: отдать форму авторизации (как в users),
+    // а не голый JSON {"error":"unauthorized"}
     if (!req.session.auth) {
-      res.status(401).json({ error: 'unauthorized' })
-    } else {
-      next()
+      try {
+        const redirect = await res.app.ask('auth', {
+          server: {
+            action: 'aut:redirect',
+            meta: { csrf: req.session.csrfSecret },
+          },
+        })
+        const html =
+          (redirect && redirect.response && redirect.response.html) ||
+          (redirect && redirect.html) ||
+          (redirect && redirect.response) ||
+          ''
+        if (html) {
+          // аутентификация подтверждена — пропускаем к защищённому ресурсу
+          return res.status(200).end(html)
+        }
+        return res.status(401).json({ error: 'unauthorized' })
+      } catch (err) {
+        console.log('⚡ err::destinations middleware aut:redirect', err)
+        return res.status(401).json({ error: 'unauthorized' })
+      }
     }
+    next()
   })
 
   return app
