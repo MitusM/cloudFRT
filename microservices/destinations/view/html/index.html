@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="{{ robots | default('index, follow') }}" />
     <meta name="description" content="{{ description | default('') }}" />
     <title>{{ title }}</title>
     {% if canonical %}<link rel="canonical" href="{{ canonical }}" />{% endif %}

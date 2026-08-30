@@ -103,7 +103,11 @@ export function validateDestInput(body, { requireTitle = true, levelRequired = f
     }
   }
 
-  if (body.parentRid !== undefined) clean.parentRid = String(body.parentRid)
+  // parentRid: null/пусто → null (корень); иначе — строка RID
+  if (body.parentRid !== undefined) {
+    clean.parentRid =
+      body.parentRid === null || body.parentRid === '' ? null : String(body.parentRid)
+  }
 
   return { ok: errors.length === 0, errors, clean }
 }

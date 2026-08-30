@@ -341,6 +341,39 @@ const endpoints = async (app) => {
   })
 
   /** --------- Admin-CRUD (этап 3, REST) ---------*/
+  /** --------- Админ-UI: SPA-страница (этап 7) ---------*/
+  // GET /destinations/admin/page — HTML-админка (SPA поверх REST admin-эндпоинтов).
+  // Рендерится через render-МС (layout index.html + page/admin.html). JS-клиент
+  // в шаблоне дальше дёргает /admin/ (list), /admin/create, /admin/:rid (update/delete).
+  app.get('/destinations/admin/page', async (req, res) => {
+    try {
+      // дерево целиком: [{ slug, title, level, path }] — для списка и select родителя
+      const tree = await db.getSitemapTree()
+      // JSON-блоб для JS-клиента (парсится из <script type="application/json">)
+      const adminData = JSON.stringify({
+        csrf: req.session.csrfSecret,
+        levels: ['country', 'region', 'place', 'attraction'],
+        tree: tree,
+        api: '/destinations/admin',
+      })
+      const data = {
+        title: 'Направления — админ',
+        page: './page/admin.html',
+        adminData: adminData,
+        current_year: new Date().getFullYear(),
+        // robots noindex для админки (не для поисковиков)
+        robots: 'noindex, nofollow',
+      }
+      const { response } = await res.app.ask('render', {
+        server: { action: 'html', meta: { dir: templateDir, page: 'index.html', data } },
+      })
+      return res.status(200).end(response.html)
+    } catch (err) {
+      console.log('⚡ err::destinations admin page', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
   // список всех узлов
   app.get('/destinations/admin/', async (req, res) => {
     try {
@@ -361,7 +394,16 @@ const endpoints = async (app) => {
       if (!rid) return errorHandler(res, 'rid обязателен', 400)
       const dest = await db.getByRid(rid)
       if (!dest) return errorHandler(res, 'Not found')
-      return res.status(200).json({ dest })
+      // дополнить: родитель (для выбора в админ-UI) и плоские координаты
+      const parentRid = await db.getParentRid(rid)
+      return res.status(200).json({
+        dest: {
+          ...dest,
+          parentRid,
+          lat: dest.location && dest.location.coordinates ? dest.location.coordinates[1] : null,
+          lng: dest.location && dest.location.coordinates ? dest.location.coordinates[0] : null,
+        },
+      })
     } catch (err) {
       console.log('⚡ err::destinations admin get', err)
       return errorHandler(res, 'Server error', 500)

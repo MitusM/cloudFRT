@@ -144,6 +144,16 @@ class Model extends PDO {
     return this.queryOne(`SELECT *, @rid as rid FROM ${rid}`)
   }
 
+  /** Родитель узла (первый по out('PART_OF')) или null. Используется админ-UI. */
+  async getParentRid(rid) {
+    const row = await this.queryOne(
+      `SELECT out('PART_OF') as parents FROM ${rid} WHERE out('PART_OF').size() > 0`
+    )
+    const p = row && row.parents
+    if (Array.isArray(p) && p.length) return String(p[0]['@rid'] || p[0])
+    return null
+  }
+
   // --- Проверка: существует ли slug (внутри родителя или глобально) ---
   async slugExists(slug, parentRid) {
     const s = String(slug).replace(/'/g, "\\'")
@@ -318,7 +328,7 @@ class Model extends PDO {
   // Возвращает [{ slug, title, level, priority, path:[rids] }] для каждого узла.
   async getSitemapTree() {
     const rows = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, priority, is_hub, $path AS path FROM (
+      `SELECT @rid as rid, slug, title, h1, level, priority, is_hub, image, $path AS path FROM (
         TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
       )`
     )
@@ -337,11 +347,14 @@ class Model extends PDO {
     }
     // собрать полный путь по $path
     return rows.map((r) => ({
+      rid: String(r.rid),
       slug: r.slug,
       title: r.title,
+      h1: r.h1,
       level: r.level,
       priority: r.priority,
       is_hub: r.is_hub,
+      image: r.image,
       // путь: от корня до узла (включительно), via slugMap
       path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
     }))
