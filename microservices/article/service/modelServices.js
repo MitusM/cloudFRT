@@ -116,6 +116,27 @@ class Model extends PDO {
     return this.queryOne('SELECT * FROM Settings WHERE microservice="article"')
   }
 
+  /** Сохранить настройки МС article (UPSERT по полю microservice).
+   *  Возвращает { count } как от UPDATE UPSERT — обработчик ждёт count === 1.
+   *  Внимание: обёртка insert() вернула бы { message, type, done }, что ломает
+   *  проверку count — поэтому вызываем session.command напрямую. */
+  async setSettings(obj) {
+    try {
+      const session = await this.pool.acquire()
+      const message = await session
+        .command(
+          'UPDATE Settings SET settings=:settings, microservice="article", created=sysdate() UPSERT WHERE microservice="article"',
+          { params: { settings: obj } },
+        )
+        .one()
+      session.close()
+      return message
+    } catch (err) {
+      console.log('⚡ err::Model.setSettings', err)
+      return { count: 0, err }
+    }
+  }
+
   setCreated(table, obj, location) {
     // Безопасность: номер-место передаётся инлайном в SQL → экранируем кавычки,
     // допускаем только числа/пробел/запятую (координаты в формате "lng, lat").
