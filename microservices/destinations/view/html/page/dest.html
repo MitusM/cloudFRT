@@ -35,6 +35,27 @@
 {# ---------- Контент хаба ---------- #}
 {% if content %}<div class="dest-content">{{ content | safe }}</div>{% endif %}
 
+{# ---------- Карта места (этап 5: интеграция с МС maps) ---------- #}
+{% if mapHtml and mapPoints and mapPoints.length %}
+<div class="dest-map" style="margin:24px 0;">
+  <h2 class="dest-h2">Карта</h2>
+  {{ mapHtml | safe }}
+  <script>
+    (function () {
+      var pts = {{ mapPoints | dump | safe }};
+      var c = {{ mapCenter | dump | safe }} || null;
+      if (window.MapsRender && pts && pts.length) {
+        window.MapsRender.renderMap('dest-map', pts, {
+          markerColor: '#e11d48',
+          {% if mapCenter %}center: [c.lng, c.lat],{% endif %}
+          zoom: pts.length > 1 ? 7 : 10
+        });
+      }
+    })();
+  </script>
+</div>
+{% endif %}
+
 {# ---------- Топ-места: прямые ссылки на цели через уровни (этап 4) ---------- #}
 {% if top_places and top_places.length %}
 <h2 class="dest-h2">Топ-места</h2>

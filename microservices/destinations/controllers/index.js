@@ -268,6 +268,41 @@ const endpoints = async (app) => {
       // статьи /stati/ по месту (этап 6: машина ссылок блога)
       const related = await db.getRelatedArticles(dest['@rid'], 6)
 
+      // ===== ЭТАП 5: карта на гео-хабе (интеграция с МС maps) =====
+      // Берём у maps:map «голую» карту (MapLibre + MapsRender.*) и подставляем
+      // точки дерева destinations (узел + дети с координатами).
+      // Показываем карту только если есть точки с координатами.
+      let mapHtml = ''
+      let mapPoints = []
+      let mapCenter = null
+      const mapData = await db.getMapPoints(dest['@rid'])
+      mapPoints = mapData.points || []
+      mapCenter = mapData.center || null
+      if (mapPoints.length) {
+        try {
+          const mapsResp = await res.app.ask('maps', {
+            server: {
+              action: 'maps:map',
+              meta: {
+                containerId: 'dest-map',
+                heightPx: 420,
+                language: 'ru',
+                ...(mapCenter
+                  ? { center: [mapCenter.lng, mapCenter.lat], zoom: mapPoints.length > 1 ? 7 : 10 }
+                  : {}),
+              },
+            },
+          })
+          mapHtml =
+            (mapsResp && mapsResp.response && mapsResp.response.html) ||
+            (mapsResp && mapsResp.html) ||
+            ''
+        } catch (err) {
+          console.log('⚡ err::destinations maps:map', err)
+          mapHtml = ''
+        }
+      }
+
       const data = {
         title: `${dest.title} — направления`,
         h1: dest.h1 || dest.title,
@@ -283,6 +318,10 @@ const endpoints = async (app) => {
         siblings,
         links: links,
         articles: related,
+        // этап 5: карта
+        mapHtml: mapHtml,
+        mapPoints: mapPoints,
+        mapCenter: mapCenter,
         current_year: new Date().getFullYear(),
       }
 

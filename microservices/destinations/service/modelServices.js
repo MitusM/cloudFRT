@@ -372,6 +372,55 @@ class Model extends PDO {
     return []
   }
 
+  // ---------- ЭТАП 5: точки для карты узла (интеграция с МС maps) ----------
+  // Собирает маркеры для карты на гео-хабе: сам узел (если есть location) +
+  // прямые дочерние узлы с координатами. Возвращает { points, center }.
+  // location хранится как OPoint { coordinates: [lng, lat] } (GeoJSON порядок!).
+  async getMapPoints(rid) {
+    const pull = (r) => {
+      // нормализуем location в { lat, lng }
+      if (r && r.location) {
+        const c = r.location.coordinates
+        if (Array.isArray(c) && c.length >= 2) {
+          return { lat: Number(c[1]), lng: Number(c[0]) }
+        }
+      }
+      return null
+    }
+
+    const points = []
+    let center = null
+
+    // сам узел
+    const self = await this.getByRid(rid)
+    const selfLoc = pull(self)
+    if (selfLoc && self.title) {
+      points.push({ name: self.title, level: self.level, ...selfLoc })
+      center = selfLoc
+    }
+
+    // прямые дети с location (достопримечательности/подместа)
+    const kids = await this.queryAll(
+      `SELECT @rid as rid, slug, title, level, location FROM Dest
+       WHERE ${rid} IN out('PART_OF') AND location IS NOT NULL`
+    )
+    for (const k of kids || []) {
+      const loc = pull(k)
+      if (loc && k.title) {
+        points.push({ name: k.title, level: k.level, ...loc })
+      }
+    }
+
+    // центр: если у узла нет координат — средняя точка по дочерним
+    if (!center && points.length) {
+      const lat = points.reduce((a, p) => a + p.lat, 0) / points.length
+      const lng = points.reduce((a, p) => a + p.lng, 0) / points.length
+      center = { lat, lng }
+    }
+
+    return { points, center }
+  }
+
   async getSettings() {
     return this.queryOne('SELECT * FROM Settings WHERE microservice="destinations"')
   }
