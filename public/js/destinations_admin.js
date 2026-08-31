@@ -55,17 +55,6 @@ __webpack_require__.r(__webpack_exports__);
     place: 'место',
     attraction: 'достопримечательность'
   };
-  var state = {
-    current: null,
-    // RID текущего узла (null = корень)
-    currentNode: null,
-    // {rid,title,level} текущего узла
-    ancestors: [],
-    // цепочка [{rid,title,level}] от корня к текущему (без текущего)
-    children: [],
-    // дети текущего узла
-    editing: false // режим формы: false=новый, true=редактирование
-  };
   function el(id) {
     return document.getElementById(id);
   }
@@ -77,11 +66,33 @@ __webpack_require__.r(__webpack_exports__);
   function nextLevel(rlevel) {
     return rlevel ? NEXT_LEVEL[rlevel] : 'country';
   }
+  var state = {
+    current: null,
+    // RID текущего узла (null = корень)
+    currentNode: null,
+    // {rid,title,level} текущего узла
+    ancestors: [],
+    // цепочка [{rid,title,level}] от корня к текущему (без текущего)
+    children: [],
+    // дети текущего узла (загруженная часть)
+    searchResults: [],
+    // результаты глобального поиска
+    total: 0,
+    // всего детей у текущего узла
+    offset: 0,
+    // текущий сдвиг в пагинации
+    limit: 50,
+    // размер страницы
+    hasMore: false,
+    // есть ли ещё не загруженные дети
+    editing: false // режим формы: false=новый, true=редактирование
+  };
 
-  // ---- загрузка детей узла (или корня) ----
+  // ---- загрузка детей узла (или корня), первая страница ----
   function loadChildren(parentRid) {
     setLoading(true);
-    var url = API + '/children' + (parentRid ? '?parent=' + encodeURIComponent(parentRid) : '?root=1');
+    state.offset = 0;
+    var url = API + '/children' + (parentRid ? '?parent=' + encodeURIComponent(parentRid) : '?root=1') + '&offset=0&limit=' + state.limit;
     fetch(url).then(function (r) {
       return r.json();
     }).then(function (j) {
@@ -89,10 +100,33 @@ __webpack_require__.r(__webpack_exports__);
       state.currentNode = j.node || null;
       state.ancestors = j.ancestors || [];
       state.children = j.children || [];
+      state.total = j.total || 0;
+      state.offset = j.offset || 0;
+      state.hasMore = !!j.hasMore;
       renderAll();
     })["catch"](function (e) {
       setLoading(false);
       setMsg('Ошибка загрузки: ' + e.message, 'err');
+    });
+  }
+
+  // ---- догрузка следующей страницы детей ('Показать ещё') ----
+  function loadMore() {
+    var nextOffset = state.offset + state.children.length;
+    var url = API + '/children' + (state.current ? '?parent=' + encodeURIComponent(state.current) : '?root=1') + '&offset=' + nextOffset + '&limit=' + state.limit;
+    var btn = document.getElementById('adm-more');
+    if (btn) btn.disabled = true;
+    fetch(url).then(function (r) {
+      return r.json();
+    }).then(function (j) {
+      state.children = state.children.concat(j.children || []);
+      state.total = j.total || state.total;
+      state.offset = j.offset || 0;
+      state.hasMore = !!j.hasMore;
+      renderAll();
+    })["catch"](function (e) {
+      setMsg('Ошибка загрузки: ' + e.message, 'err');
+      if (btn) btn.disabled = false;
     });
   }
 
@@ -135,21 +169,84 @@ __webpack_require__.r(__webpack_exports__);
     var title = el('adm-list-title');
     list.innerHTML = '';
     if (!state.currentNode) title.textContent = 'Направления (страны)';else title.textContent = (state.currentNode.title || state.currentNode.slug) + ' — разделы';
-    var q = (el('adm-search').value || '').trim().toLowerCase();
+    var q = (el('adm-search').value || '').trim();
+    // глобальный поиск активируется при ≥3 символах
+    if (q.length >= 3) {
+      renderSearchResults();
+      return;
+    }
+    var lq = q.toLowerCase();
     var filtered = state.children.filter(function (n) {
-      if (!q) return true;
-      return (n.title || '').toLowerCase().indexOf(q) !== -1 || (n.slug || '').toLowerCase().indexOf(q) !== -1;
+      if (!lq) return true;
+      return (n.title || '').toLowerCase().indexOf(lq) !== -1 || (n.slug || '').toLowerCase().indexOf(lq) !== -1;
     });
     if (!filtered.length) {
       list.innerHTML = '<div class="adm-empty">' + (state.children.length ? 'Ничего не найдено' : 'Нет узлов. Добавьте первый.') + '</div>';
       return;
     }
     filtered.forEach(function (n) {
-      var item = document.createElement('div');
-      item.className = 'adm-item';
-      item.setAttribute('data-rid', n.rid || '');
-      item.innerHTML = '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '<button class="adm-btn adm-btn-mini adm-btn-danger" data-act="del" title="Удалить">🗑</button>' + '<span class="adm-item-go" title="Войти в раздел">›</span>' + '</span>';
-      list.appendChild(item);
+      list.appendChild(makeItem(n));
+    });
+    renderMoreButton(list);
+  }
+
+  // ---- кнопка «Показать ещё» при неполной загрузке ----
+  function renderMoreButton(list) {
+    // в режиме глобального поиска кнопка не нужна
+    if ((el('adm-search').value || '').trim().length >= 3) return;
+    if (!state.hasMore) return;
+    var remaining = state.total - state.children.length;
+    var wrap = document.createElement('div');
+    wrap.className = 'adm-more-wrap';
+    wrap.innerHTML = '<button class="adm-btn adm-btn-more" id="adm-more">Показать ещё (' + remaining + ')</button>';
+    list.appendChild(wrap);
+  }
+
+  // ---- глобальные результаты поиска (в том же левом списке) ----
+  function renderSearchResults() {
+    var list = el('adm-list');
+    var title = el('adm-list-title');
+    list.innerHTML = '';
+    title.textContent = 'Результаты глобального поиска';
+    if (!state.searchResults.length) {
+      list.innerHTML = '<div class="adm-empty">Ничего не найдено по всему каталогу</div>';
+      return;
+    }
+    state.searchResults.forEach(function (n) {
+      list.appendChild(makeSearchItem(n));
+    });
+  }
+
+  // ---- строка списка (ребёнок текущего узла) ----
+  function makeItem(n) {
+    var item = document.createElement('div');
+    item.className = 'adm-item';
+    item.setAttribute('data-rid', n.rid || '');
+    item.innerHTML = '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '<button class="adm-btn adm-btn-mini adm-btn-danger" data-act="del" title="Удалить">🗑</button>' + '<span class="adm-item-go" title="Войти в раздел">›</span>' + '</span>';
+    return item;
+  }
+
+  // ---- строка результата глобального поиска (с путём, клик = редактирование) ----
+  function makeSearchItem(n) {
+    var item = document.createElement('div');
+    item.className = 'adm-item adm-item-search';
+    item.setAttribute('data-rid', n.rid || '');
+    item.setAttribute('data-search', '1');
+    item.innerHTML = '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + '<span class="adm-item-body">' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-path">' + esc(n.path || '') + '</span>' + '</span>' + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '</span>';
+    return item;
+  }
+
+  // ---- глобальный поиск по каталогу (≥3 символа) ----
+  var searchTimer = null;
+  function doGlobalSearch(q) {
+    setLoading(true);
+    fetch(API + '/search?q=' + encodeURIComponent(q)).then(function (r) {
+      return r.json();
+    }).then(function (j) {
+      state.searchResults = j.results || [];
+      renderSearchResults();
+    })["catch"](function (e) {
+      setMsg('Ошибка поиска: ' + e.message, 'err');
     });
   }
 
@@ -176,6 +273,34 @@ __webpack_require__.r(__webpack_exports__);
     state.editing = false;
   }
 
+  // ---- все узлы для селекта родителя (исключая сам узел и его потомков) ----
+  function loadParentOptions(rid, currentParentRid, cb) {
+    fetch(API + '/tree').then(function (r) {
+      return r.json();
+    }).then(function (j) {
+      var nodes = j.tree || [];
+      // путь редактируемого узла (префикс для поиска потомков)
+      var selfPath = '';
+      var selfLevel = '';
+      nodes.forEach(function (n) {
+        if (String(n.rid) === String(rid)) {
+          selfPath = n.path || '';
+          selfLevel = n.level || '';
+        }
+      });
+      var opts = '<option value="">— корень —</option>';
+      nodes.forEach(function (n) {
+        // исключить сам узел и его потомков (path начинается с пути узла)
+        if (String(n.rid) === String(rid)) return;
+        if (selfPath && (n.path || '').indexOf(selfPath + '/') === 0) return;
+        opts += '<option value="' + esc(n.rid) + '"' + (String(n.rid) === String(currentParentRid) ? ' selected' : '') + '>' + esc(n.path || n.slug) + ' (' + esc(LEVEL_LABEL[n.level] || n.level) + ')</option>';
+      });
+      cb(opts);
+    })["catch"](function (e) {
+      cb('<option value="">— корень —</option>');
+    });
+  }
+
   // ---- форма: редактирование конкретного узла ----
   function editNode(rid) {
     fetch(API + '/' + encodeURIComponent(rid)).then(function (r) {
@@ -196,13 +321,15 @@ __webpack_require__.r(__webpack_exports__);
       el('f-content').value = d.content && d.content.html ? d.content.html : d.content || '';
       el('f-lat').value = d.lat != null ? d.lat : '';
       el('f-lng').value = d.lng != null ? d.lng : '';
-      // родитель: показываем текущий контекст (не даём менять в этой задаче)
-      var pTitle = '';
-      if (state.currentNode) pTitle = state.currentNode.title || state.currentNode.slug;else if (d.parentRid) pTitle = '(в другом разделе)';
       el('f-current-rid').value = d.parentRid || '';
       el('f-current-level').value = d.level || '';
-      el('f-parent').innerHTML = '<option value="' + esc(d.parentRid || '') + '" selected>' + esc(pTitle || '— корень —') + '</option>';
-      el('f-parent').disabled = true;
+      // родитель: разблокирован для перемещения, заполняется деревом
+      // (исключая сам узел и его потомков — защита от циклов)
+      el('f-parent').disabled = false;
+      el('f-parent').innerHTML = '<option value="">— корень —</option>';
+      loadParentOptions(rid, d.parentRid, function (opts) {
+        el('f-parent').innerHTML = opts;
+      });
       updateLevelHint();
       setMsg('');
       el('adm-cancel').style.display = 'inline-block';
@@ -220,12 +347,15 @@ __webpack_require__.r(__webpack_exports__);
   // ---- сохранение (create/update) ----
   function save() {
     var rid = el('f-rid').value;
+    // родитель: при редактировании — из селекта #f-parent (можно менять),
+    // при создании — из скрытого контекста навигации #f-current-rid
+    var parentVal = el('f-parent').disabled ? el('f-current-rid').value : el('f-parent').value;
     var payload = {
       slug: el('f-slug').value.trim(),
       title: el('f-title').value.trim(),
       h1: el('f-h1').value.trim() || undefined,
       level: el('f-level').value,
-      parentRid: el('f-current-rid').value || null,
+      parentRid: parentVal || null,
       description: el('f-description').value || undefined,
       content: el('f-content').value || undefined,
       image: el('f-image').value.trim() || undefined,
@@ -320,12 +450,19 @@ __webpack_require__.r(__webpack_exports__);
 
   // список: клик по строке → войти; по кнопке → edit/del
   el('adm-list').addEventListener('click', function (ev) {
+    var more = ev.target.closest('#adm-more');
+    if (more) {
+      ev.preventDefault();
+      loadMore();
+      return;
+    }
     var btn = ev.target.closest('button[data-act]');
     var item = ev.target.closest('.adm-item');
     if (!item) return;
     var rid = item.getAttribute('data-rid');
+    var isSearch = item.getAttribute('data-search') === '1';
     var go = ev.target.closest('.adm-item-go');
-    if (go && !btn) {
+    if (go && !btn && !isSearch) {
       loadChildren(rid);
       return;
     }
@@ -333,10 +470,25 @@ __webpack_require__.r(__webpack_exports__);
       var act = btn.getAttribute('data-act');
       ev.stopPropagation();
       if (act === 'edit') editNode(rid);else if (act === 'del') deleteNode(rid);
+    } else if (isSearch) {
+      // клик по телу результата поиска → редактирование
+      editNode(rid);
     }
   });
   el('adm-search').addEventListener('input', function () {
-    renderList();
+    var q = this.value.trim();
+    if (q.length >= 3) {
+      // глобальный поиск с debounce 300 мс
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function () {
+        doGlobalSearch(q);
+      }, 300);
+    } else {
+      // очистка/<3 → возврат к детям текущего узла
+      clearTimeout(searchTimer);
+      state.searchResults = [];
+      renderList();
+    }
   });
   el('adm-add').onclick = function () {
     newNode();

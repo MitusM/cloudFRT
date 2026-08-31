@@ -406,26 +406,57 @@ const endpoints = async (app) => {
     }
   })
 
-  // ---- Drill-down админки: дети узла (или страны верхнего уровня) + хлебные крошки ----
+  // ---- Глобальный поиск по каталогу (для админки) ----
+  // GET /destinations/admin/search?q=<строка≥3> → [{rid, slug, title, level, path}]
+  app.get('/destinations/admin/search', async (req, res) => {
+    try {
+      const q = (req.query.q || '').trim()
+      if (q.length < 3) return res.status(200).json({ results: [] })
+      const results = await db.searchDest(q)
+      return res.status(200).json({ results })
+    } catch (err) {
+      console.log('⚡ err::destinations admin search', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // ---- Полное дерево (для селекта родителя при перемещении) ----
+  // GET /destinations/admin/tree → [{rid, slug, title, level, path}]
+  app.get('/destinations/admin/tree', async (req, res) => {
+    try {
+      const tree = await db.getSitemapTree()
+      return res.status(200).json({ tree })
+    } catch (err) {
+      console.log('⚡ err::destinations admin tree', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // Drill-down админки: дети узла (или страны верхнего уровня) + хлебные крошки ----
   // GET /destinations/admin/children?root=1          → страны верхнего уровня
   // GET /destinations/admin/children?parent=<rid>    → дети конкретного узла
   app.get('/destinations/admin/children', async (req, res) => {
     try {
       const parent = decodeRid(req.query.parent)
       const isRoot = req.query.root === '1' || req.query.root === 'true'
+      const offset = parseInt(req.query.offset, 10) || 0
+      const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200)
 
       let children
+      let total = 0
       let node = null
       let ancestors = []
 
       if (isRoot || !parent) {
         // корневой уровень — страны верхнего уровня
-        children = await db.listRootAdmin()
+        children = await db.listRootAdmin(limit, offset)
+        total = await db.countRootAdmin()
       } else {
         const rid = String(parent)
         node = await db.getByRid(rid)
         if (!node) return errorHandler(res, 'Родительский узел не найден', 404)
-        children = await db.listChildrenAdmin(rid)
+        children = await db.listChildrenAdmin(rid, limit, offset)
+        total = await db.countChildrenAdmin(rid)
         // цепочка предков для хлебных крошек: [текущий, ...предки] + текущий уже в node
         const chain = await db.parentsChain(rid)
         // chain: [текущий, родитель, ..., корень] → инвертируем → [корень, ..., текущий] без дубля текущего
@@ -439,7 +470,15 @@ const endpoints = async (app) => {
         ancestors = crumbs
       }
 
-      return res.status(200).json({ children, node: node || null, ancestors })
+      return res.status(200).json({
+        children,
+        node: node || null,
+        ancestors,
+        total,
+        offset,
+        limit,
+        hasMore: offset + children.length < total,
+      })
     } catch (err) {
       console.log('⚡ err::destinations admin children', err)
       return errorHandler(res, 'Server error', 500)
@@ -522,8 +561,13 @@ const endpoints = async (app) => {
       }
 
       const result = await db.updateDest(rid, clean)
-      // если меняется родитель — перенести в дереве
-      if (clean.parentRid !== undefined) {
+      // если меняется родитель — перенести в дереве (с защитой от циклов)
+      if (clean.parentRid !== undefined && String(clean.parentRid) !== String(rid)) {
+        // нельзя перенести узел в самого себя или своего потомка
+        if (clean.parentRid) {
+          const cyc = await db.isDescendant(rid, clean.parentRid)
+          if (cyc) return errorHandler(res, { errors: ['Нельзя перенести узел в самого себя или своего потомка'] }, 409)
+        }
         await db.moveDest(rid, clean.parentRid)
       }
 

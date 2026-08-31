@@ -214,6 +214,19 @@ class Model extends PDO {
     return { done: true }
   }
 
+  // --- Является ли maybeChildRid потомком rid (для защиты от циклов при move) ---
+  async isDescendant(rid, maybeChildRid) {
+    if (!rid || !maybeChildRid) return false
+    if (String(rid) === String(maybeChildRid)) return true
+    // идём от maybeChildRid вверх по PART_OF: если встречаем rid — значит он потомок
+    const rows = await this.queryAll(
+      `SELECT @rid as rid FROM (
+        TRAVERSE out('PART_OF') FROM ${maybeChildRid}
+      ) WHERE @rid = ${rid}`
+    )
+    return rows.length > 0
+  }
+
   // --- Найти узел по slug (внутри родителя или глобально) ---
   // Направление рёбер PART_OF: ребёнок -PART_OF-> родитель.
   //   out('PART_OF') узла = предки (куда напр. ребро)  → хлебные крошки
@@ -237,19 +250,39 @@ class Model extends PDO {
   }
 
   // --- Дети узла БЕЗ лимита (админ drill-down). Сортировка: уровень, затем приоритет ---
-  async listChildrenAdmin(rid) {
+  async listChildrenAdmin(rid, limit = 50, offset = 0) {
+    const lim = parseInt(limit, 10) || 50
+    const off = parseInt(offset, 10) || 0
     return this.queryAll(
       `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
-       WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC`
+       WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC SKIP ${off} LIMIT ${lim}`
     )
   }
 
+  async countChildrenAdmin(rid) {
+    const row = await this.queryOne(
+      `SELECT COUNT(*) as c FROM (
+        SELECT FROM Dest WHERE ${rid} IN out('PART_OF')
+      )`
+    )
+    return row ? (row.c || 0) : 0
+  }
+
   // --- Дети верхнего уровня (страны, без родителя) для админ-корня ---
-  async listRootAdmin() {
+  async listRootAdmin(limit = 50, offset = 0) {
+    const lim = parseInt(limit, 10) || 50
+    const off = parseInt(offset, 10) || 0
     return this.queryAll(
       `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
-       WHERE out('PART_OF').size() = 0 ORDER BY priority DESC`
+       WHERE out('PART_OF').size() = 0 ORDER BY priority DESC SKIP ${off} LIMIT ${lim}`
     )
+  }
+
+  async countRootAdmin() {
+    const row = await this.queryOne(
+      `SELECT COUNT(*) as c FROM Dest WHERE out('PART_OF').size() = 0`
+    )
+    return row ? (row.c || 0) : 0
   }
 
   // --- Цепочка предков (для хлебных крошек): от узла к корню ---
@@ -373,6 +406,38 @@ class Model extends PDO {
       is_hub: r.is_hub,
       image: r.image,
       // путь: от корня до узла (включительно), via slugMap
+      path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
+    }))
+  }
+
+  // --- Глобальный поиск по каталогу (slug/title), с полным путём от корня ---
+  // LIKE по slug/title. Возвращает [{rid, slug, title, level, path}].
+  async searchDest(q, limit = 50) {
+    const esc = (s) => String(s).replace(/'/g, "\\'")
+    const like = `%${esc(q).toLowerCase()}%`
+    const rows = await this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, image, is_hub, $path AS path FROM (
+        TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
+      ) WHERE (slug LIKE '${like}' OR title LIKE '${like}') ORDER BY title LIMIT ${limit}`
+    )
+    // slugMap по всему дереву — для сборки полного пути
+    const all = await this.queryAll(
+      `SELECT @rid as rid, slug FROM (
+        TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
+      )`
+    )
+    const slugMap = {}
+    for (const n of all) {
+      slugMap[String(n.rid)] = n.slug
+    }
+    return rows.map((r) => ({
+      rid: String(r.rid),
+      slug: r.slug,
+      title: r.title,
+      h1: r.h1,
+      level: r.level,
+      image: r.image,
+      is_hub: r.is_hub,
       path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
     }))
   }
