@@ -155,9 +155,9 @@ const endpoints = async (app) => {
           cacheServices = process.env.CACHE
           articleQuota = process.env.ARTICLE_QUOTA
         } else {
-          articleLimit = settings.limit
-          cacheServices = settings.cache
-          articleQuota = settings.quota
+          articleLimit = s.settings.limit
+          cacheServices = s.settings.cache
+          articleQuota = s.settings.quota
         }
 
         /** Получаем список стран */
@@ -217,7 +217,7 @@ const endpoints = async (app) => {
       /**  */
       let settings
       let page = await Redis.multi()
-        .get('settings:users')
+        .get(K.SETTINGS) // settings:article — свой ключ (совпадает с PUT)
         .get(K.page('settings'))
         .exec()
 
