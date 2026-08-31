@@ -41,7 +41,7 @@ CREATE PROPERTY Dest.title STRING;             -- название места
 CREATE PROPERTY Dest.h1 STRING;                -- H1 (если отличен от title)
 CREATE PROPERTY Dest.level STRING;             -- country | region | place | attraction
 CREATE PROPERTY Dest.description STRING;       -- SEO description
-CREATE PROPERTY Dest.content EMBEDDED;         -- контент хаба (rich)
+CREATE PROPERTY Dest.content STRING;          -- контент хаба (HTML-строка; был EMBEDDED — ошибка, nowi fix 31.08)
 CREATE PROPERTY Dest.image STRING;             -- URL изображения
 CREATE PROPERTY Dest.is_hub BOOLEAN;           -- является ли хабом (default true)
 ALTER PROPERTY Dest.is_hub DEFAULT true;

@@ -37,7 +37,7 @@
 
 {# ---------- Карта места (этап 5: интеграция с МС maps) ---------- #}
 {% if mapHtml and mapPoints and mapPoints.length %}
-<div class="dest-map" style="margin:24px 0;">
+<div class="dest-map">
   <h2 class="dest-h2">Карта</h2>
   {{ mapHtml | safe }}
   <script>
@@ -110,9 +110,9 @@
 {% if articles and articles.length %}
 <div class="dest-links">
   <h2 class="dest-h2">Читайте ещё</h2>
-  <ul style="list-style:none;padding:0;margin:0">
+  <ul class="dest-articles">
   {% for a in articles %}
-    <li style="margin:6px 0"><a class="dest-link" style="margin:0" href="{{ a.url }}">{{ a.title }}</a></li>
+    <li class="dest-article"><a class="dest-link" href="{{ a.url }}">{{ a.title }}</a></li>
   {% endfor %}
   </ul>
 </div>

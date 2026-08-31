@@ -155,15 +155,16 @@ class Model extends PDO {
   }
 
   // --- Проверка: существует ли slug (внутри родителя или глобально) ---
-  async slugExists(slug, parentRid) {
+  async slugExists(slug, parentRid, excludeRid) {
     const s = String(slug).replace(/'/g, "\\'")
+    const exc = excludeRid ? ` AND @rid <> ${excludeRid}` : ''
     if (parentRid) {
       const r = await this.queryOne(
-        `SELECT @rid FROM Dest WHERE slug = '${s}' AND ${parentRid} IN out('PART_OF')`
+        `SELECT @rid FROM Dest WHERE slug = '${s}' AND ${parentRid} IN out('PART_OF')${exc}`
       )
       return !!r
     }
-    const r = await this.queryOne(`SELECT @rid FROM Dest WHERE slug = '${s}'`)
+    const r = await this.queryOne(`SELECT @rid FROM Dest WHERE slug = '${s}'${exc}`)
     return !!r
   }
 
@@ -232,6 +233,22 @@ class Model extends PDO {
     return this.queryAll(
       `SELECT @rid as rid, slug, title, h1, level, image, priority FROM Dest
        WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC LIMIT ${limit}`
+    )
+  }
+
+  // --- Дети узла БЕЗ лимита (админ drill-down). Сортировка: уровень, затем приоритет ---
+  async listChildrenAdmin(rid) {
+    return this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
+       WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC`
+    )
+  }
+
+  // --- Дети верхнего уровня (страны, без родителя) для админ-корня ---
+  async listRootAdmin() {
+    return this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
+       WHERE out('PART_OF').size() = 0 ORDER BY priority DESC`
     )
   }
 

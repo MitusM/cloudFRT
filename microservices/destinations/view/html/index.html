@@ -17,48 +17,26 @@
     {% if image %}<meta property="og:image" content="{{ image }}" />{% endif %}
     <link rel="stylesheet" href="/public/css/style.css" />
     <link rel="stylesheet" href="/public/css/vendors.css" />
-    <style>
-      body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; background: #fff; }
-      .dest-nav { background: #111827; color: #fff; padding: 12px 0; }
-      .dest-nav .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
-      .dest-nav a { color: #f9fafb; text-decoration: none; font-weight: 600; }
-      .dest-main { max-width: 900px; margin: 0 auto; padding: 32px 20px 64px; }
-      .dest-breadcrumb { font-size: 14px; margin-bottom: 24px; color: #6b7280; }
-      .dest-breadcrumb ol { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-      .dest-breadcrumb li::after { content: '›'; margin: 0 6px; color: #9ca3af; }
-      .dest-breadcrumb li:last-child::after { content: ''; }
-      .dest-breadcrumb a { color: #6b7280; text-decoration: none; }
-      .dest-breadcrumb a:hover { color: #1f2937; text-decoration: underline; }
-      .dest-breadcrumb [aria-current] { color: #1f2937; font-weight: 600; }
-      h1.dest-h1 { font-size: 2rem; margin: 0 0 16px; }
-      .dest-desc { font-size: 1.05rem; color: #374151; margin-bottom: 28px; }
-      .dest-content { font-size: 1rem; }
-      .dest-content img { max-width: 100%; height: auto; }
-      h2.dest-h2 { font-size: 1.4rem; margin: 32px 0 12px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; }
-      .dest-children { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-      .dest-child { border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; text-decoration: none; color: inherit; display: block; }
-      .dest-child:hover { border-color: #111827; }
-      .dest-child .t { font-weight: 600; }
-      .dest-child .lv { text-transform: uppercase; font-size: 11px; color: #6b7280; letter-spacing: 0.5px; }
-      .dest-links { margin-top: 32px; }
-      .dest-link { display: inline-block; margin: 4px 8px 4px 0; padding: 8px 14px; border: 1px solid #d1d5db; border-radius: 8px; color: #1f2937; text-decoration: none; }
-      .dest-link:hover { background: #f3f4f6; }
-      .dest-foot { border-top: 1px solid #e5e7eb; margin-top: 48px; padding-top: 20px; font-size: 13px; color: #6b7280; }
-    </style>
+    <link rel="stylesheet" href="/public/css/destinations.css" />
+    {% if admin_page %}<link rel="stylesheet" href="/public/css/destinations_admin.css" />{% endif %}
   </head>
   <body>
     <nav class="dest-nav" role="navigation">
       <div class="wrap"><a href="/destinations/">Куда поехать</a></div>
     </nav>
 
-    <main class="dest-main" role="main">
+    <main class="dest-main{% if admin_page %} dest-main-admin{% endif %}" role="main">
       {% include page %}
     </main>
 
     <footer class="dest-foot">
-      <div class="wrap" style="max-width:900px;margin:0 auto;padding:0 20px;">
+      <div class="wrap">
         © {{ current_year | default('2026') }} cloudFRT — путеводитель по направлениям
       </div>
     </footer>
+    {% if admin_page %}
+    <script src="/public/js/runtime.js"></script>
+    <script src="/public/js/destinations_admin.js"></script>
+    {% endif %}
   </body>
 </html>

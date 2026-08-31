@@ -41,6 +41,18 @@ const errorHandler = (res, message, status = 404) => {
   return res.status(status).json({ message })
 }
 
+// RID приходит из URL (path/query) как #122:1, но браузер кодирует # и :
+// в %23, %3A (encodeURIComponent). Возвращаем чистый RID для подстановки в SQL.
+function decodeRid(input) {
+  if (input == null) return input
+  const s = String(input)
+  try {
+    return s.includes('%') ? decodeURIComponent(s) : s
+  } catch (e) {
+    return s
+  }
+}
+
 // ---- Хлебные крошки: parentsChain возвращает [текущий, ...предки] (TRAVERSE out) ----
 // Направление PART_OF: ребёнок -> родитель, поэтому TRAVERSE out() идёт от текущего к корню.
 // Нормализуем в порядок [корень ... текущий] для отображения.
@@ -366,6 +378,7 @@ const endpoints = async (app) => {
         title: 'Направления — админ',
         page: './page/admin.html',
         adminData: adminData,
+        admin_page: true,
         current_year: new Date().getFullYear(),
         // robots noindex для админки (не для поисковиков)
         robots: 'noindex, nofollow',
@@ -393,10 +406,50 @@ const endpoints = async (app) => {
     }
   })
 
+  // ---- Drill-down админки: дети узла (или страны верхнего уровня) + хлебные крошки ----
+  // GET /destinations/admin/children?root=1          → страны верхнего уровня
+  // GET /destinations/admin/children?parent=<rid>    → дети конкретного узла
+  app.get('/destinations/admin/children', async (req, res) => {
+    try {
+      const parent = decodeRid(req.query.parent)
+      const isRoot = req.query.root === '1' || req.query.root === 'true'
+
+      let children
+      let node = null
+      let ancestors = []
+
+      if (isRoot || !parent) {
+        // корневой уровень — страны верхнего уровня
+        children = await db.listRootAdmin()
+      } else {
+        const rid = String(parent)
+        node = await db.getByRid(rid)
+        if (!node) return errorHandler(res, 'Родительский узел не найден', 404)
+        children = await db.listChildrenAdmin(rid)
+        // цепочка предков для хлебных крошек: [текущий, ...предки] + текущий уже в node
+        const chain = await db.parentsChain(rid)
+        // chain: [текущий, родитель, ..., корень] → инвертируем → [корень, ..., текущий] без дубля текущего
+        const crumbs = []
+        const reversed = [...chain].reverse()
+        for (const c of reversed) {
+          if (!c || !c.slug) continue
+          if (String(c.rid) === String(node['@rid'])) continue // текущий узел — не его предок
+          crumbs.push({ rid: String(c.rid), slug: c.slug, title: c.title || c.slug, level: c.level })
+        }
+        ancestors = crumbs
+      }
+
+      return res.status(200).json({ children, node: node || null, ancestors })
+    } catch (err) {
+      console.log('⚡ err::destinations admin children', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
   // один узел по RID
   app.get('/destinations/admin/:rid', async (req, res) => {
     try {
-      const rid = req.params.rid
+      const rid = decodeRid(req.params.rid)
       if (!rid) return errorHandler(res, 'rid обязателен', 400)
       const dest = await db.getByRid(rid)
       if (!dest) return errorHandler(res, 'Not found')
@@ -456,15 +509,15 @@ const endpoints = async (app) => {
   app.put('/destinations/admin/:rid', async (req, res) => {
     try {
       const body = req.body || {}
-      const rid = req.params.rid
+      const rid = decodeRid(req.params.rid)
       if (!rid) return errorHandler(res, 'rid обязателен', 400)
 
       const { ok, errors, clean } = validateDestInput(body, { requireTitle: false })
       if (!ok) return errorHandler(res, { errors }, 400)
 
-      // если меняется slug — проверить уникальность
+      // если меняется slug — проверить уникальность (исключая сам узел при редактировании)
       if (clean.slug) {
-        const dup = await db.slugExists(clean.slug, clean.parentRid)
+        const dup = await db.slugExists(clean.slug, clean.parentRid, rid)
         if (dup) return errorHandler(res, { errors: ['slug уже занят в этом разделе'] }, 409)
       }
 
@@ -486,7 +539,7 @@ const endpoints = async (app) => {
   // удалить узел
   app.delete('/destinations/admin/:rid', async (req, res) => {
     try {
-      const rid = req.params.rid
+      const rid = decodeRid(req.params.rid)
       if (!rid) return errorHandler(res, 'rid обязателен', 400)
       // удалить рёбра и вершину
       await db.command(`DELETE EDGE PART_OF WHERE out = ${rid} OR in = ${rid}`)

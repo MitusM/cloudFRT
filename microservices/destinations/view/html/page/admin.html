@@ -1,29 +1,37 @@
 {# ============================================================
-   page/admin.html — SPA-админка гео-каталога destinations
-   Данные из <script id="admin-data" type="application/json">
-   (adminData от контроллера: { csrf, levels, tree, api }).
-   JS-клиент дёргает REST /destinations/admin: create/update/delete.
-   Весь JS внутри {% raw %} — Nunjucks не трогает его.
+   page/admin.html — SPA-админка гео-каталога destinations (drill-down)
+   Навигация: корень → страны → регионы → места → достопримечательности.
+   Данные из <script id="admin-data"> (adminData от контроллера:
+   { csrf, levels, api }). Дети подгружаются через
+   GET /destinations/admin/children?root=1 | ?parent=<rid>.
+   Стили/JS — бандлы destinations_admin (layout при admin_page=true).
    ============================================================ #}
 
-<div id="adm">
+<div id="adm" class="adm">
+  {# ---------- Шапка: заголовок + breadcrumb ---------- #}
   <div class="adm-head">
     <div>
       <h1 class="adm-title">Направления — управление</h1>
-      <p class="adm-sub">Гео-каталог: страны / регионы / места / достопримечательности</p>
+      <p class="adm-sub">Страны / регионы / места / достопримечательности</p>
     </div>
-    <div>
-      <a class="adm-link" href="/destinations/" target="_blank">Открыть сайт ↗</a>
-    </div>
+    <a class="adm-link" href="/destinations/" target="_blank">Открыть сайт ↗</a>
   </div>
 
+  {# ---------- Хлебные крошки навигации ---------- #}
+  <nav class="adm-crumbs" id="adm-crumbs" aria-label="breadcrumb">
+    <a class="adm-crumb" data-go="root" href="#">Куда поехать</a>
+  </nav>
+
   <div class="adm-layout">
-    {# ---------- Список узлов ---------- #}
+    {# ---------- Левая колонка: список детей текущего узла ---------- #}
     <div class="adm-col adm-col-list">
       <div class="adm-panel">
         <div class="adm-panel-head">
-          <span>Узлы (<span id="adm-count">0</span>)</span>
+          <span class="adm-panel-title" id="adm-list-title">Направления</span>
           <button class="adm-btn adm-btn-primary" id="adm-add">+ Добавить</button>
+        </div>
+        <div class="adm-search" id="adm-search-wrap">
+          <input type="text" id="adm-search" placeholder="Поиск по названию…" />
         </div>
         <div class="adm-list" id="adm-list">
           <div class="adm-empty">Загрузка…</div>
@@ -31,7 +39,7 @@
       </div>
     </div>
 
-    {# ---------- Форма создания/редактирования ---------- #}
+    {# ---------- Правая колонка: форма создания/редактирования ---------- #}
     <div class="adm-col adm-col-form">
       <div class="adm-panel">
         <div class="adm-panel-head">
@@ -39,13 +47,15 @@
         </div>
         <div class="adm-form" id="adm-form">
           <input type="hidden" id="f-rid" />
+          <input type="hidden" id="f-current-rid" />
+          <input type="hidden" id="f-current-level" />
           <div class="adm-grid2">
-            <label>Slug (url-сегмент)<input id="f-slug" placeholder="napr. gornyj-altaj" /></label>
             <label>Название (title)<input id="f-title" placeholder="Горный Алтай" /></label>
+            <label>Slug (url-сегмент)<input id="f-slug" placeholder="gornyj-altaj" /></label>
           </div>
           <div class="adm-grid2">
             <label>H1 (если отличен)<input id="f-h1" placeholder="—" /></label>
-            <label>Уровень
+            <label>Уровень <span class="adm-level-lock" id="f-level-display"></span>
               <select id="f-level">
                 <option value="country">country (страна)</option>
                 <option value="region">region (регион)</option>
@@ -81,7 +91,7 @@
           <div id="adm-msg" class="adm-msg"></div>
           <div class="adm-form-actions">
             <button class="adm-btn adm-btn-primary" id="adm-save">Создать</button>
-            <button class="adm-btn" id="adm-cancel" style="display:none">Отмена</button>
+            <button class="adm-btn" id="adm-cancel">Отмена</button>
           </div>
         </div>
       </div>
@@ -90,230 +100,3 @@
 </div>
 
 <script type="application/json" id="admin-data">{{ adminData | safe }}</script>
-{% raw %}
-<script>
-(function () {
-  'use strict';
-  var DATA = JSON.parse(document.getElementById('admin-data').textContent || '{}');
-  var TREE = DATA.tree || [];
-  var CSRF = DATA.csrf || '';
-  var API = DATA.api || '/destinations/admin';
-
-  function el(id) { return document.getElementById(id); }
-  function esc(s) {
-    return String(s == null ? '' : s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
-
-  function parentOptions(selRid) {
-    var opts = '<option value="">— корень —</option>';
-    TREE.forEach(function (n) {
-      if (n.rid === selRid) return;
-      opts += '<option value="' + esc(n.rid) + '"' +
-        (n.rid === selRid ? ' selected' : '') + '>' +
-        esc(n.level) + ' / ' + esc(n.title) + ' (' + esc(n.path) + ')</option>';
-    });
-    return opts;
-  }
-
-  var Adm = {
-    newNode: function () {
-      el('adm-form-title').textContent = 'Новый узел';
-      el('f-rid').value = '';
-      ['f-slug','f-title','f-h1','f-description','f-image','f-content','f-lat','f-lng','f-priority']
-        .forEach(function (id) { el(id).value = ''; });
-      var hasCountry = TREE.some(function (n) { return n.level === 'country'; });
-      el('f-level').value = hasCountry ? 'region' : 'country';
-      el('f-parent').innerHTML = parentOptions('');
-      el('f-is_hub').checked = true;
-      el('adm-msg').textContent = '';
-      el('adm-cancel').style.display = 'none';
-      el('adm-save').textContent = 'Создать';
-    },
-    editByPath: function (path) {
-      var n = TREE.find(function (x) { return x.path === path; });
-      if (!n) return;
-      el('adm-form-title').textContent = 'Редактирование: ' + (n.title || n.slug);
-      el('f-rid').value = n.rid || '';
-      el('f-slug').value = n.slug || '';
-      el('f-title').value = n.title || '';
-      el('f-h1').value = n.h1 || '';
-      el('f-level').value = n.level || 'place';
-      el('f-priority').value = (n.priority != null) ? n.priority : '';
-      el('f-is_hub').checked = !(n.is_hub === false);
-      el('f-image').value = n.image || '';
-      el('f-parent').innerHTML = parentOptions('');
-      el('f-description').value = '';
-      el('f-content').value = '';
-      el('f-lat').value = '';
-      el('f-lng').value = '';
-      if (n.rid) {
-        fetch(API + '/' + encodeURIComponent(n.rid))
-          .then(function (r) { return r.json(); })
-          .then(function (j) {
-            if (j.dest) {
-              var d = j.dest;
-              el('f-content').value = (d.content && d.content.html) ? d.content.html : (d.content || '');
-              el('f-description').value = d.description || '';
-              var c = d.location && d.location.coordinates;
-              if (c && c.length >= 2) { el('f-lat').value = c[1]; el('f-lng').value = c[0]; }
-              // предвыбрать текущего родителя в select (по RID)
-              if (d.parentRid) {
-                el('f-parent').innerHTML = parentOptions('');
-                el('f-parent').value = String(d.parentRid);
-              }
-            }
-          }).catch(function () {});
-      }
-      el('adm-msg').textContent = '';
-      el('adm-cancel').style.display = 'inline-block';
-      el('adm-save').textContent = 'Сохранить';
-    },
-    save: function () {
-      var rid = el('f-rid').value;
-      var payload = {
-        slug: el('f-slug').value.trim(),
-        title: el('f-title').value.trim(),
-        h1: el('f-h1').value.trim() || undefined,
-        level: el('f-level').value,
-        parentRid: el('f-parent').value || null,
-        description: el('f-description').value || undefined,
-        content: el('f-content').value || undefined,
-        image: el('f-image').value.trim() || undefined,
-        is_hub: el('f-is_hub').checked,
-        priority: el('f-priority').value ? parseFloat(el('f-priority').value) : undefined,
-        lat: el('f-lat').value ? parseFloat(el('f-lat').value) : undefined,
-        lng: el('f-lng').value ? parseFloat(el('f-lng').value) : undefined,
-      };
-      var isNew = !rid;
-      var url = isNew ? (API + '/create') : (API + '/' + encodeURIComponent(rid));
-      var method = isNew ? 'POST' : 'PUT';
-      Adm.setMsg('Сохранение…', 'info');
-      fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      }).then(function (r) {
-        return r.json().catch(function () { return {}; })
-          .then(function (j) { return { status: r.status, json: j }; });
-      }).then(function (out) {
-        if (out.status >= 200 && out.status < 300 && out.json.done) {
-          Adm.setMsg('Сохранено ✓', 'ok');
-          setTimeout(function () { location.reload(); }, 700);
-        } else {
-          var err = out.json.errors ? JSON.stringify(out.json.errors)
-            : (out.json.error || ('HTTP ' + out.status));
-          Adm.setMsg('Ошибка: ' + err, 'err');
-        }
-      }).catch(function (e) { Adm.setMsg('Ошибка сети: ' + e.message, 'err'); });
-    },
-    removeByPath: function (path) {
-      var n = TREE.find(function (x) { return x.path === path; });
-      if (!n) return;
-      var msg = 'Удалить узел «' + (n.title || n.slug) + '»?' +
-        '\nВложенные узлы останутся, но потеряют родителя (ребро PART_OF снимется).';
-      if (!confirm(msg)) return;
-      fetch(API + '/' + encodeURIComponent(n.rid), {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ csrf: CSRF }),
-      }).then(function (r) { return r.json(); })
-        .then(function (j) {
-          if (j.done) { Adm.setMsg('Удалено', 'ok'); setTimeout(function () { location.reload(); }, 500); }
-          else Adm.setMsg('Ошибка удаления', 'err');
-        }).catch(function (e) { Adm.setMsg('Ошибка сети: ' + e.message, 'err'); });
-    },
-    setMsg: function (txt, type) {
-      var m = el('adm-msg');
-      m.textContent = txt;
-      m.className = 'adm-msg ' + (type || '');
-    },
-    render: function () {
-      var list = el('adm-list');
-      list.innerHTML = '';
-      el('adm-count').textContent = TREE.length;
-      if (!TREE.length) {
-        list.innerHTML = '<div class="adm-empty">Нет узлов. Создайте первый.</div>';
-        return;
-      }
-      TREE.slice().sort(function (a, b) { return (a.path || '').localeCompare(b.path || ''); })
-        .forEach(function (n) {
-          var item = document.createElement('div');
-          item.className = 'adm-item';
-          item.setAttribute('data-path', n.path || '');
-          item.innerHTML =
-            '<div class="adm-item-path">' + esc(n.path || '/') + '</div>' +
-            '<div class="adm-item-title">' + esc(n.title) +
-            ' <span class="adm-item-level">' + esc(n.level) + '</span></div>' +
-            '<div class="adm-item-actions">' +
-              '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' +
-              '<button class="adm-btn adm-btn-mini adm-btn-danger" data-act="del" title="Удалить">🗑</button>' +
-            '</div>';
-          list.appendChild(item);
-        });
-    }
-  };
-
-  // делегирование кликов по списку
-  el('adm-list').addEventListener('click', function (ev) {
-    var btn = ev.target.closest('button');
-    var item = ev.target.closest('.adm-item');
-    if (!item) return;
-    ev.stopPropagation();
-    var path = item.getAttribute('data-path') || '';
-    if (btn && btn.getAttribute('data-act') === 'del') Adm.removeByPath(path);
-    else Adm.editByPath(path);
-  });
-
-  el('adm-add').onclick = function () { Adm.newNode(); el('f-title').focus(); };
-  el('adm-save').onclick = function () { Adm.save(); };
-  el('adm-cancel').onclick = function () { Adm.newNode(); };
-
-  window.Adm = Adm;
-  Adm.render();
-})();
-</script>
-
-<style>
-  .adm-head { display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap; }
-  .adm-title { font-size:1.6rem; margin:0; }
-  .adm-sub { color:#6b7280; margin:4px 0 0; }
-  .adm-link { color:#2563eb; text-decoration:none; }
-  .adm-layout { display:grid; grid-template-columns: 1.2fr 1fr; gap:24px; margin-top:24px; }
-  @media (max-width:860px){ .adm-layout{ grid-template-columns:1fr; } }
-  .adm-panel { border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#fff; }
-  .adm-panel-head { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:600; }
-  .adm-list { max-height:75vh; overflow:auto; }
-  .adm-item { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; border-bottom:1px solid #f3f4f6; cursor:pointer; gap:10px; }
-  .adm-item:hover { background:#f9fafb; }
-  .adm-item-path { font-size:12px; color:#9ca3af; font-family:monospace; min-width:110px; }
-  .adm-item-title { font-weight:600; flex:1; }
-  .adm-item-level { font-size:10px; text-transform:uppercase; color:#6b7280; background:#f3f4f6; border-radius:4px; padding:2px 6px; }
-  .adm-item-actions { display:flex; gap:4px; flex-shrink:0; }
-  .adm-empty { padding:24px; color:#9ca3af; text-align:center; }
-  .adm-form { padding:16px; display:flex; flex-direction:column; gap:12px; }
-  .adm-form label { display:flex; flex-direction:column; gap:4px; font-size:13px; font-weight:600; color:#374151; }
-  .adm-form input, .adm-form select, .adm-form textarea {
-    padding:8px 10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; font-weight:400; color:#111827; background:#fff;
-  }
-  .adm-form input:focus, .adm-form select:focus, .adm-form textarea:focus { border-color:#2563eb; outline:none; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
-  .adm-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  @media (max-width:560px){ .adm-grid2{ grid-template-columns:1fr; } }
-  .adm-row { display:flex; }
-  .adm-check { display:flex; align-items:center; gap:8px; font-weight:500; }
-  .adm-check input { width:auto; }
-  .adm-msg { font-size:13px; padding:8px 12px; border-radius:8px; font-weight:500; }
-  .adm-msg.ok { background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; }
-  .adm-msg.err { background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; }
-  .adm-msg.info { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
-  .adm-form-actions { display:flex; gap:8px; margin-top:4px; }
-  .adm-btn { padding:8px 14px; border-radius:8px; border:1px solid #d1d5db; background:#fff; color:#111827; cursor:pointer; font-weight:600; font-size:13px; }
-  .adm-btn:hover { background:#f3f4f6; }
-  .adm-btn-primary { background:#111827; color:#fff; border-color:#111827; }
-  .adm-btn-primary:hover { background:#1f2937; }
-  .adm-btn-danger { color:#b91c1c; border-color:#fecaca; }
-  .adm-btn-danger:hover { background:#fef2f2; }
-  .adm-btn-mini { padding:2px 8px; font-size:12px; }
-</style>
-{% endraw %}
