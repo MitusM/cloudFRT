@@ -1,0 +1,349 @@
+// ============================================================
+// destinations — стили админ-панели (page/admin.html)
+// Drill-down на всю ширину экрана.
+// Сборка: webpack entry `destinations_admin` → public/css/destinations_admin.css
+// ============================================================
+
+// Админка рендерится внутри .dest-main (layout ограничивает 900px и паддинги).
+// Layout добавляет класс dest-main-admin на <main> при admin_page=true.
+// Снимаем max-width и паддинги — админка на всю ширину.
+.dest-main-admin {
+  max-width: none;
+  padding: 32px 0 64px;
+}
+
+.adm {
+  margin: -32px 0 0; /* компенсировать верхний паддинг .dest-main-admin */
+}
+
+.adm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 24px 28px 12px;
+}
+
+.adm-title {
+  font-size: 1.6rem;
+  margin: 0;
+}
+
+.adm-sub {
+  color: #6b7280;
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.adm-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+// ---- Хлебные крошки навигации ----
+.adm-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 28px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.adm-crumb {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+
+  &:visited {
+    color: #2563eb;
+  }
+  &:hover {
+    text-decoration: underline;
+  }
+  // разделитель между крошками
+  & + &::before {
+    content: '›';
+    margin-right: 6px;
+    color: #9ca3af;
+  }
+}
+
+.adm-crumb-current {
+  color: #111827;
+  font-weight: 600;
+  cursor: default;
+
+  &::before {
+    content: '›';
+    margin-right: 6px;
+    color: #9ca3af;
+  }
+  &:hover {
+    text-decoration: none;
+  }
+}
+
+// ---- Full-width двухколоночная сетка ----
+.adm-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(420px, 1.4fr);
+  gap: 20px;
+  padding: 0 28px 28px;
+  align-items: start;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.adm-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.adm-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+}
+
+.adm-panel-title {
+  font-size: 14px;
+}
+
+// ---- Поиск ----
+.adm-search {
+  padding: 10px 16px;
+  border-bottom: 1px solid #eef2f7;
+
+  input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+
+    &:focus {
+      border-color: #2563eb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+  }
+}
+
+// ---- Список детей ----
+.adm-list {
+  max-height: 72vh;
+  overflow: auto;
+}
+
+.adm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  gap: 10px;
+
+  &:hover {
+    background: #f9fafb;
+  }
+}
+
+.adm-item-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #6b7280;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.adm-item-title {
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.adm-item-go {
+  color: #9ca3af;
+  font-size: 18px;
+  padding: 0 2px 0 6px;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    color: #2563eb;
+  }
+}
+
+.adm-empty {
+  padding: 24px;
+  color: #9ca3af;
+  text-align: center;
+  font-size: 14px;
+}
+
+// ---- Форма ----
+.adm-form {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #111827;
+    background: #fff;
+
+    &:focus {
+      border-color: #2563eb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+    &:disabled {
+      background: #f9fafb;
+      color: #6b7280;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.adm-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.adm-level-lock {
+  color: #6b7280;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.adm-row {
+  display: flex;
+}
+
+.adm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+
+  input {
+    width: auto;
+  }
+}
+
+.adm-msg {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 500;
+
+  &.ok {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+  }
+
+  &.err {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+  }
+
+  &.info {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+}
+
+.adm-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.adm-btn {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+.adm-btn-primary {
+  background: #111827;
+  color: #fff;
+  border-color: #111827;
+
+  &:hover {
+    background: #1f2937;
+  }
+}
+
+.adm-btn-danger {
+  color: #b91c1c;
+  border-color: #fecaca;
+
+  &:hover {
+    background: #fef2f2;
+  }
+}
+
+.adm-btn-mini {
+  padding: 2px 8px;
+  font-size: 12px;
+}

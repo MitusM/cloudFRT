@@ -25,6 +25,8 @@ const common = merge([
       users: './microservices/users/assets/js/index.js',
       login: './microservices/auth/assets/js/index.js',
       article: './microservices/article/assets/js/index.js',
+      destinations: './microservices/destinations/assets/js/index.js',
+      destinations_admin: './microservices/destinations/assets/js/admin.js',
     },
 
     optimization: {
