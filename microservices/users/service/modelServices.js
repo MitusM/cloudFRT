@@ -214,11 +214,25 @@ class UserModel extends PDO {
     return this.queryOne('SELECT * FROM Settings WHERE microservice="users"')
   }
 
-  setSettings(obj) {
-    return this.insert(
-      'UPDATE Settings SET settings=:settings, microservice="users", created =sysdate() UPSERT WHERE microservice="users"',
-      { params: { settings: obj } },
-    )
+  /** Сохранить настройки МС users (UPSERT по полю microservice).
+   *  Возвращает { count } как от UPDATE UPSERT — обработчик ждёт count === 1.
+   *  Внимание: обёртка insert() вернула бы { message, type, done }, что ломает
+   *  проверку count — поэтому вызываем session.command напрямую. */
+  async setSettings(obj) {
+    try {
+      const session = await this.pool.acquire()
+      const message = await session
+        .command(
+          'UPDATE Settings SET settings=:settings, microservice="users", created=sysdate() UPSERT WHERE microservice="users"',
+          { params: { settings: obj } },
+        )
+        .one()
+      session.close()
+      return message
+    } catch (err) {
+      console.log('⚡ err::Model.setSettings', err)
+      return { count: 0, err }
+    }
   }
 }
 

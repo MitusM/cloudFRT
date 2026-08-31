@@ -356,39 +356,38 @@ const endpoints = async (app) => {
   app.put('/users/settings(.*)', async (req, res) => {
     try {
       const body = req.body
-      if (body.csrf === req.session.csrfSecret) {
-        let obj = {
-          limit: body.limit,
-          quota: body.quota,
-          cache: body.cache,
-        }
-        /** Сохраняем или обновляем настройки в БД */
-        let settings = await db.setSettings(obj)
-        let status = 201
-        let message = {}
-        if (settings.count === 1) {
-          message.bd = 1
-          /** Сохраняем или обновляем настройки в Redis */
-          const cache = await res.app.ask('cache', {
-            server: {
-              action: 'cache:set',
-              meta: {
-                options: { db: 1 },
-                key: 'settings:users',
-                val: JSON.stringify(obj),
-              },
-            },
-          })
-
-          message.redis = cache.response.value === 'OK' ? 1 : 0
-        } else {
-          status = 200
-          message.bd = 0
-        }
-        res.status(200).end({ status: status, message: message })
-      } else {
-        // no CSRF protection
+      if (body.csrf !== req.session.csrfSecret) {
+        return res.status(403).json({ status: 403, message: 'Forbidden' })
       }
+      const obj = {
+        limit: body.limit,
+        quota: body.quota,
+        cache: body.cache,
+      }
+      /** Сохраняем или обновляем настройки в БД */
+      const settings = await db.setSettings(obj)
+      let status = 201
+      const message = {}
+      if (settings.count === 1) {
+        message.bd = 1
+        /** Сохраняем или обновляем настройки в Redis */
+        const cache = await res.app.ask('cache', {
+          server: {
+            action: 'cache:set',
+            meta: {
+              options: { db: 1 },
+              key: 'settings:users',
+              val: JSON.stringify(obj),
+            },
+          },
+        })
+
+        message.redis = cache.response.value === 'OK' ? 1 : 0
+      } else {
+        status = 200
+        message.bd = 0
+      }
+      res.status(status).json({ status, message })
     } catch (err) {
       return errorHandler(res, err)
     }

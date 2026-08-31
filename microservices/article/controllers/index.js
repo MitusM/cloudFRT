@@ -445,45 +445,44 @@ const endpoints = async (app) => {
   app.put('/article/settings(.*)', async (req, res) => {
     try {
       const body = req.body
-      if (csrfOk(body, req)) {
-        let obj = {
-          limit: body.limit,
-          quota: body.quota,
-          cache: body.cache,
-        }
-        /** Сохраняем или обновляем настройки в БД */
-        let settings = await db.setSettings(obj)
-        /** Сохраняем или обновляем настройки в Redis */
-        let setRedis = await Redis.set(K.SETTINGS, JSON.stringify(obj))
-        /** Удаляем страницы из Redis - кэш */
-        let del = await Redis.delPattern(K.PAGE_PATTERN)
-        // console.log('⚡ del::', del)
-        let status = 201
-        let message = {}
-        if (settings.count === 1) {
-          message.bd = 1
-        } else {
-          status = 200
-          message.bd = 0
-        }
-
-        if (setRedis === 'OK') {
-          message.redis = 1
-        } else {
-          status = 200
-          message.redis = 0
-        }
-
-        if (del === true) {
-          message.cache = 1
-        } else {
-          status = 200
-          message.cache = 0
-        }
-        res.status(200).end({ status: status, message: message })
-      } else {
-        // no CSRF protection
+      if (!csrfOk(body, req)) {
+        return res.status(403).json({ status: 403, message: 'Forbidden' })
       }
+      const obj = {
+        limit: body.limit,
+        quota: body.quota,
+        cache: body.cache,
+      }
+      /** Сохраняем или обновляем настройки в БД */
+      const settings = await db.setSettings(obj)
+      /** Сохраняем или обновляем настройки в Redis */
+      const setRedis = await Redis.set(K.SETTINGS, JSON.stringify(obj))
+      /** Удаляем страницы из Redis - кэш */
+      const del = await Redis.delPattern(K.PAGE_PATTERN)
+      // console.log('⚡ del::', del)
+      let status = 201
+      const message = {}
+      if (settings.count === 1) {
+        message.bd = 1
+      } else {
+        status = 200
+        message.bd = 0
+      }
+
+      if (setRedis === 'OK') {
+        message.redis = 1
+      } else {
+        status = 200
+        message.redis = 0
+      }
+
+      if (del === true) {
+        message.cache = 1
+      } else {
+        status = 200
+        message.cache = 0
+      }
+      res.status(status).json({ status, message })
     } catch (err) {
       return errorHandler(res, err)
     }
