@@ -122,6 +122,31 @@ h2.dest-h2 {
     color: #6b7280;
     letter-spacing: 0.5px;
   }
+  // описание и контент в карточке направления (root)
+  .dc-desc {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: #374151;
+  }
+  .dc-content {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #4b5563;
+    line-height: 1.45;
+    // обрезка длинного контента — не растягивает карточку
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    > *:first-child {
+      margin-top: 0;
+    }
+    > *:last-child {
+      margin-bottom: 0;
+    }
+  }
 }
 
 .dest-links {

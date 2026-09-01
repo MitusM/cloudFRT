@@ -121,6 +121,29 @@ h2.dest-h2 {
   color: #6b7280;
   letter-spacing: 0.5px;
 }
+.dest-child .dc-desc {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #374151;
+}
+.dest-child .dc-content {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #4b5563;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dest-child .dc-content > *:first-child {
+  margin-top: 0;
+}
+.dest-child .dc-content > *:last-child {
+  margin-bottom: 0;
+}
 
 .dest-links {
   margin-top: 32px;

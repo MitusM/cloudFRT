@@ -124,7 +124,7 @@ const endpoints = async (app) => {
 
       // корни дерева = места без родителя (out('PART_OF').size() = 0)
       const roots = await db.queryAll(
-        `SELECT @rid as rid, slug, title, h1, level, image, priority
+        `SELECT @rid as rid, slug, title, h1, level, image, priority, description, content
          FROM Dest WHERE out('PART_OF').size() = 0 ORDER BY priority DESC`
       )
 
@@ -133,6 +133,8 @@ const endpoints = async (app) => {
         title: r.title,
         h1: r.h1,
         level: r.level,
+        description: r.description || '',
+        content: r.content && r.content.html ? r.content.html : (r.content || ''),
         url: `/destinations/${r.slug}`,
       }))
 

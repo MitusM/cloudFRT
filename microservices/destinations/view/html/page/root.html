@@ -16,6 +16,8 @@
     <a class="dest-child" href="{{ c.url }}">
       <span class="lv">{{ c.level }}</span>
       <span class="t">{{ c.title }}</span>
+      {% if c.description %}<span class="dc-desc">{{ c.description }}</span>{% endif %}
+      {% if c.content %}<span class="dc-content">{{ c.content | safe }}</span>{% endif %}
     </a>
   </li>
   {% endfor %}
