@@ -10,18 +10,21 @@
 
 {% if countries and countries.length %}
 <h2 class="dest-h2">Направления</h2>
-<ul class="dest-children">
+<div class="dest-grid">
   {% for c in countries %}
-  <li>
-    <a class="dest-child" href="{{ c.url }}">
+  <a class="dest-card" href="{{ c.url }}">
+    {% if c.image %}
+    <div class="dc-media"><img class="dc-img" src="{{ c.image }}" alt="{{ c.title }}" loading="lazy" /></div>
+    {% endif %}
+    <div class="dc-body">
       <span class="lv">{{ c.level }}</span>
       <span class="t">{{ c.title }}</span>
       {% if c.description %}<span class="dc-desc">{{ c.description }}</span>{% endif %}
       {% if c.content %}<span class="dc-content">{{ c.content | safe }}</span>{% endif %}
-    </a>
-  </li>
+    </div>
+  </a>
   {% endfor %}
-</ul>
+</div>
 {% else %}
 <p>Раздел наполняется.</p>
 {% endif %}

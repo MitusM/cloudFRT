@@ -27,6 +27,18 @@ const APP_URL = process.env.APP_URL || 'https://cloud.frt.su'
 const CacheRedis = new Cache({ db: 0 })
 const CACHE_TTL = 300 // сек, публичный кэш страниц
 
+// Извлечь первый абзац из HTML-контента (для превью в карточке)
+// Берёт содержимое первого <p>…</p>; если абзацев нет — всё до начала первого блочного тега.
+function firstParagraph(html) {
+  if (!html) return ''
+  const src = String(html)
+  const m = src.match(/<p[^>]*>([\s\S]*?)<\/p>/i)
+  if (m) return m[1].trim()
+  // нет <p>: обрезаем до первого блочного тега (h1-h6, div, ul и т.п.)
+  const b = src.match(/^([\s\S]*?)(?=<h[1-6]|<div|<ul|<ol|<table|\z)/i)
+  return (b ? b[1] : src).trim()
+}
+
 // Инвалидировать кэш всех публичных страниц (при записи узла проще сбросить всё,
 // чем трекать затронутые пути — список путей невелик на старте)
 function invalidatePageCache() {
@@ -133,8 +145,10 @@ const endpoints = async (app) => {
         title: r.title,
         h1: r.h1,
         level: r.level,
+        image: r.image || '',
         description: r.description || '',
-        content: r.content && r.content.html ? r.content.html : (r.content || ''),
+        // в карточке показываем только первый абзац контента
+        content: firstParagraph(r.content && r.content.html ? r.content.html : (r.content || '')),
         url: `/destinations/${r.slug}`,
       }))
 
