@@ -2,7 +2,8 @@
  * *  middleware - setup route middlewares  *
  * destinations: SEO-страницы (GET /destinations/*) доступны БЕЗ авторизации —
  * чтобы их индексировали поисковики и открывались без логина.
- * Админ-CRUD (/destinations/admin/*) защищён (req.session.auth) — 401 JSON.
+ * Админ-CRUD (/destinations/admin/*) защищён: требует авторизации (req.session.auth)
+ * И группу 'admin' (req.session.user.group === 'admin'). Не-админ получает 403.
  * ***** ***** ***** ***** ***** ***** ***** */
 'use strict'
 
@@ -45,6 +46,10 @@ const middlewares = (app) => {
         console.log('⚡ err::destinations middleware aut:redirect', err)
         return res.status(401).json({ error: 'unauthorized' })
       }
+    }
+    // Авторизован. Админка destinations доступна только группе 'admin'.
+    if ((req.session.user && req.session.user.group) !== 'admin') {
+      return res.status(403).json({ error: 'forbidden: admin only' })
     }
     next()
   })
