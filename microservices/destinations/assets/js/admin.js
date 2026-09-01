@@ -40,6 +40,22 @@ import '../scss/admin.scss'
       .replace(/'/g, '&#39;')
   }
 
+  // ---- tinymce хелперы для поля #f-content ----
+  // Возвращают current content редактора или (если редактор ещё не создан)
+  // значение textarea — чтобы форма работала и при первом рендере до init.
+  function contentEditor() {
+    return window.tinymce && tinymce.get('f-content') ? tinymce.get('f-content') : null
+  }
+  function getContent() {
+    var ed = contentEditor()
+    return ed ? ed.getContent() : el('f-content').value
+  }
+  function setContent(html) {
+    var ed = contentEditor()
+    if (ed) ed.setContent(html || '')
+    el('f-content').value = html || ''
+  }
+
   // ---- уровень для нового узла в текущем контексте ----
   function nextLevel(rlevel) {
     return rlevel ? NEXT_LEVEL[rlevel] : 'country'
@@ -263,11 +279,12 @@ import '../scss/admin.scss'
   function newNode() {
     el('adm-form-title').textContent = 'Новый узел'
     el('f-rid').value = ''
-    ;['f-title', 'f-slug', 'f-h1', 'f-description', 'f-image', 'f-content', 'f-lat', 'f-lng', 'f-priority'].forEach(
+    ;['f-title', 'f-slug', 'f-h1', 'f-description', 'f-image', 'f-lat', 'f-lng', 'f-priority'].forEach(
       function (id) {
         el(id).value = ''
       }
     )
+    setContent('')
     // авто-уровень: в корне → страна, в стране → регион, и т.д.
     var lvl = nextLevel(state.currentNode ? state.currentNode.level : null)
     el('f-level').value = lvl || 'country'
@@ -346,7 +363,7 @@ import '../scss/admin.scss'
         el('f-is_hub').checked = !(d.is_hub === false)
         el('f-image').value = d.image || ''
         el('f-description').value = d.description || ''
-        el('f-content').value = d.content && d.content.html ? d.content.html : d.content || ''
+        setContent(d.content && d.content.html ? d.content.html : d.content || '')
         el('f-lat').value = d.lat != null ? d.lat : ''
         el('f-lng').value = d.lng != null ? d.lng : ''
         el('f-current-rid').value = d.parentRid || ''
@@ -387,7 +404,7 @@ import '../scss/admin.scss'
       level: el('f-level').value,
       parentRid: parentVal || null,
       description: el('f-description').value || undefined,
-      content: el('f-content').value || undefined,
+      content: getContent() || undefined,
       image: el('f-image').value.trim() || undefined,
       is_hub: el('f-is_hub').checked,
       priority: el('f-priority').value ? parseFloat(el('f-priority').value) : undefined,
@@ -534,6 +551,40 @@ import '../scss/admin.scss'
     newNode()
   }
   el('f-level').onchange = updateLevelHint
+
+  // ---- инициализация tinymce 8 для поля #f-content ----
+  if (window.tinymce) {
+    tinymce.init({
+      selector: '#f-content',
+      license_key: 'gpl',
+      language: 'ru',
+      min_height: 600,
+      menubar: false,
+      branding: false,
+      promotion: false,
+      plugins:
+        'lists advlist link autolink image table wordcount emoticons fullscreen visualblocks autoresize searchreplace'
+          .split(' ')
+          .join(' '),
+      toolbar:
+        'undo redo | blocks | bold italic underline strikethrough | forecolor backcolor | ' +
+        'bullist numlist | alignleft aligncenter alignright alignjustify | link image table | ' +
+        'emoticons visualblocks searchreplace | fullscreen',
+      link_default_target: '_blank',
+      link_default_protocol: 'https',
+      // не даём tinymce обернуть всё в свои теги при сохранении —
+      // оставляем как есть, т.к. destinations хранит content.html как есть
+      valid_children: '+p[div]',
+      setup: function (ed) {
+        ed.on('init', function () {
+          // если во время init уже было заполнено (напр. editNode до init),
+          // синхронизируем textarea → редактор
+          var val = el('f-content').value
+          if (val) ed.setContent(val)
+        })
+      },
+    })
+  }
 
   // ---- старт ----
   loadChildren(null)

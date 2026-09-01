@@ -63,7 +63,7 @@
     "sharp": "^0.35.3",
     "sortablejs": "^1.15.2",
     "storage-manager-js": "^4.2.6",
-    "tinymce": "^7.0.1",
+    "tinymce": "^8.9.0",
     "tippy.js": "^6.3.7",
     "typograf": "^7.4.0",
     "undici": "^8.10.0"
