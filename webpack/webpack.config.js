@@ -16,6 +16,15 @@ const pathList = {
   css: path.join(appRoot.path, 'public', 'css'),
 }
 
+// Обечистка копии из пакета tinymce 8 (CopyPlugin filter):
+//   - *.ts — исходники скинов (для проды нужны только css/js)
+//   - plugins/help/js/i18n/keynav/* — 60 локальей навигации help (у нас ru, help не подключён)
+function tinymceFilter(resourcePath) {
+  if (resourcePath.endsWith('.ts')) return false
+  if (resourcePath.includes('/plugins/help/js/i18n/keynav/')) return false
+  return true
+}
+
 const common = merge([
   {
     // context:
@@ -83,44 +92,53 @@ const common = merge([
           NODE_ENV: JSON.stringify(process.env.NODE_ENV || 'development'),
         },
       }),
+      // отсекаем лишнее из пакета tinymce 8: .ts-исходники и keynav-локали help
       new CopyPlugin({
         patterns: [
-          {
-            from: 'node_modules/tinymce/plugins',
-            to: path.join(pathList.build, '/plugins'),
-          },
-          {
-            from: 'node_modules/tinymce/skins',
-            to: path.join(pathList.build, '/skins'),
-          },
-          {
-            from: 'assets/js/tinymce/langs',
-            to: path.join(pathList.build, '/langs'),
-          },
-          {
-            from: 'node_modules/tinymce/themes',
-            to: path.join(pathList.build, '/themes'),
-          },
-          {
-            from: 'node_modules/tinymce/tinymce.min.js',
-            to: path.join(pathList.build),
-          },
-          {
-            from: 'node_modules/tinymce/icons',
-            to: path.join(pathList.build, '/icons'),
-          },
-          {
-            from: 'node_modules/tinymce/models',
-            to: path.join(pathList.build, '/models'),
-          },
-          {
-            from: 'assets/js/tinymce/oxide-icon-pack-template/dist/icons/cloudFRT/icons.js',
-            to: path.join(pathList.build, '/icons'),
-          },
-          {
-            from: 'node_modules/preloader-js/assets/css/preloader.css',
-            to: path.join(pathList.css),
-          },
+        // Фильтр лишнего из пакета tinymce (aprейд до 8.x):
+        //   - *.ts — исходники скинов (не нужны в проде, только css/js)
+        //   - plugins/help/js/i18n/keynav/* — 60 локальей навигации help (у нас только ru, help не подключён)
+        {
+          from: 'node_modules/tinymce/plugins',
+          to: path.join(pathList.build, '/plugins'),
+          filter: tinymceFilter,
+        },
+        {
+          from: 'node_modules/tinymce/skins',
+          to: path.join(pathList.build, '/skins'),
+          filter: tinymceFilter,
+        },
+        {
+          from: 'assets/js/tinymce/langs',
+          to: path.join(pathList.build, '/langs'),
+        },
+        {
+          from: 'node_modules/tinymce/themes',
+          to: path.join(pathList.build, '/themes'),
+          filter: tinymceFilter,
+        },
+        {
+          from: 'node_modules/tinymce/tinymce.min.js',
+          to: path.join(pathList.build),
+        },
+        {
+          from: 'node_modules/tinymce/icons',
+          to: path.join(pathList.build, '/icons'),
+          filter: tinymceFilter,
+        },
+        {
+          from: 'node_modules/tinymce/models',
+          to: path.join(pathList.build, '/models'),
+          filter: tinymceFilter,
+        },
+        {
+          from: 'assets/js/tinymce/oxide-icon-pack-template/dist/icons/cloudFRT/icons.js',
+          to: path.join(pathList.build, '/icons'),
+        },
+        {
+          from: 'node_modules/preloader-js/assets/css/preloader.css',
+          to: path.join(pathList.css),
+        },
         ],
         options: {
           concurrency: 100,
