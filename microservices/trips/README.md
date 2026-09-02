@@ -111,9 +111,9 @@ nodemon --watch . ./index.js   # dev (перезапуск при правке)
 ### Установка схемы (один раз)
 
 ```bash
-cd /media/04E0AC01E0ABF6D8/orientdb-community-3.2.55
+cd <ORIENTDB_HOME>   # каталог установки OrientDB
 ./bin/console.sh
-connect remote:127.0.0.1/cloudFRT misha <PASSWORD>
+connect remote:127.0.0.1/<DBNAME> <USER> <PASSWORD>
 # вставить содержимое microservices/trips/schema.sql
 ```
 
