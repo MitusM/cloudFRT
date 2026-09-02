@@ -1,13 +1,13 @@
 # destinations — гео-каталог мест (cloudFRT)
 
-Микросервис `destinations`: SEO-структура frt.su — гео-каталог мест (страны → регионы → места → достопримечательности) с иерархией в виде **графа OrientDB**.
+Микросервис `destinations`: SEO-структура сайта-каталога — гео-каталог мест (страны → регионы → места → достопримечательности) с иерархией в виде **графа OrientDB**.
 
 - **Шина:** микро­сервис cloudFRT на MicromQ (RabbitMQ), `name: 'destinations'`; зависимые МС: `render`, `files`, `auth`, `users`, `cache`, `maps`
 - **БД:** OrientDB 3.2.55 (граф: класс-вершина `Dest` + рёбра)
 - **Кэш:** Redis (инвалидация страниц/настроек)
 - **Рендер:** Nunjucks через МС `render` (обёртка `index.html` + подключаемые страницы)
 
-> Развёрнут на `frt.su` (прод, полный прокси на gateway :7606). См. `schema.sql` — правки схемы вручную, код БД не создаёт.
+> Развёрнут на прод-домене (полный прокси на gateway). См. `schema.sql` — правки схемы вручную, код БД не создаёт.
 
 ---
 
@@ -160,7 +160,7 @@ microservices/destinations/
 | `TIMED_OUT` | таймаут RPC (мс), default 15000 |
 | `ORIENTDB_HOST/PORT/HTTPPORT/USERNAME/PASSWORD/NAME/POOL` | подключение к OrientDB |
 | `REDIS_PORT/HOST/FAMILY/PASSWORD` | Redis-кэш |
-| `APP_URL` | базовый URL (`https://cloud.frt.su`) |
+| `APP_URL` | базовый URL (см. `.env`) |
 | `VIEW_DIR` | каталог шаблонов (`/microservices/destinations/view/html/`) |
 | `TEMPLATE_FILE` | основной layout (`index.html`) |
 
@@ -181,8 +181,8 @@ microservices/destinations/
 ## Установка схемы (один раз)
 
 ```bash
-cd /media/04E0AC01E0ABF6D8/orientdb-community-3.2.55
+cd <ORIENTDB_HOME>   # каталог установки OrientDB
 ./bin/console.sh
-connect remote:127.0.0.1/cloudFRT misha <PASSWORD>
+connect remote:127.0.0.1/<DBNAME> <USER> <PASSWORD>
 # вставить содержимое microservices/destinations/schema.sql
 ```
