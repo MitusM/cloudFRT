@@ -12,9 +12,11 @@
 export const LEVELS = ['country', 'region', 'place', 'attraction']
 
 // Допустимые поля для создания/обновления
+// (status НЕ редактируется формой — меняется отдельным эндпоинтом publish;
+//  он принят здесь только для внутренних вызовов/API.)
 export const FIELDS = [
   'slug', 'title', 'h1', 'level', 'description', 'content',
-  'lat', 'lng', 'image', 'is_hub', 'priority', 'parentRid',
+  'lat', 'lng', 'image', 'is_hub', 'priority', 'parentRid', 'status',
 ]
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -101,6 +103,11 @@ export function validateDestInput(body, { requireTitle = true, levelRequired = f
     } else {
       clean.priority = p
     }
+  }
+
+  // status: только 'draft' | 'published' (иначе игнорируем → останется как есть)
+  if (body.status !== undefined) {
+    if (body.status === 'published' || body.status === 'draft') clean.status = body.status
   }
 
   // parentRid: null/пусто → null (корень); иначе — строка RID

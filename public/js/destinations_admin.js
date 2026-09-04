@@ -101,7 +101,9 @@ __webpack_require__.r(__webpack_exports__);
     // размер страницы
     hasMore: false,
     // есть ли ещё не загруженные дети
-    editing: false // режим формы: false=новый, true=редактирование
+    editing: false,
+    // режим формы: false=новый, true=редактирование
+    currentEditRid: null // RID редактируемого узла (для статус-бара публикации)
   };
 
   // ---- загрузка детей узла (или корня), первая страница ----
@@ -234,11 +236,17 @@ __webpack_require__.r(__webpack_exports__);
   }
 
   // ---- строка списка (ребёнок текущего узла) ----
+  function statusBadge(st) {
+    var pub = st === 'published';
+    return '<span class="adm-item-badge adm-badge-' + (pub ? 'pub' : 'draft') + '" title="' + (pub ? 'Опубликовано' : 'Черновик') + '">' + (pub ? 'Опубликовано' : 'Черновик') + '</span>';
+  }
   function makeItem(n) {
     var item = document.createElement('div');
     item.className = 'adm-item';
     item.setAttribute('data-rid', n.rid || '');
-    item.innerHTML = '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '<button class="adm-btn adm-btn-mini adm-btn-danger" data-act="del" title="Удалить">🗑</button>' + '<span class="adm-item-go" title="Войти в раздел">›</span>' + '</span>';
+    // кнопка публикации: если черновик → «Опубликовать», если опубликован и editable → «Снять»
+    var isPub = n.status === 'published';
+    item.innerHTML = '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + statusBadge(n.status) + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="pub" title="' + (isPub ? 'Снять с публикации (в черновик)' : 'Опубликовать на сайте') + '">' + (isPub ? 'Снять' : 'Опубликовать') + '</button>' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '<button class="adm-btn adm-btn-mini adm-btn-danger" data-act="del" title="Удалить">🗑</button>' + '<span class="adm-item-go" title="Войти в раздел">›</span>' + '</span>';
     return item;
   }
 
@@ -248,7 +256,7 @@ __webpack_require__.r(__webpack_exports__);
     item.className = 'adm-item adm-item-search';
     item.setAttribute('data-rid', n.rid || '');
     item.setAttribute('data-search', '1');
-    item.innerHTML = '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + '<span class="adm-item-body">' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-path">' + esc(n.path || '') + '</span>' + '</span>' + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '</span>';
+    item.innerHTML = '<span class="adm-item-body">' + '<span class="adm-item-title">' + esc(n.title || n.slug) + '</span>' + '<span class="adm-item-path">' + esc(n.path || '') + '</span>' + '</span>' + '<span class="adm-item-badge">' + esc(LEVEL_LABEL[n.level] || n.level) + '</span>' + statusBadge(n.status) + '<span class="adm-item-actions">' + '<button class="adm-btn adm-btn-mini" data-act="pub">' + (n.status === 'published' ? 'Снять' : 'Опубликовать') + '</button>' + '<button class="adm-btn adm-btn-mini" data-act="edit" title="Редактировать">✎</button>' + '</span>';
     return item;
   }
 
@@ -288,6 +296,9 @@ __webpack_require__.r(__webpack_exports__);
     el('adm-cancel').style.display = 'none';
     el('adm-save').textContent = 'Создать';
     state.editing = false;
+    state.currentEditRid = null;
+    // скрыть статус-бар публикации (новый узел = черновик по факту создания)
+    renderPubBar(null);
   }
 
   // ---- все узлы для селекта родителя (исключая сам узел и его потомков) ----
@@ -352,6 +363,12 @@ __webpack_require__.r(__webpack_exports__);
       el('adm-cancel').style.display = 'inline-block';
       el('adm-save').textContent = 'Сохранить';
       state.editing = true;
+      state.currentEditRid = rid;
+      renderPubBar({
+        rid: rid,
+        status: d.status || 'draft',
+        title: d.title || d.slug
+      });
     })["catch"](function (e) {
       setMsg('Ошибка: ' + e.message, 'err');
     });
@@ -359,6 +376,69 @@ __webpack_require__.r(__webpack_exports__);
   function updateLevelHint() {
     var lvl = el('f-level').value;
     el('f-level-display').textContent = lvl ? ' (' + (LEVEL_LABEL[lvl] || lvl) + ')' : '';
+  }
+
+  // ---- статус-бар публикации в правой панели (только при редактировании) ----
+  function renderPubBar(node) {
+    var wrap = el('adm-pub-wrap');
+    if (!node || !node.rid) {
+      wrap.style.display = 'none';
+      return;
+    }
+    var pub = node.status === 'published';
+    wrap.style.display = 'flex';
+    wrap.setAttribute('data-rid', node.rid);
+    wrap.setAttribute('data-pub', pub ? '1' : '0');
+    var lbl = el('adm-pub-label');
+    lbl.textContent = pub ? 'Опубликовано — виден на сайте' : 'Черновик — скрыт с сайта';
+    lbl.className = 'adm-pub-label ' + (pub ? 'adm-pub-on' : 'adm-pub-off');
+    el('adm-pub-toggle').textContent = pub ? 'Снять с публикации' : 'Опубликовать';
+  }
+
+  // ---- toggle публикации узла ----
+  function togglePublish(rid, forcePublished) {
+    var makePub = forcePublished !== null && forcePublished !== undefined ? !!forcePublished : null;
+    // найти текущий статус: из правки (state.pubСтатус) или из списка
+    var finder = function finder(arr) {
+      var found = null;
+      (arr || []).forEach(function (x) {
+        if (String(x.rid) === String(rid)) found = x;
+      });
+      return found;
+    };
+    var n = finder(state.children) || finder(state.searchResults);
+    var curPub = n ? n.status === 'published' : el('adm-pub-toggle').getAttribute('data-pub') === '1';
+    if (makePub === null) makePub = !curPub;
+    fetch(API + '/' + encodeURIComponent(rid) + '/publish', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        csrf: CSRF,
+        publish: makePub
+      })
+    }).then(function (r) {
+      return r.json();
+    }).then(function (j) {
+      if (j.done) {
+        setMsg(makePub ? 'Опубликовано ✓' : 'Снято с публикации', 'ok');
+        // обновить список и форму
+        loadChildren(state.current);
+        setTimeout(function () {
+          if (state.editing && state.currentEditRid && String(state.currentEditRid) === String(rid)) {
+            // обновить объект currentNode status для бара
+            renderPubBar({
+              rid: rid,
+              status: j.status,
+              title: n && n.title || rid
+            });
+          }
+        }, 350);
+      } else setMsg('Ошибка: ' + (j.error || 'не удалось'), 'err');
+    })["catch"](function (e) {
+      setMsg('Ошибка сети: ' + e.message, 'err');
+    });
   }
 
   // ---- сохранение (create/update) ----
@@ -486,7 +566,7 @@ __webpack_require__.r(__webpack_exports__);
     if (btn) {
       var act = btn.getAttribute('data-act');
       ev.stopPropagation();
-      if (act === 'edit') editNode(rid);else if (act === 'del') deleteNode(rid);
+      if (act === 'edit') editNode(rid);else if (act === 'del') deleteNode(rid);else if (act === 'pub') togglePublish(rid, null);
     } else if (isSearch) {
       // клик по телу результата поиска → редактирование
       editNode(rid);
@@ -516,6 +596,14 @@ __webpack_require__.r(__webpack_exports__);
   };
   el('adm-cancel').onclick = function () {
     newNode();
+  };
+  // кнопка в статус-баре формы: опубликовать/снять текущий редактируемый узел
+  el('adm-pub-toggle').onclick = function () {
+    if (!state.currentEditRid) return;
+    // направление: если сейчас опубликован → публикуем false; если черновик → true
+    var wrap = el('adm-pub-wrap');
+    var isPub = wrap.getAttribute('data-pub') === '1' || el('adm-pub-label').className.indexOf('adm-pub-on') !== -1;
+    togglePublish(state.currentEditRid, !isPub);
   };
   el('f-level').onchange = updateLevelHint;
 

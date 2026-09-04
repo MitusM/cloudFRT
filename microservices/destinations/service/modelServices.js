@@ -86,6 +86,10 @@ class Model extends PDO {
   // parentRid опционален — при указании создаётся ребро PART_OF.
   // ПАРАМЕТРЫ ИНЛАЙНЯТСЯ в SQL (orientjs в этом стеке не подставляет
   // ни :named, ни позиционные ? — проверено; инлайн — как в article).
+  //
+  // ПУБЛИКАЦИЯ: новый узел создаётся как ЧЕРНОВИК (status='draft'), пока
+  // админ не нажмёт «Опубликовать». Публичные SEO-страницы показывают
+  // только status='published', причём draft прячет и всё своё поддерево.
   async createDest({
     slug,
     title,
@@ -99,11 +103,12 @@ class Model extends PDO {
     is_hub,
     priority,
     parentRid,
+    status, // 'draft' (default) | 'published'
   }) {
     // экранировать строку для инлайна в SQL (одинарные кавычки)
     const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
     const num = (v, d) => (v == null || v === '' ? d : v)
-    // content — тип EMBEDDED: пустое значение/null, не строка (иначе OValidationException)
+    // content хранится как строка (fix 31.08).
     const embed = (v) => (v == null || v === '' ? 'null' : sq(v))
 
     const loc = lat != null && lng != null
@@ -111,13 +116,18 @@ class Model extends PDO {
       : null
     const locSql = loc ? `, location = ${loc}` : ''
 
+    // по умолчанию — черновик (новые материалы не появляются на сайте, пока
+    // не опубликованы вручную).
+    const st = status === 'published' ? 'published' : 'draft'
+
     const res = await this.insert(
       `CREATE VERTEX Dest SET
         slug = ${sq(slug)}, title = ${sq(title)}, h1 = ${sq(h1 || title)},
         level = ${sq(level || 'place')}, description = ${sq(description || '')},
         content = ${embed(content)}, image = ${sq(image || '')},
         is_hub = ${is_hub === undefined ? true : !!is_hub},
-        priority = ${num(priority, 0.5)}, created = sysdate()${locSql}`
+        priority = ${num(priority, 0.5)}, status = '${st}',
+        created = sysdate()${locSql}`
     )
     if (!res.done || !res.message) return res
     const dest = Array.isArray(res.message) ? res.message[0] : res.message
@@ -134,7 +144,7 @@ class Model extends PDO {
     const lim = parseInt(limit, 10) || 100
     const off = parseInt(offset, 10) || 0
     return this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, is_hub, priority, image, created
+      `SELECT @rid as rid, slug, title, h1, level, is_hub, priority, image, status, created
        FROM Dest ORDER BY created DESC SKIP ${off} LIMIT ${lim}`
     )
   }
@@ -171,7 +181,7 @@ class Model extends PDO {
   // --- Обновить узел (безопасно: белый список полей + ЭКРАН-пингование) ---
   // Поля, которые можно менять. Безопасно от SQL-инъекции (нельзя произвольный set).
   async updateDest(rid, fields) {
-    const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'is_hub', 'priority']
+    const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'is_hub', 'priority', 'status']
     const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
     const num = (v) => (v == null ? 'null' : String(v))
     // content — EMBEDDED: пустое → null
@@ -182,13 +192,15 @@ class Model extends PDO {
       if (fields[key] === undefined) continue
       if (key === 'content') {
         set.push(`content = ${embed(fields[key])}`)
-      } else if (key === 'priority' || key === 'is_hub') {
-        if (key === 'is_hub') {
-          set.push(`is_hub = ${fields[key] ? true : false}`)
-        } else {
-          const n = parseFloat(fields[key])
-          set.push(`priority = ${Number.isNaN(n) ? 0.5 : n}`)
-        }
+      } else if (key === 'priority') {
+        const n = parseFloat(fields[key])
+        set.push(`priority = ${Number.isNaN(n) ? 0.5 : n}`)
+      } else if (key === 'is_hub') {
+        set.push(`is_hub = ${fields[key] ? true : false}`)
+      } else if (key === 'status') {
+        // только черновик/опубликовано (игнорируем мусор)
+        const st = fields[key] === 'published' ? 'published' : 'draft'
+        set.push(`status = '${st}'`)
       } else {
         set.push(`${key} = ${sq(fields[key])}`)
       }
@@ -202,6 +214,28 @@ class Model extends PDO {
     if (!set.length) return { done: true, updated: 0 }
     const res = await this.command(`UPDATE ${rid} SET ${set.join(', ')}`)
     return { done: true, updated: (res && res.length) || 0 }
+  }
+
+  // --- Сменить статус публикации узла: 'draft' | 'published' ---
+  async setStatus(rid, status) {
+    const st = status === 'published' ? 'published' : 'draft'
+    const res = await this.command(`UPDATE ${rid} SET status = '${st}'`)
+    return { done: true, updated: (res && res.length) || 0 }
+  }
+
+  // --- Множество СКРЫТЫХ RID (draft-узлы + всё их поддерево). ---
+  // Правило: черновик не показывается и прячет всех своих потомков (ребёнок
+  // достижим только через опубликованных предков). Поэтому скрытые = все
+  // draft-вершины и всё, что под ними вниз по PART_OF.
+  async getClosedRids() {
+    const rows = await this.queryAll(
+      `SELECT @rid as rid FROM (
+         TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE status = 'draft')
+       )`
+    )
+    const set = new Set()
+    for (const r of rows || []) set.add(String(r.rid))
+    return set
   }
 
   // --- Сменить родителя: удалить старые PART_OF из узла, добавить новое ---
@@ -242,10 +276,14 @@ class Model extends PDO {
   }
 
   // --- Список прямых детей узла (у кого ребро PART_OF на rid) ---
+  // ПУБЛИЧНАЯ версия: показываем только опубликованных детей. Родитель на этот
+  // момент уже опубликован (сюда заходят со страницы видимого узла), поэтому
+  // достаточно self-status — а не-опубликованный ребёнок прячет и своё поддерево.
   async listChildren(rid, limit = 50) {
     return this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, image, priority FROM Dest
-       WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC LIMIT ${limit}`
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, status FROM Dest
+       WHERE ${rid} IN out('PART_OF') AND status = 'published'
+       ORDER BY priority DESC LIMIT ${limit}`
     )
   }
 
@@ -254,7 +292,7 @@ class Model extends PDO {
     const lim = parseInt(limit, 10) || 50
     const off = parseInt(offset, 10) || 0
     return this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub, status FROM Dest
        WHERE ${rid} IN out('PART_OF') ORDER BY priority DESC SKIP ${off} LIMIT ${lim}`
     )
   }
@@ -273,7 +311,7 @@ class Model extends PDO {
     const lim = parseInt(limit, 10) || 50
     const off = parseInt(offset, 10) || 0
     return this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub FROM Dest
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, is_hub, status FROM Dest
        WHERE out('PART_OF').size() = 0 ORDER BY priority DESC SKIP ${off} LIMIT ${lim}`
     )
   }
@@ -295,21 +333,24 @@ class Model extends PDO {
     )
   }
 
-  // --- Узел по полному пути (массив slug от корня) ---
+  // --- Узел по полному пути (массив slug от корня) [ПУБЛИЧНЫЙ] ---
+  // Возвращает только узел, вся ветка которого опубликована: корень сам должен
+  // быть published, и каждый следующий хопу — тоже published ребёнок. Поэтому
+  // если где-то в цепочке черновик — спуск обрывается (null).
   async getByPath(slugs) {
     if (!slugs || !slugs.length) return null
     const esc = (s) => String(s).replace(/'/g, "\\'")
     const rootSlug = esc(slugs[0])
     // первый slug — корень (нет родителей: out('PART_OF').size() = 0)
     let current = await this.queryOne(
-      `SELECT * FROM Dest WHERE slug = '${rootSlug}' AND out('PART_OF').size() = 0`
+      `SELECT * FROM Dest WHERE slug = '${rootSlug}' AND out('PART_OF').size() = 0 AND status = 'published'`
     )
     if (!current) return null
-    // спускаемся: каждый следующий slug — ребёнок (его out('PART_OF') = текущий)
+    // спускаемся: каждый следующий slug — опубликованный ребёнок
     for (let i = 1; i < slugs.length; i++) {
       const rid = current['@rid']
       current = await this.queryOne(
-        `SELECT * FROM Dest WHERE slug = '${esc(slugs[i])}' AND ${rid} IN out('PART_OF')`
+        `SELECT * FROM Dest WHERE slug = '${esc(slugs[i])}' AND ${rid} IN out('PART_OF') AND status = 'published'`
       )
       if (!current) return null
     }
@@ -328,14 +369,18 @@ class Model extends PDO {
   // Водопад Корбу напрямую, минуя промежуточный хаб Телецкого озера.
   // Возвращает { places: [{rid,slug,title,level,priority,path:[rids]}], slugMap: {rid:slug} }.
   // path — цепочка RID от хаба до узла (для сборки полного URL).
+  // ПУБЛИЧНЫЙ: исключаем черновики и всё, что под ними (closed), чтобы не
+  // протащить опубликованный узел, живущий под черновиком.
   async getTopPlaces(rid, { levels = ['attraction', 'place'], limit = 12 } = {}) {
     const lim = parseInt(limit, 10) || 12
     const levelClause = levels.length ? `(${levels.map((l) => `level = '${l}'`).join(' OR ')})` : '1=1'
+    const closed = await this.getClosedRids()
     const places = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, priority, $path AS path FROM (
+      `SELECT @rid as rid, slug, title, level, priority, status, $path AS path FROM (
         TRAVERSE in('PART_OF') FROM ${rid}
-      ) WHERE ${levelClause} ORDER BY priority DESC LIMIT ${lim}`
+      ) WHERE ${levelClause} AND status = 'published' ORDER BY priority DESC LIMIT ${lim}`
     )
+    const publicPlaces = places.filter((p) => !closed.has(String(p.rid)))
     // карта rid→slug по всему поддереву (для промежуточных звеньев пути)
     const all = await this.queryAll(
       `SELECT @rid as rid, slug FROM (TRAVERSE in('PART_OF') FROM ${rid})`
@@ -346,7 +391,7 @@ class Model extends PDO {
       slugMap[r] = n.slug
       slugMap[r.match(/#\d+:\d+/)?.[0]] = n.slug
     }
-    return { places, slugMap }
+    return { places: publicPlaces, slugMap }
   }
 
   // «Похожие места»: братья по дереву (same parent). Для достопримечательности -
@@ -360,9 +405,9 @@ class Model extends PDO {
     // берём родителей (обычно один), для каждого собираем детей
     const parentsList = Array.isArray(parents) ? parents : [parents]
     const out = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, priority FROM Dest
+      `SELECT @rid as rid, slug, title, level, priority, status FROM Dest
        WHERE ${parentsList.map((p) => `${p['@rid'] || p} IN out('PART_OF')`).join(' OR ')}
-         AND @rid <> ${rid}
+         AND @rid <> ${rid} AND status = 'published'
        ORDER BY priority DESC LIMIT ${lim}`
     )
     return out
@@ -378,7 +423,7 @@ class Model extends PDO {
   // Возвращает [{ slug, title, level, priority, path:[rids] }] для каждого узла.
   async getSitemapTree() {
     const rows = await this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, priority, is_hub, image, $path AS path FROM (
+      `SELECT @rid as rid, slug, title, h1, level, priority, is_hub, image, status, $path AS path FROM (
         TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
       )`
     )
@@ -405,6 +450,7 @@ class Model extends PDO {
       priority: r.priority,
       is_hub: r.is_hub,
       image: r.image,
+      status: r.status || 'draft',
       // путь: от корня до узла (включительно), via slugMap
       path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
     }))
@@ -416,7 +462,7 @@ class Model extends PDO {
     const esc = (s) => String(s).replace(/'/g, "\\'")
     const like = `%${esc(q).toLowerCase()}%`
     const rows = await this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, image, is_hub, $path AS path FROM (
+      `SELECT @rid as rid, slug, title, h1, level, image, is_hub, status, $path AS path FROM (
         TRAVERSE in('PART_OF') FROM (SELECT FROM Dest WHERE out('PART_OF').size() = 0)
       ) WHERE (slug LIKE '${like}' OR title LIKE '${like}') ORDER BY title LIMIT ${limit}`
     )
@@ -438,6 +484,7 @@ class Model extends PDO {
       level: r.level,
       image: r.image,
       is_hub: r.is_hub,
+      status: r.status || 'draft',
       path: (r.path || []).map((rid) => slugMap[String(rid)]).filter(Boolean).join('/'),
     }))
   }
@@ -494,10 +541,10 @@ class Model extends PDO {
       center = selfLoc
     }
 
-    // прямые дети с location (достопримечательности/подместа)
+    // прямые дети с location (достопримечательности/подместа) — только опубликованные
     const kids = await this.queryAll(
       `SELECT @rid as rid, slug, title, level, location FROM Dest
-       WHERE ${rid} IN out('PART_OF') AND location IS NOT NULL`
+       WHERE ${rid} IN out('PART_OF') AND location IS NOT NULL AND status = 'published'`
     )
     for (const k of kids || []) {
       const loc = pull(k)

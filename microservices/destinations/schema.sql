@@ -49,6 +49,9 @@ CREATE PROPERTY Dest.priority DOUBLE;          -- приоритет в sitemap 
 CREATE PROPERTY Dest.location EMBEDDED;        -- координаты (ST_GeomFromText POINT)
 CREATE PROPERTY Dest.created DATETIME;         -- ТОЛЬКО toOrientDate(), не ISO
 CREATE PROPERTY Dest.links EMBEDDEDMAP;        -- ручные блоки перелинковки: { top_places:[{slug,title,url}], похожие:[...], где_жить:[...], тур:[...] } (этап 4)
+CREATE PROPERTY Dest.status STRING;             -- 'draft' (default) | 'published'. Введено 04.09.2026: новые узлы создаются ЧЕРНОВИКАМИ и не
+                                                -- показываются на сайте, пока админ не опубликует. Черновик прячет и всё своё поддерево.
+ALTER PROPERTY Dest.status DEFAULT 'draft';
 
 /* ---------- ИНДЕКСЫ Dest ---------- */
 CREATE INDEX Dest.slug_idx ON Dest (slug) NOTUNIQUE;

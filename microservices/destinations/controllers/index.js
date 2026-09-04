@@ -134,10 +134,10 @@ const endpoints = async (app) => {
       const cached = await CacheRedis.get('destPage:__root__')
       if (cached) return res.status(200).end(cached)
 
-      // корни дерева = места без родителя (out('PART_OF').size() = 0)
+      // корни дерева = места без родителя (out('PART_OF').size() = 0), только опубликованные
       const roots = await db.queryAll(
         `SELECT @rid as rid, slug, title, h1, level, image, priority, description, content
-         FROM Dest WHERE out('PART_OF').size() = 0 ORDER BY priority DESC`
+         FROM Dest WHERE out('PART_OF').size() = 0 AND status = 'published' ORDER BY priority DESC`
       )
 
       const countries = roots.map((r) => ({
@@ -185,10 +185,16 @@ const endpoints = async (app) => {
     try {
       const tree = await db.getSitemapTree()
 
+      // Публичный sitemap: исключаем черновики и всё, что под ними (closed),
+      // чтобы поисковики не индексировали неготовые страницы. (Админские ветки
+      // getSitemapTree/tree черновики НЕ фильтруют — админ видит всё.)
+      const closed = await db.getClosedRids()
+      const publicTree = tree.filter((n) => !closed.has(n.rid))
+
       // Приоритет: выше для хабов/стран, ниже для достопримечательностей,
       // но не меньше ~0.5 (все страницы ценны).
       const LEVEL_PRIO = { country: 0.9, region: 0.8, place: 0.7, attraction: 0.6 }
-      const urls = tree
+      const urls = publicTree
         .filter((n) => n.path) // без корня самого? корень — отдельная страница, добавим своё
         .map((n) => {
           const base = (n.priority !== undefined && n.priority != null ? n.priority : LEVEL_PRIO[n.level]) || 0.6
@@ -207,10 +213,8 @@ const endpoints = async (app) => {
       lines.push('</urlset>')
       const xml = lines.join('\n')
 
-      // micromq-обвязка res не имеет .type()/.set() — отдаём как есть
+      // micromq-обвязка res не имеет .type() — отдаём как есть
       res.status(200).end(xml)
-
-      res.status(200).type('application/xml').end(xml)
     } catch (err) {
       console.log('⚡ err::destinations sitemap', err)
       return errorHandler(res, 'Server error', 500)
@@ -592,6 +596,31 @@ const endpoints = async (app) => {
       return res.status(200).json({ done: true, updated: result.updated })
     } catch (err) {
       console.log('⚡ err::destinations update', err)
+      return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // ---- Публикация / снятие с публикации (меняет ТОЛЬКО status, контент не трогает) ----
+  // PUT /destinations/admin/:rid/publish   body { publish: true }  → черновик ⇒ опубликовать
+  // PUT /destinations/admin/:rid/publish   body { publish: false } → опубликовать ⇒ черновик
+  // Отдельно от формы: узел сохраняется как черновик, публикуется вручную, когда готов.
+  app.put('/destinations/admin/:rid/publish', async (req, res) => {
+    try {
+      const rid = decodeRid(req.params.rid)
+      if (!rid) return errorHandler(res, 'rid обязателен', 400)
+      const dest = await db.getByRid(rid)
+      if (!dest) return errorHandler(res, 'Not found')
+
+      // явный флаг обязателен: {"publish": true|false} (без тумблер-дефолтов)
+      const publish = req.body && req.body.publish
+      const next = publish ? 'published' : 'draft'
+      const result = await db.setStatus(rid, next)
+
+      // инвалидировать публичный кэш — статус влияет на видимость страниц
+      await invalidatePageCache()
+      return res.status(200).json({ done: true, rid, status: next, updated: result.updated })
+    } catch (err) {
+      console.log('⚡ err::destinations publish', err)
       return errorHandler(res, 'Server error', 500)
     }
   })

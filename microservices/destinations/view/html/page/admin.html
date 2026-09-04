@@ -45,6 +45,11 @@
         <div class="adm-panel-head">
           <span id="adm-form-title">Новый узел</span>
         </div>
+        {# Индикатор/кнопка публикации текущего редактируемого узла (показывается только в режиме правки) #}
+        <div class="adm-pubwrap" id="adm-pub-wrap" style="display:none">
+          <span class="adm-pub-label" id="adm-pub-label">Черновик</span>
+          <button class="adm-btn adm-btn-mini" id="adm-pub-toggle" type="button">Опубликовать</button>
+        </div>
         <div class="adm-form" id="adm-form">
           <input type="hidden" id="f-rid" />
           <input type="hidden" id="f-current-rid" />
