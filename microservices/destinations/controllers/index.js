@@ -16,6 +16,8 @@ import dotenv from 'dotenv'
 import { Model } from '../service/modelServices.js'
 import { validateDestInput, normalizeSlug } from '../service/validation.js'
 import { Cache } from '../service/cacheServices.js'
+import { csrfOk } from '../service/csrf.js'
+import File from '../core/images/index.js'
 
 const appRoot = pkg.path
 dotenv.config()
@@ -638,6 +640,90 @@ const endpoints = async (app) => {
     } catch (err) {
       console.log('⚡ err::destinations delete', err)
       return errorHandler(res, 'Server error', 500)
+    }
+  })
+
+  // --------- Загрузка изображений для материала (аналог MC article) ---------
+  // Gateway:  POST /upload/:microservice-:mi   → кладёт оригинал + resize-папку,
+  //           монтирует req.body = { fields, files } и делегирует сюда.
+  // Клиент destinations админки шлёт /upload/destinations-dest.
+  // Сервис:  оригинал (jpg/png) → webp-оригинал (WEBP_FOLDER_DEST) +
+  //          уменьшенные webp-копии (в resize-папку от gateway). Ответ в формате
+  //          article/{resize:{width:pathFile}, webpOriginal:{...}} для вставки <picture>.
+  app.post('/upload/destinations-dest', async (req, res) => {
+    try {
+      const body = req.body || {}
+      const fields = body.fields || {}
+      const file0 = (body.files && body.files[0]) || null
+      if (!file0 || !file0.isAbsolute) {
+        return res.status(400).json({ status: 400, message: 'Файл не получен' })
+      }
+
+      const Images = new File({ webQuality: 80, jpgQuality: 80 })
+      // папка webp-копии оригинала (по имени загружаемого типа)
+      const webpFolder = process.env.WEBP_FOLDER_DEST || '/images/destinations/dest/webp/'
+      const absolutePathFile = file0.isAbsolute
+      const resizeFolder = file0.resize // от gateway: /images/destinations/<mi>/resize/
+      if (!resizeFolder) {
+        return res.status(400).json({ status: 400, message: 'resize-папка не задана' })
+      }
+
+      // webp-оригинал
+      const webp = await Images.webp(absolutePathFile, webpFolder)
+      const wepFile = webp[0] && webp[0].destinationPath
+      if (!wepFile) {
+        return res.status(500).json({ status: 500, message: 'Не удалось создать webp' })
+      }
+
+      const statFile = await Images.statFile(wepFile)
+      const imgWidth = statFile.width
+
+      // уменьшенные webp-копии (по ширине источника)
+      const resolutionsArr = [480, 960, 1280, 1920, 2700]
+      const minResolution = Images.util.minFilter(resolutionsArr, imgWidth)
+      const img = await Images.resizeWEBP(minResolution, wepFile, resizeFolder)
+      const obj = await Images.util.arrayToObject(img, 'width')
+
+      const imgR = img.map((file) => file.pathFile)
+
+      res.status(200).json({
+        status: 200,
+        body: {
+          original: { name: file0.newName, pathFile: file0.path },
+          resize: obj,
+          webpOriginal: {
+            originalName: statFile.name,
+            name: statFile.name,
+            pathFile: wepFile.split(appRoot)[1] || wepFile,
+            format: statFile.type,
+            size: statFile.size,
+            bytes: statFile.bytes,
+            height: statFile.height,
+            width: imgWidth,
+          },
+          resolution: minResolution,
+          files: [...imgR, file0.path, statFile.path],
+        },
+      })
+    } catch (err) {
+      console.log('⚡ err::destinations upload', err)
+      return res.status(500).json({ status: 500, message: 'Server error' })
+    }
+  })
+
+  // Удаление загруженных файлов изображения (DFS-очистка по списку путей)
+  // DELETE /destinations/admin/delete-image  body:{ files:[...], csrf }
+  app.delete('/destinations/admin/delete-image', async (req, res) => {
+    try {
+      const body = req.body || {}
+      if (!csrfOk(body, req)) {
+        return res.status(403).json({ status: 403, message: 'Forbidden' })
+      }
+      const deleted = await new File().deleteArrayFiles(body.files)
+      res.status(200).json({ status: deleted === true ? 201 : 200 })
+    } catch (err) {
+      console.log('⚡ err::destinations delete-image', err)
+      return res.status(500).json({ status: 500, message: 'Server error' })
     }
   })
 }

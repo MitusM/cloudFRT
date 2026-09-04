@@ -78,6 +78,151 @@ __webpack_require__.r(__webpack_exports__);
     el('f-content').value = html || '';
   }
 
+  // ---------- Загрузка изображений (аналог MC article) ----------
+  // Собирает <figure><picture><source webp (самый широкий из сгенерённых resize)>+
+  //                   <img webp-оригинал>> для вставки в контент (f-content).
+  // resize = response.body.resize (объект { width: {pathFile,...} }).
+  var PIC_W = [480, 960, 1280, 1920, 2700];
+  function pictureTag(resize, webpOriginal, alt, uuid) {
+    // берём самый широкий сгенерированный resize как srcset-кандидат
+    var srcset = '';
+    var sel = null;
+    for (var i = PIC_W.length - 1; i >= 0; i--) {
+      var s = resize && resize[PIC_W[i]];
+      if (s && s.pathFile) {
+        srcset = s.pathFile + ' ' + PIC_W[i] + 'w';
+        sel = PIC_W[i];
+        break;
+      }
+    }
+    // если есть ещё и следующий (узкий) — добавляем его вторым кандидатом
+    var nxtIdx = PIC_W.indexOf(sel) - 1;
+    if (nxtIdx >= 0) {
+      var narrow = resize[PIC_W[nxtIdx]];
+      if (narrow && narrow.pathFile) srcset += ', ' + narrow.pathFile + ' ' + PIC_W[nxtIdx] + 'w';
+    }
+    var html = '<figure id="' + esc(uuid || '') + '" class="figure-picture-img"><picture>';
+    if (srcset) html += '<source type="image/webp" srcset="' + esc(srcset) + '" />';
+    if (webpOriginal && webpOriginal.pathFile) {
+      html += '<img type="image/webp" loading="lazy" src="' + esc(webpOriginal.pathFile) + '" alt="' + esc(alt || '') + '" />';
+    }
+    html += '<figcaption>' + esc(alt || '') + '</figcaption></picture></figure>';
+    return html;
+  }
+
+  // alt по текущему заголовку + счётчику (как в article)
+  function uploadAlt(counter) {
+    var t = (el('f-title').value || '').trim();
+    return (counter || 1) + '-' + (t || 'фото');
+  }
+
+  // Инициализация зоны dropzone (#dest-dropzone) и логика вставки в контент
+  function initDropzone() {
+    if (!window.Dropzone) return;
+    if (el('dest-dropzone').dataset.dzBound) return;
+    el('dest-dropzone').dataset.dzBound = '1';
+    window.Dropzone.autoDiscover = false;
+
+    // кликабелен только заголовок-подсказка (не превью, не вся зона),
+    // чтобы клик по миниатюре не открывал диалог выбора файла
+    var hintEl = document.querySelector('.adm-dropzone-hint');
+    var dropzone = new window.Dropzone('#dest-dropzone', {
+      url: '/upload/destinations-dest',
+      dictDefaultMessage: 'Перетащите изображения или кликните',
+      acceptedFiles: 'image/jpeg,image/jpg,image/png,image/webp',
+      uploadMultiple: false,
+      parallelUploads: 1,
+      addRemoveLinks: true,
+      withCredentials: true,
+      timeout: 300000,
+      thumbnailWidth: 200,
+      thumbnailHeight: 200,
+      clickable: hintEl ? hintEl : '#dest-dropzone'
+    });
+    dropzone.on('sending', function (file, xhr, formData) {
+      formData.append('csrf', CSRF);
+      formData.append('count', 1);
+      var t = (el('f-title').value || '').trim();
+      if (t) formData.append('name', t);
+      // кнопка удаления по умолчанию (крестик в углу) у dropzone v5 нет —
+      // оставляем флажок добавить remove после успеха
+    });
+
+    // Вставка webp-<picture> в редактор (клик по миниатюре/деталим — как в article)
+    function insertIntoEditor(resizeObj, webpOrig, altText, uid) {
+      var ed = contentEditor();
+      var html = pictureTag(resizeObj, webpOrig, altText, uid);
+      if (ed) {
+        // возвращаем фокус в редактор и вставляем в конец
+        ed.focus();
+        try {
+          ed.insertContent(html); // надёжнее execCommand для сложных тегов
+        } catch (err) {
+          ed.execCommand('mceInsertContent', false, html);
+        }
+      } else {
+        el('f-content').value = (el('f-content').value || '') + html;
+      }
+      setMsg('Фото вставлено в контент ✓', 'ok');
+    }
+    dropzone.on('success', function (file, response) {
+      var body = response && response.body;
+      if (!body) {
+        setMsg('Сервер не вернул данные изображения', 'err');
+        return;
+      }
+      var uuid = 'f' + (file.upload && file.upload.uuid ? file.upload.uuid : Date.now());
+      var alt = uploadAlt(1);
+      // пути файлов для очистки с диска при удалении из дропзоны
+      file.dzMeta = {
+        files: body.files || [],
+        resize: body.resize,
+        webpOriginal: body.webpOriginal
+      };
+
+      // клик по изображению или полю деталей → вставка (без ограничения «один раз»)
+      var scope = file.previewElement || file.previewTemplate || null;
+      var steps = function steps(ev) {
+        if (ev.target.closest && ev.target.closest('.dz-remove,.dz-progress')) return;
+        ev.preventDefault && ev.preventDefault();
+        ev.stopPropagation && ev.stopPropagation();
+        insertIntoEditor(body.resize, body.webpOriginal, alt, uuid);
+      };
+      if (scope) {
+        ;
+        ['.dz-image', '.dz-details'].forEach(function (sel) {
+          var node = scope.querySelector(sel);
+          if (node) node.addEventListener('click', steps);
+        });
+        // фолбэк: если превью рендерилось без этих селекторов — клик по всей превью
+        if (!scope.querySelector('.dz-image') && !scope.querySelector('.dz-details')) {
+          scope.addEventListener('click', steps);
+        }
+      }
+      console.log('⚡ destinations upload success, ready to insert:', body);
+    });
+    dropzone.on('error', function (file, message) {
+      setMsg('Ошибка загрузки: ' + (message && message.message ? message.message : message), 'err');
+    });
+
+    // удаление файлов с диска при удалении из дропзоны
+    dropzone.on('removedfile', function (file) {
+      var meta = file.dzMeta;
+      if (meta && meta.files && meta.files.length) {
+        fetch('/destinations/admin/delete-image', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            files: meta.files,
+            csrf: CSRF
+          })
+        })["catch"](function () {});
+      }
+    });
+  }
+
   // ---- уровень для нового узла в текущем контексте ----
   function nextLevel(rlevel) {
     return rlevel ? NEXT_LEVEL[rlevel] : 'country';
@@ -636,6 +781,7 @@ __webpack_require__.r(__webpack_exports__);
   }
 
   // ---- старт ----
+  initDropzone();
   loadChildren(null);
 })();
 
