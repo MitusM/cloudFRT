@@ -88,7 +88,9 @@
             <input id="f-image" placeholder="https://…" />
           </label>
           <label>Загрузка фото в материал
-            <div class="adm-dropzone" id="dest-dropzone">
+            <!-- класс dropzone обязателен: дефолтный css dropzone тайлит миниатюры только под `.dropzone .dz-preview { display:inline-block }`;
+                 сам dropzone v5 класс `dropzone` НЕ добавляет на элемент -->
+            <div class="adm-dropzone dropzone" id="dest-dropzone">
               <div class="adm-dropzone-hint">Перетащите картинку сюда или кликните</div>
             </div>
             <div class="adm-dropzone-info">После загрузки клик по миниатюре вставит фото в контент (webp, адаптивные размеры).</div>

@@ -429,7 +429,7 @@
 // ---- Зона загрузки изображений в материал (dropzone) ----
 // dropzone тянется из unpkg (вьюха index.html, только admin_page).
 // Подгоняем под стиль админ-формы.
-.adm-dropzone {
+.adm-dropzone.dropzone {
   border: 1.5px dashed #cbd5e1;
   border-radius: 8px;
   min-height: 92px;
@@ -439,8 +439,8 @@
   transition: border-color 0.15s;
   margin-top: 4px;
 }
-.adm-dropzone:hover,
-.adm-dropzone.dz-drag-hover {
+.adm-dropzone.dropzone:hover,
+.adm-dropzone.dropzone.dz-drag-hover {
   border-color: #2563eb;
   background: #eff6ff;
 }
@@ -449,17 +449,27 @@
   font-size: 13px;
   text-align: center;
   padding: 26px 8px;
+  margin: 0;
 }
-.adm-dropzone.dz-started .adm-dropzone-hint {
+// Дефолтный dz-message от dropzone («Перетащите изображения или кликните») не нужен:
+// у нас свой hint (.adm-dropzone-hint, а также clickable: hintEl в admin.js).
+// Класс .dropzone на контейнере нужен для плитки превью, но он же включает дефолтный
+// dz-message — прячем его, чтобы не висело две подписи.
+.adm-dropzone.dropzone .dz-message {
+  display: none !important;
+}
+.adm-dropzone.dropzone.dz-started .adm-dropzone-hint {
   display: none;
 }
-.adm-dropzone .dz-preview {
-  margin: 6px;
+.adm-dropzone.dropzone .dz-preview {
+  // дефолт dropzone (.dropzone .dz-preview) уже даёт display:inline-block = плитку;
+  // здесь только отбивка и точечная поправка поверх дефолта (0,2,0 > 0,1,0).
+  margin: 8px;
 }
-.adm-dropzone .dz-preview .dz-image {
+.adm-dropzone.dropzone .dz-preview .dz-image {
   border-radius: 6px;
 }
-.adm-dropzone .dz-preview .dz-details {
+.adm-dropzone.dropzone .dz-preview .dz-details {
   display: none;
 }
 .adm-dropzone-info {
