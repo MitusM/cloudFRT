@@ -27,6 +27,14 @@ let redisStore = new RedisStore({
   client: redisClient,
 })
 
+// Секрет подписи cookie сессии. Общий для gateway и upload-МС (иначе uploads не увидит admin-сессию).
+// Хранится ТОЛЬКО в .env (корень cloudFRT, dotenv.config() в index.js). В коде не зашит.
+const SESSION_SECRET = process.env.SESSION_SECRET
+if (!SESSION_SECRET) {
+  console.error('[gateway] SESSION_SECRET не задан. Добавьте SESSION_SECRET=<значение> в корневой .env (dotenv) и перезапустите. Выход.')
+  process.exit(1)
+}
+
 const action = (app) => {
   app.action('gateway:session', async (meta, res) => {
     try {
@@ -58,7 +66,7 @@ const action = (app) => {
 
   app.use(
     session({
-      secret: 'wuxHK8j2m2DiOkbFb8Hm',
+      secret: SESSION_SECRET,
       name: 'sid',
       resave: false, // не сохранять сеанс, если он не изменен
       saveUninitialized: true,

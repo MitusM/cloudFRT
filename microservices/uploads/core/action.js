@@ -28,10 +28,14 @@ let redisStore = new RedisStore({
  * action(app) — подключает express-session (общий Redis, cookie 'sid') + CSRF.
  * SESSION_SECRET из env ОБЯЗАТЕЛЬНО должен совпадать с gateway (core/action.js),
  * чтобы uploads видел ту же admin-сессию (auth===true + тот же csrfSecret).
- * Фолбэк = прежний секрет gateway, чтобы не сломать сессию, если env не задан.
+ * Секрет не зашит в коде — только в env (.env uploads), совпадает с gateway.
  */
 const action = (app) => {
-  const secret = process.env.SESSION_SECRET || 'wuxHK8j2m2DiOkbFb8Hm'
+  const secret = process.env.SESSION_SECRET
+  if (!secret) {
+    console.error('[uploads] SESSION_SECRET не задан в .env (microservices/uploads/.env). Должен совпадать с gateway. Выход.')
+    process.exit(1)
+  }
 
   app.use(
     session({
