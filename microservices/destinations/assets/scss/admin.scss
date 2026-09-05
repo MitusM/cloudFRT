@@ -465,12 +465,46 @@
   // дефолт dropzone (.dropzone .dz-preview) уже даёт display:inline-block = плитку;
   // здесь только отбивка и точечная поправка поверх дефолта (0,2,0 > 0,1,0).
   margin: 8px;
+  position: relative; // якорь для кнопки-крестика удаления (.dz-remove) в углу превью
 }
 .adm-dropzone.dropzone .dz-preview .dz-image {
   border-radius: 6px;
 }
 .adm-dropzone.dropzone .dz-preview .dz-details {
   display: none;
+}
+// Кнопка удаления файла: дефолтная ссылка dropzone («Remove file» под превью)
+// превращена в иконку-крестик в правом верхнем углу миниатюры.
+.adm-dropzone.dropzone .dz-preview .dz-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.55);
+  font-size: 0; // прячем текст («Remove file»)
+  line-height: 1;
+  text-decoration: none !important;
+  // сам крестик рисуем псевдоэлементом (text-тень не нужна)
+  &::before {
+    content: '✕';
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1;
+  }
+}
+.adm-dropzone.dropzone .dz-preview .dz-remove:hover,
+.adm-dropzone.dropzone .dz-preview .dz-remove:focus {
+  background: #dc2626;
+  text-decoration: none;
+  opacity: 1;
 }
 .adm-dropzone-info {
   display: block;
