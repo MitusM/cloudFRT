@@ -1,0 +1,13 @@
+{
+  "name": "uploads",
+  "version": "1.0.0",
+  "description": "Единый upload-микросервис cloudFRT — приём+webp+resize+delete изображений (Server :7620)",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": ""
+  },
+  "author": "MitusM",
+  "license": "MIT",
+  "dependencies": {}
+}

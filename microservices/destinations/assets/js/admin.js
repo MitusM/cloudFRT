@@ -105,7 +105,7 @@ import '../scss/admin.scss'
     // чтобы клик по миниатюре не открывал диалог выбора файла
     var hintEl = document.querySelector('.adm-dropzone-hint')
     var dropzone = new window.Dropzone('#dest-dropzone', {
-      url: '/upload/destinations-dest',
+      url: '/files/upload/destinations-dest',
       dictDefaultMessage: 'Перетащите изображения или кликните',
       acceptedFiles: 'image/jpeg,image/jpg,image/png,image/webp',
       uploadMultiple: false,
@@ -185,7 +185,7 @@ import '../scss/admin.scss'
     dropzone.on('removedfile', function (file) {
       var meta = file.dzMeta
       if (meta && meta.files && meta.files.length) {
-        fetch('/destinations/admin/delete-image', {
+        fetch('/files/delete-image', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ files: meta.files, csrf: CSRF }),
