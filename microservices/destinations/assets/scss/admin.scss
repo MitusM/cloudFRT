@@ -506,6 +506,32 @@
   text-decoration: none;
   opacity: 1;
 }
+// Кнопка «Сделать обложкой» под превью: вставляет ссылку главного webp в #f-image.
+// (добавляется в success-обработчике admin.js через scope.appendChild)
+.adm-dropzone.dropzone .dz-preview .dz-cover-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #fff;
+  color: #2563eb;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.adm-dropzone.dropzone .dz-preview .dz-cover-btn:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+.adm-dropzone.dropzone .dz-preview .dz-cover-btn.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+}
 .adm-dropzone-info {
   display: block;
   color: #9ca3af;

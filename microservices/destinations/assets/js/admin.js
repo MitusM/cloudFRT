@@ -173,6 +173,32 @@ import '../scss/admin.scss'
         if (!scope.querySelector('.dz-image') && !scope.querySelector('.dz-details')) {
           scope.addEventListener('click', steps)
         }
+
+        // Кнопка «Сделать обложкой»: клик → вставить ссылку главного webp в #f-image
+        // (изображение материала / og:image). Одна активная на форму.
+        var coverPath = body.webpOriginal && body.webpOriginal.pathFile
+        var coverBtn = document.createElement('button')
+        coverBtn.type = 'button'
+        coverBtn.className = 'dz-cover-btn'
+        coverBtn.title = 'Использовать как главное изображение (поле «Изображение URL»)'
+        coverBtn.textContent = 'Сделать обложкой'
+        coverBtn.addEventListener('click', function (ev) {
+          ev.preventDefault()
+          ev.stopPropagation()
+          if (!coverPath) {
+            setMsg('Сервер не вернул ссылку на webp-изображение', 'err')
+            return
+          }
+          el('f-image').value = coverPath
+          // снять активность с кнопок других превью, отметить текущую
+          var cont = scope && scope.parentNode
+          ;(cont || document).querySelectorAll('.dz-cover-btn').forEach(function (b) {
+            b.classList.remove('is-active')
+          })
+          coverBtn.classList.add('is-active')
+          setMsg('Картинка установлена как главная ✓', 'ok')
+        })
+        scope.appendChild(coverBtn)
       }
       console.log('⚡ destinations upload success, ready to insert:', body)
     })
