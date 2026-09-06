@@ -12,6 +12,22 @@ class PDO {
     this.httpPort = options.httpPort || 2480;
   }
 
+  // Экранировать строку для ИНЛАЙНА в SQL (orientjs в этом стеке не
+  // подставляет :named / ? — значения инлайнятся в текст запроса).
+  // Помимо одинарной кавычки обязательно обрабатываем обратный слэш и
+  // управляющие символы (\n, \r): иначе многострочный HTML из tinyMCE
+  // роняет запрос с `Lexical error ... Encountered "\n"`.
+  _sqlStr(v) {
+    if (v == null) return "''"
+    const s = String(v)
+      .replace(/\\/g, '\\\\')   // \  → \\ (должно идти ПЕРВЫМ)
+      .replace(/'/g, "\\'")        // '  → \'
+      .replace(/\r/g, '\\r')       // CR → \r
+      .replace(/\n/g, '\\n')       // LF → \n
+      .replace(/\t/g, '\\t')       // TAB → \t
+    return `'${s}'`
+  }
+
   async connect(options) {
     try {
       this.username = options.username;

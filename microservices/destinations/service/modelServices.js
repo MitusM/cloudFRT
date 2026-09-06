@@ -105,11 +105,11 @@ class Model extends PDO {
     parentRid,
     status, // 'draft' (default) | 'published'
   }) {
-    // экранировать строку для инлайна в SQL (одинарные кавычки)
-    const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
+    // экранировать строку для инлайна в SQL (одинарные кавычки + \n/\r/\\)
+    const sq = (v) => this._sqlStr(v)
     const num = (v, d) => (v == null || v === '' ? d : v)
     // content хранится как строка (fix 31.08).
-    const embed = (v) => (v == null || v === '' ? 'null' : sq(v))
+    const embed = (v) => (v == null || v === '' ? 'null' : this._sqlStr(v))
 
     const loc = lat != null && lng != null
       ? `ST_GeomFromText('POINT(${num(lng, 0)} ${num(lat, 0)})')`
@@ -182,10 +182,10 @@ class Model extends PDO {
   // Поля, которые можно менять. Безопасно от SQL-инъекции (нельзя произвольный set).
   async updateDest(rid, fields) {
     const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'is_hub', 'priority', 'status']
-    const sq = (v) => (v == null ? "''" : `'${String(v).replace(/'/g, "\\'")}'`)
+    const sq = (v) => this._sqlStr(v) // экранирует ' и \n/\r/\\
     const num = (v) => (v == null ? 'null' : String(v))
     // content — EMBEDDED: пустое → null
-    const embed = (v) => (v == null || v === '' ? 'null' : sq(v))
+    const embed = (v) => (v == null || v === '' ? 'null' : this._sqlStr(v))
     const set = []
 
     for (const key of ALLOWED) {
@@ -281,7 +281,7 @@ class Model extends PDO {
   // достаточно self-status — а не-опубликованный ребёнок прячет и своё поддерево.
   async listChildren(rid, limit = 50) {
     return this.queryAll(
-      `SELECT @rid as rid, slug, title, h1, level, image, priority, status FROM Dest
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, status, content FROM Dest
        WHERE ${rid} IN out('PART_OF') AND status = 'published'
        ORDER BY priority DESC LIMIT ${limit}`
     )
@@ -376,7 +376,7 @@ class Model extends PDO {
     const levelClause = levels.length ? `(${levels.map((l) => `level = '${l}'`).join(' OR ')})` : '1=1'
     const closed = await this.getClosedRids()
     const places = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, priority, status, $path AS path FROM (
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, status, content, $path AS path FROM (
         TRAVERSE in('PART_OF') FROM ${rid}
       ) WHERE ${levelClause} AND status = 'published' ORDER BY priority DESC LIMIT ${lim}`
     )
@@ -405,7 +405,7 @@ class Model extends PDO {
     // берём родителей (обычно один), для каждого собираем детей
     const parentsList = Array.isArray(parents) ? parents : [parents]
     const out = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, priority, status FROM Dest
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, status, content FROM Dest
        WHERE ${parentsList.map((p) => `${p['@rid'] || p} IN out('PART_OF')`).join(' OR ')}
          AND @rid <> ${rid} AND status = 'published'
        ORDER BY priority DESC LIMIT ${lim}`

@@ -10,6 +10,21 @@
      siblings:  [{url, title, level}] — похожие места на том же уровне
    ============================================================ #}
 
+{# ---------- Карточка места/хаба (как на /destinations/) ----------
+   Поля: url, image, level, cardTitle (H1 если отличен от title, иначе title), intro #}
+{% macro destCard(c) %}
+<a class="dest-card" href="{{ c.url }}">
+  {% if c.image %}
+  <div class="dc-media"><img class="dc-img" src="{{ c.image }}" alt="{{ c.cardTitle }}" loading="lazy" /></div>
+  {% endif %}
+  <div class="dc-body">
+    {% if c.level %}<span class="lv">{{ c.level }}</span>{% endif %}
+    <span class="t">{{ c.cardTitle }}</span>
+    {% if c.intro %}<span class="dc-desc">{{ c.intro }}</span>{% endif %}
+  </div>
+</a>
+{% endmacro %}
+
 {# ---------- Хлебные крошки ---------- #}
 {% if breadcrumb %}
 <nav class="dest-breadcrumb" aria-label="breadcrumb">
@@ -27,10 +42,21 @@
 </nav>
 {% endif %}
 
-{# ---------- H1 и описание ---------- #}
+{# ---------- Hero: основное изображение на всю ширину + H1 поверх ---------- #}
+{% if image %}
+<div class="dest-hero">
+  <img class="dest-hero-bg" src="{{ image }}" alt="{{ h1 }}" loading="eager" fetchpriority="high" />
+  <div class="dest-hero-shade"></div>
+  <div class="dest-hero-inner">
+    <h1 class="dest-h1 dest-h1-over">{{ h1 }}</h1>
+    {% if description %}<p class="dest-desc dest-desc-over">{{ description }}</p>{% endif %}
+  </div>
+</div>
+{% else %}
+{# Без картинки — обычный заголовок/описание в колонке #}
 <h1 class="dest-h1">{{ h1 }}</h1>
 {% if description %}<p class="dest-desc">{{ description }}</p>{% endif %}
-{% if image %}<p><img src="{{ image }}" alt="{{ h1 }}" loading="lazy" /></p>{% endif %}
+{% endif %}
 
 {# ---------- Контент хаба ---------- #}
 {% if content %}<div class="dest-content">{{ content | safe }}</div>{% endif %}
@@ -59,40 +85,32 @@
 {# ---------- Топ-места: прямые ссылки на цели через уровни (этап 4) ---------- #}
 {% if top_places and top_places.length %}
 <h2 class="dest-h2">Топ-места</h2>
-<ul class="dest-children">
+<div class="dest-grid">
   {% for tp in top_places %}
-  <li>
-    <a class="dest-child" href="{{ tp.url }}">
-      <span class="lv">{{ tp.level }}</span>
-      <span class="t">{{ tp.title }}</span>
-    </a>
-  </li>
+    {{ destCard(tp) }}
   {% endfor %}
-</ul>
+</div>
 {% endif %}
 
 {# ---------- Подместа / достопримечательности (для хабов) ---------- #}
 {% if children and children.length %}
 <h2 class="dest-h2">{% if level == 'country' %}Направления{% elif level == 'region' %}Места и достопримечательности{% else %}Что посмотреть{% endif %}</h2>
-<ul class="dest-children">
+<div class="dest-grid">
   {% for child in children %}
-  <li>
-    <a class="dest-child" href="{{ child.url }}">
-      <span class="lv">{{ child.level }}</span>
-      <span class="t">{{ child.title }}</span>
-    </a>
-  </li>
+    {{ destCard(child) }}
   {% endfor %}
-</ul>
+</div>
 {% endif %}
 
 {# ---------- Похожие места (братья, этап 4) ---------- #}
 {% if siblings and siblings.length %}
 <div class="dest-links">
   <h2 class="dest-h2">Похожие места</h2>
-  {% for s in siblings %}
-  <a class="dest-link" href="{{ s.url }}">{{ s.title }}</a>
-  {% endfor %}
+  <div class="dest-grid">
+    {% for s in siblings %}
+      {{ destCard(s) }}
+    {% endfor %}
+  </div>
 </div>
 {% endif %}
 

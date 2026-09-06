@@ -43,6 +43,33 @@ function firstParagraph(html) {
 
 // Инвалидировать кэш всех публичных страниц (при записи узла проще сбросить всё,
 // чем трекать затронутые пути — список путей невелик на старте)
+// Извлечь HTML-контент целиком/строку (у Dest content может быть {html:{...}} или строка)
+function htmlContent(src) {
+  if (!src) return ''
+  if (typeof src === 'string') return src
+  if (typeof src === 'object' && src) {
+    if (typeof src.html === 'string') return src.html
+    if (typeof src.html === 'object' && src.html) return String(src.html.html || src.html.text || '')
+  }
+  return String(src)
+}
+
+// Поля для карточки места/хаба (как на /destinations/):
+//   cardTitle — H1 если он ЗАДАН и ОТЛИЧАЕТСЯ от title; иначе title (не дублируем)
+//   image     — основное изображение (webp-обложка) или ''
+//   intro     — первый абзац контента (превью в карточке)
+function destCardFields(row) {
+  const title = row && row.title ? String(row.title).trim() : ''
+  const h1 = row && row.h1 ? String(row.h1).trim() : ''
+  const cardTitle = h1 && h1 !== title ? h1 : title
+  const content = row && row.content ? htmlContent(row.content) : ''
+  return {
+    cardTitle,
+    image: (row && row.image) || '',
+    intro: firstParagraph(content),
+  }
+}
+
 function invalidatePageCache() {
   try {
     return CacheRedis.delPattern('destPage:*')
@@ -258,12 +285,18 @@ const endpoints = async (app) => {
 
       // дети (для хабов: подместа/достопримечательности)
       const kids = await db.listChildren(dest['@rid'])
-      const children = kids.map((k) => ({
-        slug: k.slug,
-        title: k.title,
-        level: k.level,
-        url: `/destinations/${slugs.join('/')}/${k.slug}`,
-      }))
+      const children = kids.map((k) => {
+        const cf = destCardFields(k)
+        return {
+          slug: k.slug,
+          title: k.title,
+          level: k.level,
+          url: `/destinations/${slugs.join('/')}/${k.slug}`,
+          cardTitle: cf.cardTitle,
+          image: cf.image,
+          intro: cf.intro,
+        }
+      })
 
       // ===== ЭТАП 4: перелинковка =====
       const basePath = `/destinations/${slugs.join('/')}`
@@ -287,7 +320,15 @@ const endpoints = async (app) => {
             const pathRids = (t.path || []).slice(1)
             const subSlugs = pathRids.map((r) => slugMap[String(r)]).filter(Boolean)
             const url = `${basePath}/${subSlugs.join('/')}`
-            return { title: t.title, level: t.level, url }
+            const cf = destCardFields(t)
+            return {
+              title: t.title,
+              level: t.level,
+              url,
+              cardTitle: cf.cardTitle,
+              image: cf.image,
+              intro: cf.intro,
+            }
           })
       }
 
@@ -295,11 +336,17 @@ const endpoints = async (app) => {
       const sibs = await db.getSiblings(dest['@rid'], 8)
       // родительский путь = basePath без последнего сегмента (текущий узел)
       const parentPath = slugs.slice(0, -1).join('/')
-      const siblings = sibs.map((s) => ({
-        title: s.title,
-        level: s.level,
-        url: `/destinations/${parentPath}/${s.slug}`,
-      }))
+      const siblings = sibs.map((s) => {
+        const cf = destCardFields(s)
+        return {
+          title: s.title,
+          level: s.level,
+          url: `/destinations/${parentPath}/${s.slug}`,
+          cardTitle: cf.cardTitle,
+          image: cf.image,
+          intro: cf.intro,
+        }
+      })
 
       // ручные блоки перелинковки (links поле узла): где жить / тур / кастом
       const manualLinks = await db.getLinks(dest['@rid'])
