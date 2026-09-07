@@ -94,6 +94,14 @@ import '../scss/admin.scss'
     return (counter || 1) + '-' + (t || 'фото')
   }
 
+  // Экземпляр dropzone (нужен снаружи initDropzone — из newNode(), чтобы после
+  // «Создать/Сохранить» очистить зону под следующий материал). Сброс делаем
+  // через removeAllFiles НЕ пересоздавая экземпляр — иначе ломается drag/drop.
+  var dropzoneApi = null
+  // Поднимается на время программного сброса формы, чтобы removeAllFiles() НЕ
+  // удалил с диска уже загруженные файлы (те могли попасть в контент/обложку).
+  var resettingDropzone = false
+
   // Инициализация зоны dropzone (#dest-dropzone) и логика вставки в контент
   function initDropzone() {
     if (!window.Dropzone) return
@@ -117,6 +125,7 @@ import '../scss/admin.scss'
       thumbnailHeight: 200,
       clickable: hintEl ? hintEl : '#dest-dropzone',
     })
+    dropzoneApi = dropzone // доступ к экземпляру для программного сброса из newNode()
 
     dropzone.on('sending', function (file, xhr, formData) {
       formData.append('csrf', CSRF)
@@ -207,8 +216,11 @@ import '../scss/admin.scss'
       setMsg('Ошибка загрузки: ' + (message && message.message ? message.message : message), 'err')
     })
 
-    // удаление файлов с диска при удалении из дропзоны
+    // удаление файлов с диска при удалении из дропзоны (крестик юзера).
+    // Программный сброс формы (newNode после «Создать/Сохранить») поднимает
+    // resettingDropzone — тогда files НЕ удаляем (могли быть вставлены в контент/обложку).
     dropzone.on('removedfile', function (file) {
+      if (resettingDropzone) return
       var meta = file.dzMeta
       if (meta && meta.files && meta.files.length) {
         fetch('/files/delete-image', {
@@ -487,6 +499,15 @@ import '../scss/admin.scss'
     state.currentEditRid = null
     // скрыть статус-бар публикации (новый узел = черновик по факту создания)
     renderPubBar(null)
+    // очистить зону загрузки фото под следующий материал (после «Создать/Сохранить»)
+    if (window.Dropzone) {
+      resettingDropzone = true
+      try {
+        if (dropzoneApi) dropzoneApi.removeAllFiles()
+      } finally {
+        resettingDropzone = false
+      }
+    }
   }
 
   // ---- все узлы для селекта родителя (исключая сам узел и его потомков) ----
