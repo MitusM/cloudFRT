@@ -1,1 +1,1 @@
-"use strict";(self.webpackChunkcloudFRT=self.webpackChunkcloudFRT||[]).push([[548],{223(){require("../scss/index.scss")}},s=>{s(223)}]);
+"use strict";(self.webpackChunkcloudFRT=self.webpackChunkcloudFRT||[]).push([[548],{223(){}},u=>{u(223)}]);

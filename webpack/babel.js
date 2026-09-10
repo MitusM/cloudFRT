@@ -9,13 +9,15 @@ module.exports = function () {
           use: {
             loader: 'babel-loader',
             options: {
-              // @babel/preset-env 8: по умолчанию целится в современные браузеры
-              // и НЕ транспилирует модули (отдаёт ESM), что ломает webpack:
-              // loader обязан вернуть CJS. Явный modules:'commonjs' даёт
-              // современный синтаксис (без старого полифиллинга) + CJS-обёртку.
-              presets: [['@babel/preset-env', { modules: 'commonjs' }]],
-              plugins: ['@babel/plugin-transform-runtime'],
-              sourceType: 'module'
+              // ВАЖНО: НЕ задавать modules:'commonjs'.
+              // package.json содержит "type":"module" → webpack парсит все .js
+              // как javascript/esm. Babel, отдающий CJS с require(), в такой файл
+              // НЕ перехватывается webpack'ом — сырой require() попадает в бандл
+              // и падает в браузере с "require is not defined" (регрессия
+              // 10.09.2026: пропали tinymce и весь JS на article/login/users/
+              // destinations). Пусть babel оставляет ESM — webpack сам слинкует.
+              presets: ['@babel/preset-env'],
+              plugins: ['@babel/plugin-transform-runtime']
             }
           }
         },
