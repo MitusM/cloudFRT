@@ -135,10 +135,9 @@ const common = merge([
           from: 'assets/js/tinymce/oxide-icon-pack-template/dist/icons/cloudFRT/icons.js',
           to: path.join(pathList.build, '/icons'),
         },
-        {
-          from: 'node_modules/preloader-js/assets/css/preloader.css',
-          to: path.join(pathList.css),
-        },
+        // preloader.css БОЛЬШЕ НЕ КОПИРУЕТСЯ: стили прелоадера подключены
+        // штатно через assets/scss/_preloader.scss → style.css
+        // (раньше файл копировался, но нигде в шаблонах не подключался)
         ],
         options: {
           concurrency: 100,

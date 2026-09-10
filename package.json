@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/MitusM/cloudFRT#readme",
   "dependencies": {
+    "@babel/runtime": "^8.0.0",
     "app-root-path": "^3.1.0",
     "assert": "^2.1.0",
     "busboy": "^1.6.0",
@@ -68,8 +69,9 @@
     "undici": "^8.10.2"
   },
   "devDependencies": {
-    "@babel/plugin-transform-runtime": "^7.24.3",
-    "@babel/preset-env": "^7.24.4",
+    "@babel/core": "^8.0.1",
+    "@babel/plugin-transform-runtime": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
     "babel-loader": "^10.1.1",
     "copy-webpack-plugin": "^14.0.0",
     "css-loader": "^7.1.5",
