@@ -12,6 +12,19 @@ import { endpoints } from './controllers/index.js'
 
 // const require = createRequire(import.meta.url)
 
+// === === === === === === === === === === === ===
+// 0. Страховка от падения процесса на необработанном промис-реджекте.
+//    Шина (amqplib) может отвалиться в любой момент — Gateway не должен
+//    из-за этого умирать: ошибку логируем, процесс живёт дальше.
+// === === === === === === === === === === === ===
+process.on('unhandledRejection', (err) => {
+  console.error('⚡ unhandledRejection:', (err && err.message) || err)
+})
+
+process.on('uncaughtException', (err) => {
+  console.error('⚡ uncaughtException:', (err && err.message) || err)
+})
+
 dotenv.config()
 
 const rabbitUrl = process.env.RABBIT_URL || 'amqp://guest:guest@localhost:5672/'
