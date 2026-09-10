@@ -34,7 +34,7 @@
     "express-session": "^1.18.0",
     "file-type": "^22.0.2",
     "filehound": "^1.17.6",
-    "image-size": "^1.1.1",
+    "image-size": "^2.0.2",
     "imagemin": "^8.0.1",
     "imagemin-mozjpeg": "^10.0.0",
     "imagemin-pngquant": "^9.0.2",

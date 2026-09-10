@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import { promisify } from 'util'
-import sizeOf from 'image-size'
+import { imageSizeFromFile } from 'image-size/fromFile'
 import imagemin from 'imagemin'
 import imageminMozjpeg from 'imagemin-mozjpeg'
 import imageminPngquant from 'imagemin-pngquant'
@@ -31,15 +31,13 @@ class Images extends File {
    * Determine the size of the width and height of the file and its expansion
    * Supported formats BMP, CUR, DDS, GIF, ICNS, ICO, JPEG, KTX, PNG, PNM(PAM, PBM, PFM, PGM, PPM), PSD, SVG, TIFF, WebP
    * @param {string} file Абс
-   * @returns {object} {width,height,type}
+   * @returns {Promise<object>} {width,height,type}
    * @example:
-   * new File.size(path) //=> { height: 1024, width: 682, type: 'jpg' }
+   * await new File.dimensions(path) //=> { height: 1024, width: 682, type: 'jpg' }
    */
-  // async
-  dimensions(file) {
-    // const dimensions = await sizeOf(file)
-    // console.log('⚡ dimensions', dimensions)
-    return sizeOf(file)
+  // image-size v2: нет sync-API с путём; imageSizeFromFile читает файл сам (async).
+  async dimensions(file) {
+    return await imageSizeFromFile(file)
   }
 
   async statImg(file) {
