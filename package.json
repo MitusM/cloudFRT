@@ -78,7 +78,7 @@
     "mini-css-extract-plugin": "^2.10.2",
     "mini-svg-data-uri": "^1.4.4",
     "sass": "^1.104.0",
-    "sass-loader": "^14.2.1",
+    "sass-loader": "^17.0.1",
     "svg-url-loader": "^8.1.0",
     "webpack": "^5.110.3",
     "webpack-bundle-analyzer": "^4.10.2",
