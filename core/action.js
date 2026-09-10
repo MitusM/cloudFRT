@@ -11,7 +11,7 @@ dotenv.config()
 // const redisClient = redis.createClient()
 // const RedisSess = new RedisStore({ client: redisClient })
 
-import RedisStore from 'connect-redis'
+import { RedisStore } from 'connect-redis'
 import session from 'express-session'
 import { createClient } from 'redis'
 
