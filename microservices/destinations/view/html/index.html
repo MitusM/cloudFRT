@@ -21,7 +21,8 @@
     {% if admin_page %}
     <link rel="stylesheet" href="/public/css/destinations_admin.css" />
     {# dropzone (загрузка изображений в материал) — z-index не перекрывать админ-форму #}
-    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" />
+    {# стили dropzone локализованы (public/css/dropzone.min.css) вместо CDN unpkg #}
+    <link rel="stylesheet" href="/public/css/dropzone.min.css" />
     {% endif %}
   </head>
   <body>
@@ -40,8 +41,10 @@
     </footer>
     {% if admin_page %}
     <script src="/public/js/tinymce.min.js"></script>
-    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    {# dropzone: destinations_admin.js импортирует его модульно (webpack вынес в vendors.js),
+       поэтому runtime.js → vendors.js → destinations_admin.js — обязательный порядок #}
     <script src="/public/js/runtime.js"></script>
+    <script src="/public/js/vendors.js"></script>
     <script src="/public/js/destinations_admin.js"></script>
     {% endif %}
   </body>

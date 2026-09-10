@@ -5,6 +5,13 @@
 // Дети грузятся лениво через GET /destinations/admin/children.
 // ============================================================
 import '../scss/admin.scss'
+// dropzone v5: раньше приходил с CDN unpkg как window.Dropzone.
+// Теперь импортируем локально — webpack кладёт его в этот же бандл,
+// и он гарантированно исполняется вместе с admin.js. Ниже выставляем
+// в window.Dropzone, чтобы код ниже (initDropzone) работал без правок.
+import Dropzone from 'dropzone'
+
+window.Dropzone = Dropzone
 
 ;(function () {
   'use strict'
