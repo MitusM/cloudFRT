@@ -1,6 +1,5 @@
 import '../scss/index.scss'
 import { nanoid } from 'nanoid'
-import { prototype } from 'dropzone'
 ;(async () => {
   let doc = document
   doc.addEventListener('DOMContentLoaded', () => {

@@ -1,6 +1,6 @@
 'use strict'
-import Dropzone from 'dropzone'
-Dropzone.autoDiscover = false
+// dropzone — глобальный window.Dropzone с CDN (index.html каждого микросервиса)
+window.Dropzone && (window.Dropzone.autoDiscover = false)
 
 export function Upload(options) {
     // console.log('💯 options', options)

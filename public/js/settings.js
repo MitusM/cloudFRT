@@ -1,1 +1,85 @@
-"use strict";(self.webpackChunkcloudFRT=self.webpackChunkcloudFRT||[]).push([[472],{89(){(async()=>{document.addEventListener("DOMContentLoaded",async()=>{let e=new _$.Form("form__add")._form.elements,t=e[3],s=document.querySelector("meta[name=csrf-token]").getAttributeNode("content").value;t.addEventListener("click",t=>{t.preventDefault();let a=e[0].value,c=e[1].value,n=e[2].checked;axios.put("/users/settings",{limit:a,quota:c,cache:n,csrf:s}).then(e=>{let t=e.data,s="";var a,c;console.log("⚡ data::",t),201===t.status&&(1===t.message.bd&&(s+="Данные успешно добавлены в Базу Данных! </br>"),1===t.message.redis&&(s+="Настройки успешно сохранены в Redis! </br>"),1===t.message.cache&&(s+="Кэш успешно обновлён!"),a="success",c=s,_$.message(a,{title:"Завершенное",message:c,position:"topCenter"}))}).catch(e=>{console.log("⚡ err::",e)})})})})()}},e=>{e(89)}]);
+"use strict";
+(self["webpackChunkcloudFRT"] = self["webpackChunkcloudFRT"] || []).push([["settings"],{
+
+/***/ "./microservices/users/assets/js/settings.js"
+/*!***************************************************!*\
+  !*** ./microservices/users/assets/js/settings.js ***!
+  \***************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+;(async () => {
+  let doc = document
+  // Settings
+  doc.addEventListener('DOMContentLoaded', async () => {
+    /** Add settings form for id  */
+    let formAdd = new _$.Form('form__add')
+    // console.log('⚡ formAdd::', formAdd._form)
+    let elementForm = formAdd._form.elements
+    // console.log('⚡ elementForm::', elementForm)
+    /** Элементы формы добавления или редактирования пользователя */
+    let submit = elementForm[3]
+
+    let csrf = document
+      .querySelector('meta[name=csrf-token]')
+      .getAttributeNode('content').value
+
+    /**
+     * Всплывающее сообщение.
+     * @param {string} body Сообщение
+     */
+    let message = (action, body) => {
+      _$.message(action, {
+        title: action === 'error' ? 'Ошибка' : 'Завершенное',
+        message: body,
+        position: 'topCenter',
+      })
+    }
+
+    submit.addEventListener('click', (e) => {
+      e.preventDefault()
+      let limit = elementForm[0].value
+      let quota = elementForm[1].value
+      let cache = elementForm[2].checked
+      axios
+        .put('/users/settings', {
+          limit: limit,
+          quota: quota,
+          cache: cache,
+          csrf: csrf,
+        })
+        .then((res) => {
+          let data = res.data
+          let mess = ''
+          console.log('⚡ data::', data)
+          /** Успешное выполнение операций. Если пришёл ответ со статусом 201. Все остальные ошибка */
+          if (data.status === 201) {
+            if (data.message.bd === 1) {
+              mess += 'Данные успешно добавлены в Базу Данных! </br>'
+            }
+            if (data.message.redis === 1) {
+              mess += 'Настройки успешно сохранены в Redis! </br>'
+            }
+            if (data.message.cache === 1) {
+              mess += 'Кэш успешно обновлён!'
+            }
+            message('success', mess)
+          } else {
+          }
+        })
+        .catch((err) => {
+          console.log('⚡ err::', err)
+        })
+    })
+  })
+})()
+
+
+/***/ }
+
+},
+/******/ __webpack_require__ => { // webpackRuntimeModules
+/******/ var __webpack_exec__ = (moduleId) => (__webpack_require__(moduleId))
+/******/ var __webpack_exports__ = (__webpack_exec__("./microservices/users/assets/js/settings.js"));
+/******/ }
+]);

@@ -1,1 +1,8994 @@
-!function(){"use strict";var e=tinymce.util.Tools.resolve("tinymce.ModelManager");const t=e=>t=>(e=>{const t=typeof e;return null===e?"null":"object"===t&&Array.isArray(e)?"array":"object"===t&&(o=n=e,(r=String).prototype.isPrototypeOf(o)||n.constructor?.name===r.name)?"string":t;var o,n,r})(t)===e,o=e=>t=>typeof t===e,n=e=>t=>e===t,r=t("string"),s=t("object"),l=t("array"),a=n(null),c=o("boolean"),i=n(void 0),m=e=>!(e=>null==e)(e),d=o("function"),u=o("number"),f=()=>{},g=e=>()=>e,h=e=>e,p=(e,t)=>e===t;function b(e,...t){return(...o)=>{const n=t.concat(o);return e.apply(null,n)}}const w=e=>t=>!e(t),v=e=>e(),y=g(!1),x=g(!0);class C{tag;value;static singletonNone=new C(!1);constructor(e,t){this.tag=e,this.value=t}static some(e){return new C(!0,e)}static none(){return C.singletonNone}fold(e,t){return this.tag?t(this.value):e()}isSome(){return this.tag}isNone(){return!this.tag}map(e){return this.tag?C.some(e(this.value)):C.none()}bind(e){return this.tag?e(this.value):C.none()}exists(e){return this.tag&&e(this.value)}forall(e){return!this.tag||e(this.value)}filter(e){return!this.tag||e(this.value)?this:C.none()}getOr(e){return this.tag?this.value:e}or(e){return this.tag?this:e}getOrThunk(e){return this.tag?this.value:e()}orThunk(e){return this.tag?this:e()}getOrDie(e){if(this.tag)return this.value;throw new Error(e??"Called getOrDie on None")}static from(e){return m(e)?C.some(e):C.none()}getOrNull(){return this.tag?this.value:null}getOrUndefined(){return this.value}each(e){this.tag&&e(this.value)}toArray(){return this.tag?[this.value]:[]}toString(){return this.tag?`some(${this.value})`:"none()"}}const T=Array.prototype.slice,S=Array.prototype.indexOf,R=Array.prototype.push,D=(e,t)=>{return o=e,n=t,S.call(o,n)>-1;var o,n},O=(e,t)=>{for(let o=0,n=e.length;o<n;o++)if(t(e[o],o))return!0;return!1},k=(e,t)=>{const o=[];for(let n=0;n<e;n++)o.push(t(n));return o},E=(e,t)=>{const o=e.length,n=new Array(o);for(let r=0;r<o;r++){const o=e[r];n[r]=t(o,r)}return n},_=(e,t)=>{for(let o=0,n=e.length;o<n;o++)t(e[o],o)},N=(e,t)=>{const o=[],n=[];for(let r=0,s=e.length;r<s;r++){const s=e[r];(t(s,r)?o:n).push(s)}return{pass:o,fail:n}},B=(e,t)=>{const o=[];for(let n=0,r=e.length;n<r;n++){const r=e[n];t(r,n)&&o.push(r)}return o},z=(e,t,o)=>(((e,t)=>{for(let o=e.length-1;o>=0;o--)t(e[o],o)})(e,(e,n)=>{o=t(o,e,n)}),o),A=(e,t,o)=>(_(e,(e,n)=>{o=t(o,e,n)}),o),L=(e,t)=>((e,t,o)=>{for(let n=0,r=e.length;n<r;n++){const r=e[n];if(t(r,n))return C.some(r);if(o(r,n))break}return C.none()})(e,t,y),M=(e,t)=>{for(let o=0,n=e.length;o<n;o++)if(t(e[o],o))return C.some(o);return C.none()},W=e=>{const t=[];for(let o=0,n=e.length;o<n;++o){if(!l(e[o]))throw new Error("Arr.flatten item "+o+" was not an array, input: "+e);R.apply(t,e[o])}return t},j=(e,t)=>W(E(e,t)),P=(e,t)=>{for(let o=0,n=e.length;o<n;++o)if(!0!==t(e[o],o))return!1;return!0},I=(e,t)=>{const o={};for(let n=0,r=e.length;n<r;n++){const r=e[n];o[String(r)]=t(r,n)}return o},F=(e,t)=>t>=0&&t<e.length?C.some(e[t]):C.none(),H=e=>F(e,0),$=e=>F(e,e.length-1),V=(e,t)=>{for(let o=0;o<e.length;o++){const n=t(e[o],o);if(n.isSome())return n}return C.none()},q=Object.keys,U=Object.hasOwnProperty,G=(e,t)=>{const o=q(e);for(let n=0,r=o.length;n<r;n++){const r=o[n];t(e[r],r)}},K=(e,t)=>Y(e,(e,o)=>({k:o,v:t(e,o)})),Y=(e,t)=>{const o={};return G(e,(e,n)=>{const r=t(e,n);o[r.k]=r.v}),o},J=(e,t)=>{const o=[];return G(e,(e,n)=>{o.push(t(e,n))}),o},Q=e=>J(e,h),X=(e,t)=>U.call(e,t),Z=e=>{if(!l(e))throw new Error("cases must be an array");if(0===e.length)throw new Error("there must be at least one case");const t=[],o={};return _(e,(n,r)=>{const s=q(n);if(1!==s.length)throw new Error("one and only one name per case");const a=s[0],c=n[a];if(void 0!==o[a])throw new Error("duplicate key detected:"+a);if("cata"===a)throw new Error("cannot have a case named cata (sorry)");if(!l(c))throw new Error("case arguments must be an array");t.push(a),o[a]=(...o)=>{const n=o.length;if(n!==c.length)throw new Error("Wrong number of arguments to case "+a+". Expected "+c.length+" ("+c+"), got "+n);return{fold:(...t)=>{if(t.length!==e.length)throw new Error("Wrong number of arguments to fold. Expected "+e.length+", got "+t.length);return t[r].apply(null,o)},match:e=>{const n=q(e);if(t.length!==n.length)throw new Error("Wrong number of arguments to match. Expected: "+t.join(",")+"\nActual: "+n.join(","));if(!P(t,e=>D(n,e)))throw new Error("Not all branches were specified when using match. Specified: "+n.join(", ")+"\nRequired: "+t.join(", "));return e[a].apply(null,o)},log:e=>{console.log(e,{constructors:t,constructor:a,params:o})}}}}),o},ee=e=>{let t=e;return{get:()=>t,set:e=>{t=e}}},te=e=>e.slice(0).sort(),oe=(e,t)=>{const o=B(t,t=>!D(e,t));o.length>0&&(e=>{throw new Error("Unsupported keys for object: "+te(e).join(", "))})(o)},ne=e=>((e,t)=>((e,t,o)=>{if(0===t.length)throw new Error("You must specify at least one required field.");return((e,t)=>{if(!l(t))throw new Error("The "+e+" fields must be an array. Was: "+t+".");_(t,t=>{if(!r(t))throw new Error("The value "+t+" in the "+e+" fields was not a string.")})})("required",t),(e=>{const t=te(e);L(t,(e,o)=>o<t.length-1&&e===t[o+1]).each(e=>{throw new Error("The field: "+e+" occurs more than once in the combined fields: ["+t.join(", ")+"].")})})(t),n=>{const r=q(n);P(t,e=>D(r,e))||((e,t)=>{throw new Error("All required keys ("+te(e).join(", ")+") were not specified. Specified keys were: "+te(t).join(", ")+".")})(t,r),e(t,r);const s=B(t,e=>!o.validate(n[e],e));return s.length>0&&((e,t)=>{throw new Error("All values need to be of type: "+t+". Keys ("+te(e).join(", ")+") were not.")})(s,o.label),n}})(e,t,{validate:d,label:"function"}))(oe,e),re=e=>{const t=t=>t(e),o=g(e),n=()=>r,r={tag:!0,inner:e,fold:(t,o)=>o(e),isValue:x,isError:y,map:t=>le.value(t(e)),mapError:n,bind:t,exists:t,forall:t,getOr:o,or:n,getOrThunk:o,orThunk:n,getOrDie:o,each:t=>{t(e)},toOptional:()=>C.some(e)};return r},se=e=>{const t=()=>o,o={tag:!1,inner:e,fold:(t,o)=>t(e),isValue:y,isError:x,map:t,mapError:t=>le.error(t(e)),bind:t,exists:y,forall:x,getOr:h,or:h,getOrThunk:v,orThunk:v,getOrDie:(n=String(e),()=>{throw new Error(n)}),each:f,toOptional:C.none};var n;return o},le={value:re,error:se,fromOption:(e,t)=>e.fold(()=>se(t),re)},ae="undefined"!=typeof window?window:Function("return this;")(),ce=e=>{const t=e.replace(/\./g,"-");return{resolve:e=>t+"-"+e}},ie=(e,t,o=p)=>e.exists(e=>o(e,t)),me=e=>{const t=[],o=e=>{t.push(e)};for(let t=0;t<e.length;t++)e[t].each(o);return t},de=(e,t)=>e?C.some(t):C.none(),ue=(e,t)=>((e,t)=>{let o=null!=t?t:ae;for(let t=0;t<e.length&&null!=o;++t)o=o[e[t]];return o})(e.split("."),t),fe=()=>{const e=(e=>{const t=ee(C.none()),o=()=>t.get().each(e);return{clear:()=>{o(),t.set(C.none())},isSet:()=>t.get().isSome(),get:()=>t.get(),set:e=>{o(),t.set(C.some(e))}}})(f);return{...e,on:t=>e.get().each(t)}},ge=(e,t,o)=>""===t||e.length>=t.length&&e.substr(o,o+t.length)===t,he=(e,t,o=0,n)=>{const r=e.indexOf(t,o);return-1!==r&&(!!i(n)||r+t.length<=n)},pe=(e,t)=>ge(e,t,0),be=(e,t)=>ge(e,t,e.length-t.length),we=(e=>t=>t.replace(e,""))(/^\s+|\s+$/g),ve=e=>e.length>0,ye=e=>{let t,o=!1;return(...n)=>(o||(o=!0,t=e.apply(null,n)),t)},xe=["tfoot","thead","tbody","colgroup"],Ce=(e,t,o)=>({element:e,rowspan:t,colspan:o}),Te=(e,t,o)=>({element:e,cells:t,section:o}),Se=(e,t,o)=>({element:e,isNew:t,isLocked:o}),Re=(e,t,o,n)=>({element:e,cells:t,section:o,isNew:n}),De=(e,t,o)=>{const n=e.cells,r=n.slice(0,t),s=n.slice(t),l=r.concat(o).concat(s);return Ee(e,l)},Oe=(e,t,o)=>De(e,t,[o]),ke=(e,t,o)=>{e.cells[t]=o},Ee=(e,t)=>Re(e.element,t,e.section,e.isNew),_e=(e,t)=>e.cells[t],Ne=(e,t)=>_e(e,t).element,Be=e=>e.cells.length,ze=e=>{const t=N(e,e=>"colgroup"===e.section);return{rows:t.fail,cols:t.pass}},Ae=(e,t,o)=>{const n=E(e.cells,o);return Re(t(e.element),n,e.section,!0)},Le=e=>{if(null==e)throw new Error("Node cannot be null or undefined");return{dom:e}},Me={fromHtml:(e,t)=>{const o=(t||document).createElement("div");if(o.innerHTML=e,!o.hasChildNodes()||o.childNodes.length>1){const t="HTML does not have a single root node";throw console.error(t,e),new Error(t)}return Le(o.childNodes[0])},fromTag:(e,t)=>{const o=(t||document).createElement(e);return Le(o)},fromText:(e,t)=>{const o=(t||document).createTextNode(e);return Le(o)},fromDom:Le,fromPoint:(e,t,o)=>C.from(e.dom.elementFromPoint(t,o)).map(Le)},We=(e,t)=>{const o=e.document.createRange();return o.selectNode(t.dom),o},je=(e,t)=>{const o=e.document.createRange();return Pe(o,t),o},Pe=(e,t)=>e.selectNodeContents(t.dom),Ie=(e,t,o)=>{const n=e.document.createRange();var r;return r=n,t.fold(e=>{r.setStartBefore(e.dom)},(e,t)=>{r.setStart(e.dom,t)},e=>{r.setStartAfter(e.dom)}),((e,t)=>{t.fold(t=>{e.setEndBefore(t.dom)},(t,o)=>{e.setEnd(t.dom,o)},t=>{e.setEndAfter(t.dom)})})(n,o),n},Fe=(e,t,o,n,r)=>{const s=e.document.createRange();return s.setStart(t.dom,o),s.setEnd(n.dom,r),s},He=e=>({left:e.left,top:e.top,right:e.right,bottom:e.bottom,width:e.width,height:e.height}),$e=Z([{ltr:["start","soffset","finish","foffset"]},{rtl:["start","soffset","finish","foffset"]}]),Ve=(e,t,o)=>t(Me.fromDom(o.startContainer),o.startOffset,Me.fromDom(o.endContainer),o.endOffset),qe=(e,t)=>{const o=((e,t)=>t.match({domRange:e=>({ltr:g(e),rtl:C.none}),relative:(t,o)=>({ltr:ye(()=>Ie(e,t,o)),rtl:ye(()=>C.some(Ie(e,o,t)))}),exact:(t,o,n,r)=>({ltr:ye(()=>Fe(e,t,o,n,r)),rtl:ye(()=>C.some(Fe(e,n,r,t,o)))})}))(e,t);return((e,t)=>{const o=t.ltr();return o.collapsed?t.rtl().filter(e=>!1===e.collapsed).map(e=>$e.rtl(Me.fromDom(e.endContainer),e.endOffset,Me.fromDom(e.startContainer),e.startOffset)).getOrThunk(()=>Ve(0,$e.ltr,o)):Ve(0,$e.ltr,o)})(0,o)},Ue=(e,t)=>qe(e,t).match({ltr:(t,o,n,r)=>{const s=e.document.createRange();return s.setStart(t.dom,o),s.setEnd(n.dom,r),s},rtl:(t,o,n,r)=>{const s=e.document.createRange();return s.setStart(n.dom,r),s.setEnd(t.dom,o),s}});$e.ltr,$e.rtl;const Ge=(e,t)=>{const o=e.dom;if(1!==o.nodeType)return!1;{const e=o;if(void 0!==e.matches)return e.matches(t);if(void 0!==e.msMatchesSelector)return e.msMatchesSelector(t);if(void 0!==e.webkitMatchesSelector)return e.webkitMatchesSelector(t);if(void 0!==e.mozMatchesSelector)return e.mozMatchesSelector(t);throw new Error("Browser lacks native selectors")}},Ke=e=>1!==e.nodeType&&9!==e.nodeType&&11!==e.nodeType||0===e.childElementCount,Ye=(e,t)=>{const o=void 0===t?document:t.dom;return Ke(o)?C.none():C.from(o.querySelector(e)).map(Me.fromDom)},Je=(e,t)=>e.dom===t.dom,Qe=(e,t)=>{const o=e.dom,n=t.dom;return o!==n&&o.contains(n)},Xe=Ge,Ze=()=>et(0,0),et=(e,t)=>({major:e,minor:t}),tt={nu:et,detect:(e,t)=>{const o=String(t).toLowerCase();return 0===e.length?Ze():((e,t)=>{const o=((e,t)=>{for(let o=0;o<e.length;o++){const n=e[o];if(n.test(t))return n}})(e,t);if(!o)return{major:0,minor:0};const n=e=>Number(t.replace(o,"$"+e));return et(n(1),n(2))})(e,o)},unknown:Ze},ot=(e,t)=>{const o=String(t).toLowerCase();return L(e,e=>e.search(o))},nt=/.*?version\/\ ?([0-9]+)\.([0-9]+).*/,rt=e=>t=>he(t,e),st=[{name:"Edge",versionRegexes:[/.*?edge\/ ?([0-9]+)\.([0-9]+)$/],search:e=>he(e,"edge/")&&he(e,"chrome")&&he(e,"safari")&&he(e,"applewebkit")},{name:"Chromium",brand:"Chromium",versionRegexes:[/.*?chrome\/([0-9]+)\.([0-9]+).*/,nt],search:e=>he(e,"chrome")&&!he(e,"chromeframe")},{name:"IE",versionRegexes:[/.*?msie\ ?([0-9]+)\.([0-9]+).*/,/.*?rv:([0-9]+)\.([0-9]+).*/],search:e=>he(e,"msie")||he(e,"trident")},{name:"Opera",versionRegexes:[nt,/.*?opera\/([0-9]+)\.([0-9]+).*/],search:rt("opera")},{name:"Firefox",versionRegexes:[/.*?firefox\/\ ?([0-9]+)\.([0-9]+).*/],search:rt("firefox")},{name:"Safari",versionRegexes:[nt,/.*?cpu os ([0-9]+)_([0-9]+).*/],search:e=>(he(e,"safari")||he(e,"mobile/"))&&he(e,"applewebkit")}],lt=[{name:"Windows",search:rt("win"),versionRegexes:[/.*?windows\ nt\ ?([0-9]+)\.([0-9]+).*/]},{name:"iOS",search:e=>he(e,"iphone")||he(e,"ipad"),versionRegexes:[/.*?version\/\ ?([0-9]+)\.([0-9]+).*/,/.*cpu os ([0-9]+)_([0-9]+).*/,/.*cpu iphone os ([0-9]+)_([0-9]+).*/]},{name:"Android",search:rt("android"),versionRegexes:[/.*?android\ ?([0-9]+)\.([0-9]+).*/]},{name:"macOS",search:rt("mac os x"),versionRegexes:[/.*?mac\ os\ x\ ?([0-9]+)_([0-9]+).*/]},{name:"Linux",search:rt("linux"),versionRegexes:[]},{name:"Solaris",search:rt("sunos"),versionRegexes:[]},{name:"FreeBSD",search:rt("freebsd"),versionRegexes:[]},{name:"ChromeOS",search:rt("cros"),versionRegexes:[/.*?chrome\/([0-9]+)\.([0-9]+).*/]}],at={browsers:g(st),oses:g(lt)},ct="Edge",it="Chromium",mt="Opera",dt="Firefox",ut="Safari",ft=e=>{const t=e.current,o=e.version,n=e=>()=>t===e;return{current:t,version:o,isEdge:n(ct),isChromium:n(it),isIE:n("IE"),isOpera:n(mt),isFirefox:n(dt),isSafari:n(ut)}},gt=()=>ft({current:void 0,version:tt.unknown()}),ht=ft,pt=(g(ct),g(it),g("IE"),g(mt),g(dt),g(ut),"Windows"),bt="Android",wt="Linux",vt="macOS",yt="Solaris",xt="FreeBSD",Ct="ChromeOS",Tt=e=>{const t=e.current,o=e.version,n=e=>()=>t===e;return{current:t,version:o,isWindows:n(pt),isiOS:n("iOS"),isAndroid:n(bt),isMacOS:n(vt),isLinux:n(wt),isSolaris:n(yt),isFreeBSD:n(xt),isChromeOS:n(Ct)}},St=()=>Tt({current:void 0,version:tt.unknown()}),Rt=Tt,Dt=(g(pt),g("iOS"),g(bt),g(wt),g(vt),g(yt),g(xt),g(Ct),e=>window.matchMedia(e).matches);let Ot=ye(()=>((e,t,o)=>{const n=at.browsers(),r=at.oses(),s=t.bind(e=>((e,t)=>V(t.brands,t=>{const o=t.brand.toLowerCase();return L(e,e=>o===e.brand?.toLowerCase()).map(e=>({current:e.name,version:tt.nu(parseInt(t.version,10),0)}))}))(n,e)).orThunk(()=>((e,t)=>ot(e,t).map(e=>{const o=tt.detect(e.versionRegexes,t);return{current:e.name,version:o}}))(n,e)).fold(gt,ht),l=((e,t)=>ot(e,t).map(e=>{const o=tt.detect(e.versionRegexes,t);return{current:e.name,version:o}}))(r,e).fold(St,Rt),a=((e,t,o,n)=>{const r=e.isiOS()&&!0===/ipad/i.test(o),s=e.isiOS()&&!r,l=e.isiOS()||e.isAndroid(),a=l||n("(pointer:coarse)"),c=r||!s&&l&&n("(min-device-width:768px)"),i=s||l&&!c,m=t.isSafari()&&e.isiOS()&&!1===/safari/i.test(o),d=!i&&!c&&!m;return{isiPad:g(r),isiPhone:g(s),isTablet:g(c),isPhone:g(i),isTouch:g(a),isAndroid:e.isAndroid,isiOS:e.isiOS,isWebView:g(m),isDesktop:g(d)}})(l,s,e,o);return{browser:s,os:l,deviceType:a}})(window.navigator.userAgent,C.from(window.navigator.userAgentData),Dt));const kt=()=>Ot(),Et=Object.getPrototypeOf,_t=e=>{const t=ue("ownerDocument.defaultView",e);return s(e)&&((e=>((e,t)=>{const o=((e,t)=>ue(e,t))(e,t);if(null==o)throw new Error(e+" not available on this browser");return o})("HTMLElement",e))(t).prototype.isPrototypeOf(e)||/^HTML\w*Element$/.test(Et(e).constructor.name))},Nt=e=>e.dom.nodeName.toLowerCase(),Bt=e=>e.dom.nodeType,zt=e=>t=>Bt(t)===e,At=e=>8===Bt(e)||"#comment"===Nt(e),Lt=e=>Mt(e)&&_t(e.dom),Mt=zt(1),Wt=zt(3),jt=zt(9),Pt=zt(11),It=e=>t=>Mt(t)&&Nt(t)===e,Ft=e=>Me.fromDom(e.dom.ownerDocument),Ht=e=>jt(e)?e:Ft(e),$t=e=>C.from(e.dom.parentNode).map(Me.fromDom),Vt=e=>C.from(e.dom.parentElement).map(Me.fromDom),qt=(e,t)=>{const o=d(t)?t:y;let n=e.dom;const r=[];for(;null!==n.parentNode&&void 0!==n.parentNode;){const e=n.parentNode,t=Me.fromDom(e);if(r.push(t),!0===o(t))break;n=e}return r},Ut=e=>C.from(e.dom.previousSibling).map(Me.fromDom),Gt=e=>C.from(e.dom.nextSibling).map(Me.fromDom),Kt=e=>E(e.dom.childNodes,Me.fromDom),Yt=(e,t)=>{const o=e.dom.childNodes;return C.from(o[t]).map(Me.fromDom)},Jt=e=>Pt(e)&&m(e.dom.host),Qt=e=>Me.fromDom(e.dom.getRootNode()),Xt=e=>Me.fromDom(e.dom.host),Zt=e=>{const t=Me.fromDom((e=>{if(m(e.target)){const t=Me.fromDom(e.target);if(Mt(t)&&m(t.dom.shadowRoot)&&e.composed&&e.composedPath){const t=e.composedPath();if(t)return H(t)}}return C.from(e.target)})(e).getOr(e.target)),o=()=>e.stopPropagation(),n=()=>e.preventDefault(),r=(s=n,l=o,(...e)=>s(l.apply(null,e)));var s,l;return((e,t,o,n,r,s,l)=>({target:e,x:t,y:o,stop:n,prevent:r,kill:s,raw:l}))(t,e.clientX,e.clientY,o,n,r,e)},eo=(e,t,o,n)=>{e.dom.removeEventListener(t,o,n)},to=x,oo=(e,t,o)=>((e,t,o,n)=>((e,t,o,n,r)=>{const s=((e,t)=>o=>{e(o)&&t(Zt(o))})(o,n);return e.dom.addEventListener(t,s,r),{unbind:b(eo,e,t,s,r)}})(e,t,o,n,!1))(e,t,to,o),no=Zt,ro=(e,t)=>{$t(e).each(o=>{o.dom.insertBefore(t.dom,e.dom)})},so=(e,t)=>{Gt(e).fold(()=>{$t(e).each(e=>{ao(e,t)})},e=>{ro(e,t)})},lo=(e,t)=>{const o=(e=>Yt(e,0))(e);o.fold(()=>{ao(e,t)},o=>{e.dom.insertBefore(t.dom,o.dom)})},ao=(e,t)=>{e.dom.appendChild(t.dom)},co=(e,t)=>{ro(e,t),ao(t,e)},io=(e,t)=>{_(t,(o,n)=>{const r=0===n?e:t[n-1];so(r,o)})},mo=(e,t)=>{_(t,t=>{ao(e,t)})},uo=(e,t,o)=>{if(!(r(o)||c(o)||u(o)))throw console.error("Invalid call to Attribute.set. Key ",t,":: Value ",o,":: Element ",e),new Error("Attribute value was not simple");e.setAttribute(t,o+"")},fo=(e,t,o)=>{uo(e.dom,t,o)},go=(e,t)=>{const o=e.dom;G(t,(e,t)=>{uo(o,t,e)})},ho=(e,t)=>{const o=e.dom.getAttribute(t);return null===o?void 0:o},po=(e,t)=>C.from(ho(e,t)),bo=(e,t)=>{e.dom.removeAttribute(t)},wo=e=>A(e.dom.attributes,(e,t)=>(e[t.name]=t.value,e),{}),vo=e=>{e.dom.textContent="",_(Kt(e),e=>{yo(e)})},yo=e=>{const t=e.dom;null!==t.parentNode&&t.parentNode.removeChild(t)},xo=e=>{const t=Kt(e);t.length>0&&io(e,t),yo(e)},Co=(e,t)=>Me.fromDom(e.dom.cloneNode(t)),To=e=>Co(e,!1),So=e=>Co(e,!0),Ro=(e,t)=>{const o=Me.fromTag(t),n=wo(e);return go(o,n),o},Do=e=>void 0!==e.style&&d(e.style.getPropertyValue),Oo=e=>{const t=Wt(e)?e.dom.parentNode:e.dom;if(null==t||null===t.ownerDocument)return!1;const o=t.ownerDocument;return(e=>{const t=Qt(e);return Jt(t)?C.some(t):C.none()})(Me.fromDom(t)).fold(()=>o.body.contains(t),(n=Oo,r=Xt,e=>n(r(e))));var n,r},ko=(e,t,o)=>{if(!r(o))throw console.error("Invalid call to CSS.set. Property ",t,":: Value ",o,":: Element ",e),new Error("CSS value must be a string: "+o);Do(e)&&e.style.setProperty(t,o)},Eo=(e,t,o)=>{const n=e.dom;ko(n,t,o)},_o=(e,t)=>{const o=e.dom;G(t,(e,t)=>{ko(o,t,e)})},No=(e,t)=>{const o=e.dom,n=window.getComputedStyle(o).getPropertyValue(t);return""!==n||Oo(e)?n:Bo(o,t)},Bo=(e,t)=>Do(e)?e.style.getPropertyValue(t):"",zo=(e,t)=>{const o=e.dom,n=Bo(o,t);return C.from(n).filter(e=>e.length>0)},Ao=(e,t)=>{((e,t)=>{Do(e)&&e.style.removeProperty(t)})(e.dom,t),ie(po(e,"style").map(we),"")&&bo(e,"style")},Lo=(e,t)=>{const o=o=>{const n=t(o);if(n<=0||null===n){const t=No(o,e);return parseFloat(t)||0}return n},n=(e,t)=>A(t,(t,o)=>{const n=No(e,o),r=void 0===n?0:parseInt(n,10);return isNaN(r)?t:t+r},0);return{set:(t,o)=>{if(!u(o)&&!o.match(/^[0-9]+$/))throw new Error(e+".set accepts only positive integer values. Value was "+o);const n=t.dom;Do(n)&&(n.style[e]=o+"px")},get:o,getOuter:o,aggregate:n,max:(e,t,o)=>{const r=n(e,o);return t>r?t-r:0}}},Mo=(e,t,o)=>((e,t)=>(e=>{const t=parseFloat(e);return isNaN(t)?C.none():C.some(t)})(e).getOr(t))(No(e,t),o),Wo=Lo("height",e=>{const t=e.dom;return Oo(e)?t.getBoundingClientRect().height:t.offsetHeight}),jo=e=>Wo.get(e),Po=e=>Wo.getOuter(e),Io=Lo("width",e=>{const t=e.dom;return Oo(e)?t.getBoundingClientRect().width:t.offsetWidth}),Fo=e=>Io.get(e),Ho=e=>Io.getOuter(e),$o=e=>((e,t)=>{const o=e.dom,n=o.getBoundingClientRect().width||o.offsetWidth;return"border-box"===t?n:((e,t,o,n)=>t-Mo(e,`padding-${o}`,0)-Mo(e,`padding-${n}`,0)-Mo(e,`border-${o}-width`,0)-Mo(e,`border-${n}-width`,0))(e,n,"left","right")})(e,"content-box"),Vo=(e,t)=>({left:e,top:t,translate:(o,n)=>Vo(e+o,t+n)}),qo=Vo,Uo=(e,t)=>void 0!==e?e:void 0!==t?t:0,Go=e=>{const t=e.dom.ownerDocument,o=t.body,n=t.defaultView,r=t.documentElement;if(o===e.dom)return qo(o.offsetLeft,o.offsetTop);const s=Uo(n?.pageYOffset,r.scrollTop),l=Uo(n?.pageXOffset,r.scrollLeft),a=Uo(r.clientTop,o.clientTop),c=Uo(r.clientLeft,o.clientLeft);return Ko(e).translate(l-c,s-a)},Ko=e=>{const t=e.dom,o=t.ownerDocument.body;return o===t?qo(o.offsetLeft,o.offsetTop):Oo(e)?(e=>{const t=e.getBoundingClientRect();return qo(t.left,t.top)})(t):qo(0,0)},Yo=(e=>{const t=t=>e(t)?C.from(t.dom.nodeValue):C.none();return{get:o=>{if(!e(o))throw new Error("Can only get text value of a text node");return t(o).getOr("")},getOption:t,set:(t,o)=>{if(!e(t))throw new Error("Can only set raw text value of a text node");t.dom.nodeValue=o}}})(Wt),Jo=e=>Yo.get(e),Qo=e=>Yo.getOption(e),Xo=(e,t)=>Yo.set(e,t),Zo=(e,t)=>o=>"rtl"===en(o)?t:e,en=e=>"rtl"===No(e,"direction")?"rtl":"ltr";var tn=(e,t,o,n,r)=>e(o,n)?C.some(o):d(r)&&r(o)?C.none():t(o,n,r);const on=(e,t,o)=>{let n=e.dom;const r=d(o)?o:y;for(;n.parentNode;){n=n.parentNode;const e=Me.fromDom(n);if(t(e))return C.some(e);if(r(e))break}return C.none()},nn=(e,t,o)=>tn((e,t)=>t(e),on,e,t,o),rn=(e,t,o)=>on(e,e=>Ge(e,t),o),sn=(e,t)=>(e=>L(e.dom.childNodes,e=>{return o=Me.fromDom(e),Ge(o,t);var o}).map(Me.fromDom))(e),ln=(e,t)=>Ye(t,e),an=(e,t,o)=>tn((e,t)=>Ge(e,t),rn,e,t,o),cn=e=>void 0!==e.dom.classList,mn=(e,t)=>((e,t,o)=>{const n=((e,t)=>{const o=ho(e,t);return void 0===o||""===o?[]:o.split(" ")})(e,t).concat([o]);return fo(e,t,n.join(" ")),!0})(e,"class",t),dn=(e,t)=>{cn(e)?e.dom.classList.add(t):mn(e,t)},un=(e,t)=>cn(e)&&e.dom.classList.contains(t),fn=e=>an(e,"[contenteditable]"),gn=(e,t=!1)=>Oo(e)?e.dom.isContentEditable:fn(e).fold(g(t),e=>"true"===hn(e)),hn=e=>e.dom.contentEditable,pn=(e,t)=>{let o=[];return _(Kt(e),e=>{t(e)&&(o=o.concat([e])),o=o.concat(pn(e,t))}),o},bn=(e,t,o)=>((e,o,n)=>B(qt(e,n),e=>Ge(e,t)))(e,0,o),wn=(e,t)=>(e=>B(Kt(e),e=>Ge(e,t)))(e),vn=(e,t)=>((e,t)=>{const o=void 0===t?document:t.dom;return Ke(o)?[]:E(o.querySelectorAll(e),Me.fromDom)})(t,e),yn=e=>"img"===Nt(e)?1:Qo(e).fold(()=>Kt(e).length,e=>e.length),xn=["img","br"],Cn=e=>Qo(e).filter(e=>0!==e.trim().length||e.indexOf(" ")>-1).isSome()||D(xn,Nt(e))||(e=>Lt(e)&&"false"===ho(e,"contenteditable"))(e),Tn=e=>((e,t)=>{const o=e=>{for(let n=0;n<e.childNodes.length;n++){const r=Me.fromDom(e.childNodes[n]);if(t(r))return C.some(r);const s=o(e.childNodes[n]);if(s.isSome())return s}return C.none()};return o(e.dom)})(e,Cn),Sn=e=>Rn(e,Cn),Rn=(e,t)=>{const o=e=>{const n=Kt(e);for(let e=n.length-1;e>=0;e--){const r=n[e];if(t(r))return C.some(r);const s=o(r);if(s.isSome())return s}return C.none()};return o(e)},Dn=(e,t,o,n)=>({start:e,soffset:t,finish:o,foffset:n}),On=Z([{before:["element"]},{on:["element","offset"]},{after:["element"]}]),kn={before:On.before,on:On.on,after:On.after,cata:(e,t,o,n)=>e.fold(t,o,n),getStart:e=>e.fold(h,h,h)},En=Z([{domRange:["rng"]},{relative:["startSitu","finishSitu"]},{exact:["start","soffset","finish","foffset"]}]),_n={domRange:En.domRange,relative:En.relative,exact:En.exact,exactFromRange:e=>En.exact(e.start,e.soffset,e.finish,e.foffset),getWin:e=>{const t=(e=>e.match({domRange:e=>Me.fromDom(e.startContainer),relative:(e,t)=>kn.getStart(e),exact:(e,t,o,n)=>e}))(e);return Me.fromDom(Ht(t).dom.defaultView)},range:Dn},Nn=(e,t)=>{const o=Nt(e);return"input"===o?kn.after(e):D(["br","img"],o)?0===t?kn.before(e):kn.after(e):kn.on(e,t)},Bn=e=>C.from(e.getSelection()),zn=(e,t)=>{Bn(e).each(e=>{e.removeAllRanges(),e.addRange(t)})},An=(e,t,o,n,r)=>{const s=Fe(e,t,o,n,r);zn(e,s)},Ln=(e,t)=>qe(e,t).match({ltr:(t,o,n,r)=>{An(e,t,o,n,r)},rtl:(t,o,n,r)=>{Bn(e).each(s=>{if(s.setBaseAndExtent)s.setBaseAndExtent(t.dom,o,n.dom,r);else if(s.extend)try{((e,t,o,n,r,s)=>{t.collapse(o.dom,n),t.extend(r.dom,s)})(0,s,t,o,n,r)}catch{An(e,n,r,t,o)}else An(e,n,r,t,o)})}}),Mn=(e,t,o,n,r)=>{const s=((e,t,o,n)=>{const r=Nn(e,t),s=Nn(o,n);return _n.relative(r,s)})(t,o,n,r);Ln(e,s)},Wn=(e,t,o)=>{const n=((e,t)=>{const o=e.fold(kn.before,Nn,kn.after),n=t.fold(kn.before,Nn,kn.after);return _n.relative(o,n)})(t,o);Ln(e,n)},jn=e=>{if(e.rangeCount>0){const t=e.getRangeAt(0),o=e.getRangeAt(e.rangeCount-1);return C.some(Dn(Me.fromDom(t.startContainer),t.startOffset,Me.fromDom(o.endContainer),o.endOffset))}return C.none()},Pn=e=>{if(null===e.anchorNode||null===e.focusNode)return jn(e);{const t=Me.fromDom(e.anchorNode),o=Me.fromDom(e.focusNode);return((e,t,o,n)=>{const r=((e,t,o,n)=>{const r=Ft(e).dom.createRange();return r.setStart(e.dom,t),r.setEnd(o.dom,n),r})(e,t,o,n),s=Je(e,o)&&t===n;return r.collapsed&&!s})(t,e.anchorOffset,o,e.focusOffset)?C.some(Dn(t,e.anchorOffset,o,e.focusOffset)):jn(e)}},In=(e,t,o=!0)=>{const n=(o?je:We)(e,t);zn(e,n)},Fn=e=>(e=>Bn(e).filter(e=>e.rangeCount>0).bind(Pn))(e).map(e=>_n.exact(e.start,e.soffset,e.finish,e.foffset)),Hn=(e,t,o)=>((e,t,o)=>((e,t,o)=>e.caretPositionFromPoint?((e,t,o)=>C.from(e.caretPositionFromPoint?.(t,o)).bind(t=>{if(null===t.offsetNode)return C.none();const o=e.createRange();return o.setStart(t.offsetNode,t.offset),o.collapse(),C.some(o)}))(e,t,o):e.caretRangeFromPoint?((e,t,o)=>C.from(e.caretRangeFromPoint?.(t,o)))(e,t,o):C.none())(e.document,t,o).map(e=>Dn(Me.fromDom(e.startContainer),e.startOffset,Me.fromDom(e.endContainer),e.endOffset)))(e,t,o),$n={unsupportedLength:["em","ex","cap","ch","ic","rem","lh","rlh","vw","vh","vi","vb","vmin","vmax","cm","mm","Q","in","pc","pt","px"],fixed:["px","pt"],relative:["%"],empty:[""]},Vn=(()=>{const e="[0-9]+",t="[eE][+-]?"+e,o=e=>`(?:${e})?`,n=["Infinity",e+"\\."+o(e)+o(t),"\\."+e+o(t),e+o(t)].join("|");return new RegExp(`^([+-]?(?:${n}))(.*)$`)})(),qn=e=>E(e,g(0)),Un=(e,t,o,n,r)=>r(e.slice(0,t)).concat(n).concat(r(e.slice(o))),Gn=e=>(t,o,n,r)=>{if(e(n)){const e=Math.max(r,t[o]-Math.abs(n)),s=Math.abs(e-t[o]);return n>=0?s:-s}return n},Kn=Gn(e=>e<0),Yn=Gn(x),Jn=()=>{const e=(e,t,o,n)=>{const r=(100+o)/100,s=Math.max(n,(e[t]+o)/r);return E(e,(e,o)=>(o===t?s:e/r)-e)},t=(t,o,n,r,s,l)=>l?e(t,o,r,s):((e,t,o,n,r)=>{const s=Kn(e,t,n,r);return Un(e,t,o+1,[s,0],qn)})(t,o,n,r,s);return{resizeTable:(e,t)=>e(t),clampTableDelta:Kn,calcLeftEdgeDeltas:t,calcMiddleDeltas:(e,o,n,r,s,l,a)=>t(e,n,r,s,l,a),calcRightEdgeDeltas:(t,o,n,r,s,l)=>{if(l)return e(t,n,r,s);{const e=Kn(t,n,r,s);return qn(t.slice(0,n)).concat([e])}},calcRedestributedWidths:(e,t,o,n)=>{if(n){const n=(t+o)/t,r=E(e,e=>e/n);return{delta:100*n-100,newSizes:r}}return{delta:o,newSizes:e}}}},Qn=()=>{const e=(e,t,o,n,r)=>{const s=Yn(e,n>=0?o:t,n,r);return Un(e,t,o+1,[s,-s],qn)};return{resizeTable:(e,t,o)=>{o&&e(t)},clampTableDelta:(e,t,o,n,r)=>{if(r){if(o>=0)return o;{const t=A(e,(e,t)=>e+t-n,0);return Math.max(-t,o)}}return Kn(e,t,o,n)},calcLeftEdgeDeltas:e,calcMiddleDeltas:(t,o,n,r,s,l)=>e(t,n,r,s,l),calcRightEdgeDeltas:(e,t,o,n,r,s)=>{if(s)return qn(e);{const t=n/e.length;return E(e,g(t))}},calcRedestributedWidths:(e,t,o,n)=>({delta:0,newSizes:e})}},Xn=(e,t,o=0)=>po(e,t).map(e=>parseInt(e,10)).getOr(o),Zn=(e,t)=>Xn(e,t,1),er=e=>It("col")(e)?Xn(e,"span",1)>1:Zn(e,"colspan")>1,tr=(e,t)=>parseInt(No(e,t),10),or=g(10),nr=g(10),rr=(e,t)=>sr(e,t,x),sr=(e,t,o)=>j(Kt(e),e=>Ge(e,t)?o(e)?[e]:[]:sr(e,t,o)),lr=(e,t)=>((e,t,o=y)=>o(t)?C.none():D(e,Nt(t))?C.some(t):rn(t,e.join(","),e=>Ge(e,"table")||o(e)))(["td","th"],e,t),ar=e=>rr(e,"th,td"),cr=e=>Ge(e,"colgroup")?wn(e,"col"):j(dr(e),e=>wn(e,"col")),ir=(e,t)=>an(e,"table",t),mr=e=>rr(e,"tr"),dr=e=>ir(e).fold(g([]),e=>wn(e,"colgroup")),ur=It("th"),fr=e=>P(e,e=>ur(e.element)),gr=(e,t)=>e&&t?"sectionCells":e?"section":"cells",hr=e=>{const t="thead"===e.section,o=ie(pr(e.cells),"th");return"tfoot"===e.section?{type:"footer"}:t||o?{type:"header",subType:gr(t,o)}:{type:"body"}},pr=e=>{const t=B(e,e=>ur(e.element));return 0===t.length?C.some("td"):t.length===e.length?C.some("th"):C.none()},br=(e,t)=>E(e,e=>{if("colgroup"===Nt(e)){const t=E(cr(e),e=>{const t=Xn(e,"span",1);return Ce(e,1,t)});return Te(e,t,"colgroup")}{const o=E(ar(e),e=>{const t=Xn(e,"rowspan",1),o=Xn(e,"colspan",1);return Ce(e,t,o)});return Te(e,o,t(e))}}),wr=e=>$t(e).map(e=>{const t=Nt(e);return(e=>D(xe,e))(t)?t:"tbody"}).getOr("tbody"),vr=e=>{const t=mr(e),o=[...dr(e),...t];return br(o,wr)},yr="data-snooker-locked-cols",xr=e=>po(e,yr).bind(e=>C.from(e.match(/\d+/g))).map(e=>I(e,x)),Cr=e=>{const t=A(ze(e).rows,(e,t)=>(_(t.cells,(t,o)=>{t.isLocked&&(e[o]=!0)}),e),{}),o=J(t,(e,t)=>parseInt(t,10));return(e=>{const t=T.call(e,0);return t.sort(void 0),t})(o)},Tr=(e,t)=>e+","+t,Sr=(e,t)=>{const o=j(e.all,e=>e.cells);return B(o,t)},Rr=e=>{const t={},o=[],n=H(e).map(e=>e.element).bind(ir).bind(xr).getOr({});let r=0,s=0,l=0;const{pass:a,fail:c}=N(e,e=>"colgroup"===e.section);_(c,e=>{const a=[];_(e.cells,e=>{let o=0;for(;void 0!==t[Tr(l,o)];)o++;const r=((e,t)=>X(e,t)&&void 0!==e[t]&&null!==e[t])(n,o.toString()),c=((e,t,o,n,r,s)=>({element:e,rowspan:t,colspan:o,row:n,column:r,isLocked:s}))(e.element,e.rowspan,e.colspan,l,o,r);for(let n=0;n<e.colspan;n++)for(let r=0;r<e.rowspan;r++){const e=o+n,a=Tr(l+r,e);t[a]=c,s=Math.max(s,e+1)}a.push(c)}),r++,o.push(Te(e.element,a,e.section)),l++});const{columns:i,colgroups:m}=$(a).map(e=>{const t=(e=>{const t={};let o=0;return _(e.cells,e=>{const n=e.colspan;k(n,r=>{const s=o+r;t[s]=((e,t,o)=>({element:e,colspan:t,column:o}))(e.element,n,s)}),o+=n}),t})(e),o=((e,t)=>({element:e,columns:t}))(e.element,Q(t));return{colgroups:[o],columns:t}}).getOrThunk(()=>({colgroups:[],columns:{}})),d=((e,t)=>({rows:e,columns:t}))(r,s);return{grid:d,access:t,all:o,columns:i,colgroups:m}},Dr=e=>{const t=vr(e);return Rr(t)},Or=Rr,kr=(e,t,o)=>C.from(e.access[Tr(t,o)]),Er=(e,t,o)=>{const n=Sr(e,e=>o(t,e.element));return n.length>0?C.some(n[0]):C.none()},_r=Sr,Nr=e=>j(e.all,e=>e.cells),Br=e=>Q(e.columns),zr=e=>q(e.columns).length>0,Ar=(e,t)=>C.from(e.columns[t]),Lr=(e,t,o)=>Se(o(e.element,t),!0,e.isLocked),Mr=(e,t)=>e.section!==t?Re(e.element,e.cells,t,e.isNew):e,Wr=()=>({transformRow:Mr,transformCell:(e,t,o)=>{const n=o(e.element,t),r="td"!==Nt(n)?(e=>{const t=Ro(e,"td");so(e,t);const o=Kt(e);return mo(t,o),yo(e),t})(n):n;return Se(r,e.isNew,e.isLocked)}}),jr=()=>({transformRow:Mr,transformCell:Lr}),Pr=()=>({transformRow:(e,t)=>Mr(e,"thead"===t?"tbody":t),transformCell:Lr}),Ir=Wr,Fr=jr,Hr=Pr,$r=()=>({transformRow:h,transformCell:Lr}),Vr=(e,t=x)=>{const o=e.grid,n=k(o.columns,h),r=k(o.rows,h);return E(n,o=>qr(()=>j(r,t=>kr(e,t,o).filter(e=>e.column===o).toArray()),e=>1===e.colspan&&t(e.element),()=>kr(e,0,o)))},qr=(e,t,o)=>{const n=e();return L(n,t).orThunk(()=>C.from(n[0]).orThunk(o)).map(e=>e.element)},Ur=e=>{const t=e.grid,o=k(t.rows,h),n=k(t.columns,h);return E(o,t=>qr(()=>j(n,o=>kr(e,t,o).filter(e=>e.row===t).fold(g([]),e=>[e])),e=>1===e.rowspan,()=>kr(e,t,0)))},Gr=(e,t)=>({row:e,y:t}),Kr=(e,t)=>({col:e,x:t}),Yr=e=>Go(e).left+Ho(e),Jr=e=>Go(e).left,Qr=(e,t)=>Kr(e,Jr(t)),Xr=(e,t)=>Kr(e,Yr(t)),Zr=e=>Go(e).top,es=(e,t)=>Gr(e,Zr(t)),ts=(e,t)=>Gr(e,Zr(t)+Po(t)),os=(e,t,o)=>{if(0===o.length)return[];const n=E(o.slice(1),(t,o)=>t.map(t=>e(o,t))),r=o[o.length-1].map(e=>t(o.length-1,e));return n.concat([r])},ns={delta:h,positions:e=>os(es,ts,e),edge:Zr},rs=Zo({delta:h,edge:Jr,positions:e=>os(Qr,Xr,e)},{delta:e=>-e,edge:Yr,positions:e=>os(Xr,Qr,e)}),ss={delta:(e,t)=>rs(t).delta(e,t),positions:(e,t)=>rs(t).positions(e,t),edge:e=>rs(e).edge(e)},ls=/(\d+(\.\d+)?)%/,as=/(\d+(\.\d+)?)px|em/,cs=It("col"),is=It("tr"),ms=(e,t,o)=>{const n=Vt(e).getOrThunk(()=>(e=>{const t=e.dom.body;if(null==t)throw new Error("Body is not available yet");return Me.fromDom(t)})(Ft(e)));return t(e)/o(n)*100},ds=(e,t)=>{Eo(e,"width",t+"px")},us=(e,t)=>{Eo(e,"width",t+"%")},fs=(e,t)=>{Eo(e,"height",t+"px")},gs=e=>{const t=(e=>{return Mo(t=e,"height",t.dom.offsetHeight)+"px";var t})(e);return t?((e,t,o,n)=>{const r=parseFloat(e);return be(e,"%")&&"table"!==Nt(t)?((e,t,o,n)=>{const r=ir(e).map(e=>{const n=o(e);return Math.floor(t/100*n)}).getOr(t);return n(e,r),r})(t,r,o,n):r})(t,e,jo,fs):jo(e)},hs=(e,t)=>zo(e,t).orThunk(()=>po(e,t).map(e=>e+"px")),ps=e=>hs(e,"width"),bs=e=>ms(e,Fo,$o),ws=e=>{return cs(e)?Math.round(Fo(e)):Mo(t=e,"width",t.dom.offsetWidth);var t},vs=e=>is(e)?jo(e):((e,t,o)=>o(e)/Zn(e,"rowspan"))(e,0,gs),ys=(e,t,o)=>{Eo(e,"width",t+o)},xs=e=>ms(e,Fo,$o)+"%",Cs=g(ls),Ts=It("col"),Ss=e=>ps(e).getOrThunk(()=>ws(e)+"px"),Rs=e=>{return(t=e,hs(t,"height")).getOrThunk(()=>vs(e)+"px");var t},Ds=(e,t,o,n,r,s)=>e.filter(n).fold(()=>s(((e,t)=>{if(t<0||t>=e.length-1)return C.none();const o=e[t].fold(()=>{const o=(e=>{const t=T.call(e,0);return t.reverse(),t})(e.slice(0,t));return V(o,(e,t)=>e.map(e=>({value:e,delta:t+1})))},e=>C.some({value:e,delta:0})),n=e[t+1].fold(()=>{const o=e.slice(t+1);return V(o,(e,t)=>e.map(e=>({value:e,delta:t+1})))},e=>C.some({value:e,delta:1}));return o.bind(e=>n.map(t=>{const o=t.delta+e.delta;return Math.abs(t.value-e.value)/o}))})(o,t)),e=>r(e)),Os=(e,t,o,n)=>{const r=Vr(e),s=zr(e)?(e=>E(Br(e),e=>C.from(e.element)))(e):r,l=[C.some(ss.edge(t))].concat(E(ss.positions(r,t),e=>e.map(e=>e.x))),a=w(er);return E(s,(e,t)=>Ds(e,t,l,a,e=>{if((e=>{const t=kt().browser,o=t.isChromium()||t.isFirefox();return!Ts(e)||o})(e))return o(e);{const e=null!=(s=r[t])?h(s):C.none();return Ds(e,t,l,a,e=>n(C.some(Math.round(Fo(e)))),n)}var s},n))},ks=e=>e.map(e=>e+"px").getOr(""),Es=(e,t,o)=>Os(e,t,ws,e=>e.getOrThunk(o.minCellWidth)),_s=(e,t,o,n)=>{const r=Ur(e),s=E(e.all,e=>C.some(e.element)),l=[C.some(ns.edge(t))].concat(E(ns.positions(r,t),e=>e.map(e=>e.y)));return E(s,(e,t)=>Ds(e,t,l,x,o,n))},Ns=(e,t)=>()=>Oo(e)?t(e):parseFloat(zo(e,"width").getOr("0")),Bs=e=>{const t=Ns(e,e=>parseFloat(xs(e))),o=Ns(e,Fo);return{width:t,pixelWidth:o,getWidths:(t,o)=>((e,t,o)=>Os(e,t,bs,e=>e.fold(()=>o.minCellWidth(),e=>e/o.pixelWidth()*100)))(t,e,o),getCellDelta:e=>e/o()*100,singleColumnWidth:(e,t)=>[100-e],minCellWidth:()=>or()/o()*100,setElementWidth:us,adjustTableWidth:o=>{const n=t();us(e,n+o/100*n)},isRelative:!0,label:"percent"}},zs=e=>{const t=Ns(e,Fo);return{width:t,pixelWidth:t,getWidths:(t,o)=>Es(t,e,o),getCellDelta:h,singleColumnWidth:(e,t)=>[Math.max(or(),e+t)-e],minCellWidth:or,setElementWidth:ds,adjustTableWidth:o=>{const n=t()+o;ds(e,n)},isRelative:!1,label:"pixel"}},As=e=>ps(e).fold(()=>(e=>{const t=Ns(e,Fo),o=g(0);return{width:t,pixelWidth:t,getWidths:(t,o)=>Es(t,e,o),getCellDelta:o,singleColumnWidth:g([0]),minCellWidth:o,setElementWidth:f,adjustTableWidth:f,isRelative:!0,label:"none"}})(e),t=>((e,t)=>null!==Cs().exec(t)?Bs(e):zs(e))(e,t)),Ls=zs,Ms=Bs,Ws=(e,t,o,n)=>{o===n?bo(e,t):fo(e,t,o)},js=(e,t,o)=>{$(wn(e,t)).fold(()=>lo(e,o),e=>so(e,o))},Ps=(e,t)=>{const o=[],n=[],r=e=>E(e,e=>{e.isNew&&o.push(e.element);const t=e.element;return vo(t),_(e.cells,e=>{e.isNew&&n.push(e.element),Ws(e.element,"colspan",e.colspan,1),Ws(e.element,"rowspan",e.rowspan,1),ao(t,e.element)}),t}),s=e=>j(e,e=>E(e.cells,e=>(Ws(e.element,"span",e.colspan,1),e.element))),l=(t,o)=>{const n=((e,t)=>{const o=sn(e,t).getOrThunk(()=>{const o=Me.fromTag(t,Ft(e).dom);return"thead"===t?js(e,"caption,colgroup",o):"colgroup"===t?js(e,"caption",o):ao(e,o),o});return vo(o),o})(e,o),l=("colgroup"===o?s:r)(t);mo(n,l)},a=(t,o)=>{t.length>0?l(t,o):(t=>{sn(e,t).each(yo)})(o)},c=[],i=[],m=[],d=[];return _(t,e=>{switch(e.section){case"thead":c.push(e);break;case"tbody":i.push(e);break;case"tfoot":m.push(e);break;case"colgroup":d.push(e)}}),a(d,"colgroup"),a(c,"thead"),a(i,"tbody"),a(m,"tfoot"),{newRows:o,newCells:n}},Is=(e,t)=>{if(0===e.length)return 0;const o=e[0];return M(e,e=>!t(o.element,e.element)).getOr(e.length)},Fs=(e,t)=>{const o=E(e,e=>E(e.cells,y));return E(e,(n,r)=>{const s=j(n.cells,(n,s)=>{if(!1===o[r][s]){const m=((e,t,o,n)=>{const r=((e,t)=>e[t])(e,t),s="colgroup"===r.section,l=Is(r.cells.slice(o),n),a=s?1:Is(((e,t)=>E(e,e=>_e(e,t)))(e.slice(t),o),n);return{colspan:l,rowspan:a}})(e,r,s,t);return((e,t,n,r)=>{for(let s=e;s<e+n;s++)for(let e=t;e<t+r;e++)o[s][e]=!0})(r,s,m.rowspan,m.colspan),[(l=n.element,a=m.rowspan,c=m.colspan,i=n.isNew,{element:l,rowspan:a,colspan:c,isNew:i})]}return[];var l,a,c,i});return((e,t,o,n)=>({element:e,cells:t,section:o,isNew:n}))(n.element,s,n.section,n.isNew)})},Hs=(e,t,o)=>{const n=[];_(e.colgroups,r=>{const s=[];for(let n=0;n<e.grid.columns;n++){const r=Ar(e,n).map(e=>Se(e.element,o,!1)).getOrThunk(()=>Se(t.colGap(),!0,!1));s.push(r)}n.push(Re(r.element,s,"colgroup",o))});for(let r=0;r<e.grid.rows;r++){const s=[];for(let n=0;n<e.grid.columns;n++){const l=kr(e,r,n).map(e=>Se(e.element,o,e.isLocked)).getOrThunk(()=>Se(t.gap(),!0,!1));s.push(l)}const l=e.all[r],a=Re(l.element,s,l.section,o);n.push(a)}return n},$s=e=>Fs(e,Je),Vs=(e,t)=>V(e.all,e=>L(e.cells,e=>Je(t,e.element))),qs=(e,t,o)=>{const n=E(t.selection,t=>lr(t).bind(t=>Vs(e,t)).filter(o)),r=me(n);return de(r.length>0,r)},Us=(e,t,o,n,r,s,l,a,c)=>{const i=Dr(s),m=C.from(c?.section).getOrThunk($r);return t(i,l).map(t=>{const o=((e,t)=>Hs(e,t,!1))(i,a),n=e(o,t,Je,r(a),m),s=Cr(n.grid);return{info:t,grid:$s(n.grid),cursor:n.cursor,lockedColumns:s}}).bind(e=>{const t=Ps(s,e.grid),r=C.from(c?.sizing).getOrThunk(()=>As(s)),l=C.from(c?.resize).getOrThunk(Qn);return o(s,e.grid,e.info,{sizing:r,resize:l,section:m}),n(s),bo(s,yr),e.lockedColumns.length>0&&fo(s,yr,e.lockedColumns.join(",")),C.some({cursor:e.cursor,newRows:t.newRows,newCells:t.newCells})})},Gs=(e,t)=>lr(t.element).bind(o=>Vs(e,o).map(e=>({...e,generators:t.generators,clipboard:t.clipboard}))),Ks=(e,t)=>qs(e,t,x).map(e=>({cells:e,generators:t.generators,clipboard:t.clipboard})),Ys=(e,t)=>qs(e,t,x),Js=(e,t)=>qs(e,t,e=>!e.isLocked),Qs=(e,t)=>P(t,t=>((e,t)=>Vs(e,t).exists(e=>!e.isLocked))(e,t)),Xs=(e,t)=>((e,t)=>t.mergable)(0,t).filter(t=>Qs(e,t.cells)),Zs=(e,t)=>((e,t)=>t.unmergable)(0,t).filter(t=>Qs(e,t)),el={...Z([{none:[]},{only:["index"]},{left:["index","next"]},{middle:["prev","index","next"]},{right:["prev","index"]}])},tl=(e,t,o)=>{const n=((e,t)=>zr(e)?((e,t)=>{const o=Br(e);return E(o,(e,o)=>({element:e.element,width:t[o],colspan:e.colspan}))})(e,t):((e,t)=>{const o=Nr(e);return E(o,e=>{const o=((e,t,o)=>{let n=0;for(let r=e;r<t;r++)n+=void 0!==o[r]?o[r]:0;return n})(e.column,e.column+e.colspan,t);return{element:e.element,width:o,colspan:e.colspan}})})(e,t))(e,t);_(n,e=>{o.setElementWidth(e.element,e.width)})},ol=(e,t,o,n,r)=>{const s=Dr(e),l=r.getCellDelta(t),a=r.getWidths(s,r),c=o===s.grid.columns-1,i=n.clampTableDelta(a,o,l,r.minCellWidth(),c),m=((e,t,o,n,r)=>{const s=e.slice(0),l=((e,t)=>0===e.length?el.none():1===e.length?el.only(0):0===t?el.left(0,1):t===e.length-1?el.right(t-1,t):t>0&&t<e.length-1?el.middle(t-1,t,t+1):el.none())(e,t),a=g(E(s,g(0)));return l.fold(a,e=>n.singleColumnWidth(s[e],o),(e,t)=>r.calcLeftEdgeDeltas(s,e,t,o,n.minCellWidth(),n.isRelative),(e,t,l)=>r.calcMiddleDeltas(s,e,t,l,o,n.minCellWidth(),n.isRelative),(e,t)=>r.calcRightEdgeDeltas(s,e,t,o,n.minCellWidth(),n.isRelative))})(a,o,i,r,n),d=E(m,(e,t)=>e+a[t]);tl(s,d,r),n.resizeTable(r.adjustTableWidth,i,c)},nl=(e,t,o)=>{const n=Dr(e),r=((e,t)=>_s(e,t,vs,e=>e.getOrThunk(nr)))(n,e),s=E(r,(e,n)=>o===n?Math.max(t+e,nr()):e),l=((e,t)=>E(e.all,(e,o)=>({element:e.element,height:t[o]})))(n,s);_(l,e=>{fs(e.element,e.height)}),_(Nr(n),e=>{(e=>{Ao(e,"height")})(e.element)});const a=z(s,(e,t)=>e+t,0);fs(e,a)},rl=(e,t)=>{if(!er(e)){const o=(e=>ps(e).bind(e=>{return t=e,o=["fixed","relative","empty"],C.from(Vn.exec(t)).bind(e=>{const t=Number(e[1]),n=e[2];return((e,t)=>O(t,t=>O($n[t],t=>e===t)))(n,o)?C.some({value:t,unit:n}):C.none()});var t,o}))(e);o.each(o=>{const n=o.value/2;ys(e,n,o.unit),ys(t,n,o.unit)})}},sl=(e,t,o)=>{const n=Xn(e,t,1);1===o||n<=1?bo(e,t):fo(e,t,Math.min(o,n))},ll=(e,t)=>o=>{const n=o.column+o.colspan-1,r=o.column;return n>=e&&r<t},al=(e,t,o)=>{const n=e[o].element,r=Me.fromTag("td");ao(r,Me.fromTag("br")),(t?ao:lo)(n,r)},cl=It("col"),il=It("colgroup"),ml=e=>"tr"===Nt(e)||il(e),dl=e=>({element:e,colspan:Xn(e,"colspan",1),rowspan:Xn(e,"rowspan",1)}),ul=e=>po(e,"scope").map(e=>e.substr(0,3)),fl=(e,t=dl)=>{const o=o=>{if(ml(o))return il((r={element:o}).element)?e.colgroup(r):e.row(r);{const r=o,s=(t=>cl(t.element)?e.col(t):e.cell(t))(t(r));return n=C.some({item:r,replacement:s}),s}var r};let n=C.none();return{getOrInit:(e,t)=>n.fold(()=>o(e),n=>t(e,n.item)?n.replacement:o(e))}},gl=e=>t=>{const o=[],n=n=>{const r="td"===e?{scope:null}:{},s=t.replace(n,e,r);return o.push({item:n,sub:s}),s};return{replaceOrInit:(e,t)=>{if(ml(e)||cl(e))return e;{const r=e;return((e,t)=>L(o,o=>t(o.item,e)))(r,t).fold(()=>n(r),o=>t(e,o.item)?o.sub:n(r))}}}},hl=e=>({unmerge:t=>{const o=ul(t);return o.each(e=>fo(t,"scope",e)),()=>{const n=e.cell({element:t,colspan:1,rowspan:1});return Ao(n,"width"),Ao(t,"width"),o.each(e=>fo(n,"scope",e)),n}},merge:e=>(Ao(e[0],"width"),(()=>{const t=me(E(e,ul));if(0===t.length)return C.none();{const e=t[0],o=["row","col"];return O(t,t=>t!==e&&D(o,t))?C.none():C.from(e)}})().fold(()=>bo(e[0],"scope"),t=>fo(e[0],"scope",t+"group")),g(e[0]))}),pl=Z([{invalid:["raw"]},{pixels:["value"]},{percent:["value"]}]),bl=(e,t,o)=>{const n=o.substring(0,o.length-e.length),r=parseFloat(n);return n===r.toString()?t(r):pl.invalid(o)},wl={...pl,from:e=>be(e,"%")?bl("%",pl.percent,e):be(e,"px")?bl("px",pl.pixels,e):pl.invalid(e)},vl=(e,t,o)=>{const n=wl.from(o),r=P(e,e=>"0px"===e)?((e,t)=>{const o=e.fold(()=>g(""),e=>g(e/t+"px"),()=>g(100/t+"%"));return k(t,o)})(n,e.length):((e,t,o)=>e.fold(()=>t,e=>((e,t,o)=>{const n=o/t;return E(e,e=>wl.from(e).fold(()=>e,e=>e*n+"px",e=>e/100*o+"px"))})(t,o,e),e=>((e,t)=>E(e,e=>wl.from(e).fold(()=>e,e=>e/t*100+"%",e=>e+"%")))(t,o)))(n,e,t);return Cl(r)},yl=(e,t)=>0===e.length?t:z(e,(e,t)=>wl.from(t).fold(g(0),h,h)+e,0),xl=(e,t)=>wl.from(e).fold(g(e),e=>e+t+"px",e=>e+t+"%"),Cl=e=>{if(0===e.length)return e;const t=z(e,(e,t)=>{const o=wl.from(t).fold(()=>({value:t,remainder:0}),e=>(e=>{const t=Math.floor(e);return{value:t+"px",remainder:e-t}})(e),e=>({value:e+"%",remainder:0}));return{output:[o.value].concat(e.output),remainder:e.remainder+o.remainder}},{output:[],remainder:0}),o=t.output;return o.slice(0,o.length-1).concat([xl(o[o.length-1],Math.round(t.remainder))])},Tl=wl.from,Sl=(e,t,o)=>{const n=Dr(e),r=n.all,s=Nr(n),l=Br(n);t.each(t=>{const o=Tl(t).fold(g("px"),g("px"),g("%")),r=Fo(e),a=((e,t)=>Os(e,t,Ss,ks))(n,e),c=vl(a,r,t);zr(n)?((e,t,o)=>{_(t,(t,n)=>{const r=yl([e[n]],or());Eo(t.element,"width",r+o)})})(c,l,o):((e,t,o)=>{_(t,t=>{const n=e.slice(t.column,t.colspan+t.column),r=yl(n,or());Eo(t.element,"width",r+o)})})(c,s,o),Eo(e,"width",t)}),o.each(t=>{const o=jo(e),l=((e,t)=>_s(e,t,Rs,ks))(n,e);((e,t,o)=>{_(o,e=>{Ao(e.element,"height")}),_(t,(t,o)=>{Eo(t.element,"height",e[o])})})(vl(l,o,t),r,s),Eo(e,"height",t)})},Rl=e=>ps(e).exists(e=>ls.test(e)),Dl=e=>ps(e).exists(e=>as.test(e)),Ol=e=>ps(e).isNone();var kl=["body","p","div","article","aside","figcaption","figure","footer","header","nav","section","ol","ul","li","table","thead","tbody","tfoot","caption","tr","td","th","h1","h2","h3","h4","h5","h6","blockquote","pre","address"],El=()=>({up:g({selector:rn,closest:an,predicate:on,all:qt}),down:g({selector:vn,predicate:pn}),styles:g({get:No,getRaw:zo,set:Eo,remove:Ao}),attrs:g({get:ho,set:fo,remove:bo,copyTo:(e,t)=>{const o=wo(e);go(t,o)}}),insert:g({before:ro,after:so,afterAll:io,append:ao,appendAll:mo,prepend:lo,wrap:co}),remove:g({unwrap:xo,remove:yo}),create:g({nu:Me.fromTag,clone:e=>Me.fromDom(e.dom.cloneNode(!1)),text:Me.fromText}),query:g({comparePosition:(e,t)=>e.dom.compareDocumentPosition(t.dom),prevSibling:Ut,nextSibling:Gt}),property:g({children:Kt,name:Nt,parent:$t,document:e=>Ht(e).dom,isText:Wt,isComment:At,isElement:Mt,isSpecial:e=>{const t=Nt(e);return D(["script","noscript","iframe","noframes","noembed","title","style","textarea","xmp"],t)},getLanguage:e=>Mt(e)?po(e,"lang"):C.none(),getText:Jo,setText:Xo,isBoundary:e=>!!Mt(e)&&("body"===Nt(e)||D(kl,Nt(e))),isEmptyTag:e=>!!Mt(e)&&D(["br","img","hr","input"],Nt(e)),isNonEditable:e=>Mt(e)&&"false"===ho(e,"contenteditable")}),eq:Je,is:Xe});const _l=(e,t)=>({item:e,mode:t}),Nl=(e,t,o,n=Bl)=>e.property().parent(t).map(e=>_l(e,n)),Bl=(e,t,o,n=zl)=>o.sibling(e,t).map(e=>_l(e,n)),zl=(e,t,o,n=zl)=>{const r=e.property().children(t);return o.first(r).map(e=>_l(e,n))},Al=[{current:Nl,next:Bl,fallback:C.none()},{current:Bl,next:zl,fallback:C.some(Nl)},{current:zl,next:zl,fallback:C.some(Bl)}],Ll=(e,t,o,n,r=Al)=>L(r,e=>e.current===o).bind(o=>o.current(e,t,n,o.next).orThunk(()=>o.fallback.bind(o=>Ll(e,t,o,n)))),Ml=(e,t,o,n,r,s)=>Ll(e,t,n,r).bind(t=>s(t.item)?C.none():o(t.item)?C.some(t.item):Ml(e,t.item,o,t.mode,r,s)),Wl=(e,t)=>({element:e,offset:t}),jl=(e,t,o)=>e.property().isText(t)&&0===e.property().getText(t).trim().length||e.property().isComment(t)?o(t).bind(t=>jl(e,t,o).orThunk(()=>C.some(t))):C.none(),Pl=(e,t)=>e.property().isText(t)?e.property().getText(t).length:e.property().children(t).length,Il=(e,t)=>{const o=jl(e,t,e.query().prevSibling).getOr(t);if(e.property().isText(o))return Wl(o,Pl(e,o));const n=e.property().children(o);return n.length>0?Il(e,n[n.length-1]):Wl(o,Pl(e,o))},Fl=Il,Hl=El(),$l=e=>t=>0===e.property().children(t).length,Vl=(e,t,o,n)=>Ml(e,t,o,Bl,{sibling:(e,t)=>e.query().prevSibling(t),first:e=>e.length>0?C.some(e[e.length-1]):C.none()},n),ql=(e,t,o,n)=>Ml(e,t,o,Bl,{sibling:(e,t)=>e.query().nextSibling(t),first:e=>e.length>0?C.some(e[0]):C.none()},n),Ul=El(),Gl=(e,t)=>((e,t,o)=>Vl(e,t,$l(e),o))(Ul,e,t),Kl=(e,t)=>((e,t,o)=>ql(e,t,$l(e),o))(Ul,e,t),Yl=["body","p","div","article","aside","figcaption","figure","footer","header","nav","section","ol","ul","table","thead","tfoot","tbody","caption","tr","td","th","h1","h2","h3","h4","h5","h6","blockquote","pre","address"],Jl=(e,t,o,n)=>{const r=t(e,o);return z(n,(o,n)=>{const r=t(e,n);return Ql(e,o,r)},r)},Ql=(e,t,o)=>t.bind(t=>o.filter(b(e.eq,t))),Xl=El(),Zl=(e,t)=>((e,t,o)=>o.length>0?((e,t,o,n)=>n(e,t,o[0],o.slice(1)))(e,t,o,Jl):C.none())(Xl,(t,o)=>e(o),t),ea=El(),ta=e=>((e,t)=>{const o=e.property().name(t);return D(Yl,o)})(ea,e),oa=e=>((e,t)=>{const o=e.property().name(t);return D(["ol","ul"],o)})(ea,e),na=e=>{const t=It("br"),o=e=>Sn(e).bind(o=>{const n=Gt(o).map(e=>!!ta(e)||!!((e,t)=>D(["br","img","hr","input"],e.property().name(t)))(ea,e)&&"img"!==Nt(e)).getOr(!1);return $t(o).map(r=>{return!0===n||("li"===Nt(s=r)||on(s,oa).isSome())||t(o)||ta(r)&&!Je(e,r)?[]:[Me.fromTag("br")];var s})}).getOr([]),n=(()=>{const n=j(e,e=>{const n=Kt(e);return(e=>P(e,e=>t(e)||Wt(e)&&0===Jo(e).trim().length))(n)?[]:n.concat(o(e))});return 0===n.length?[Me.fromTag("br")]:n})();vo(e[0]),mo(e[0],n)},ra=e=>{bo(e,"width"),bo(e,"height")},sa=e=>{const t=xs(e);Sl(e,C.some(t),C.none()),ra(e)},la=e=>{const t=(e=>Fo(e)+"px")(e);Sl(e,C.some(t),C.none()),ra(e)},aa=e=>{Ao(e,"width");const t=cr(e),o=t.length>0?t:ar(e);_(o,e=>{Ao(e,"width"),ra(e)}),ra(e)},ca={scope:["row","col"]},ia=e=>()=>{const t=Me.fromTag("td",e.dom);return ao(t,Me.fromTag("br",e.dom)),t},ma=e=>()=>Me.fromTag("col",e.dom),da=e=>()=>Me.fromTag("colgroup",e.dom),ua=e=>()=>Me.fromTag("tr",e.dom),fa=(e,t,o)=>{const n=((e,t)=>{const o=Ro(e,t),n=Kt(So(e));return mo(o,n),o})(e,t);return G(o,(e,t)=>{null===e?bo(n,t):fo(n,t,e)}),n},ga=e=>e,ha=(e,t,o)=>{const n=(e,t)=>{((e,t)=>{const o=e.dom,n=t.dom;Do(o)&&Do(n)&&(n.style.cssText=o.style.cssText)})(e.element,t),Ao(t,"height"),1!==e.colspan&&Ao(t,"width")};return{col:o=>{const r=Me.fromTag(Nt(o.element),t.dom);return n(o,r),e(o.element,r),r},colgroup:da(t),row:ua(t),cell:r=>{const s=Me.fromTag(Nt(r.element),t.dom),l=o.getOr(["strong","em","b","i","span","font","h1","h2","h3","h4","h5","h6","p","div"]),a=l.length>0?((e,t,o)=>Tn(e).map(n=>{const r=o.join(","),s=bn(n,r,t=>Je(t,e));return z(s,(e,t)=>{const o=To(t);return ao(e,o),o},t)}).getOr(t))(r.element,s,l):s;return ao(a,Me.fromTag("br")),n(r,s),((e,t)=>{G(ca,(o,n)=>po(e,n).filter(e=>D(o,e)).each(e=>fo(t,n,e)))})(r.element,s),e(r.element,s),s},replace:fa,colGap:ma(t),gap:ia(t)}},pa=e=>({col:ma(e),colgroup:da(e),row:ua(e),cell:ia(e),replace:ga,colGap:ma(e),gap:ia(e)}),ba=e=>Dr(e).grid,wa=(e,t,o,n)=>{const r=ze(e).rows;let s=!0;for(let e=0;e<r.length;e++)for(let l=0;l<Be(r[0]);l++){const a=r[e],c=_e(a,l),i=o(c.element,t);i&&!s?ke(a,l,Se(n(),!0,c.isLocked)):i&&(s=!1)}return e},va=(e,t)=>({rowDelta:0,colDelta:Be(e[0])-Be(t[0])}),ya=(e,t)=>({rowDelta:e.length-t.length,colDelta:0}),xa=(e,t,o,n)=>{const r="colgroup"===t.section?o.col:o.cell;return k(e,e=>Se(r(),!0,n(e)))},Ca=(e,t,o,n)=>{const r=e[e.length-1];return e.concat(k(t,()=>{const e="colgroup"===r.section?o.colgroup:o.row,t=Ae(r,e,h),s=xa(t.cells.length,t,o,e=>X(n,e.toString()));return Ee(t,s)}))},Ta=(e,t,o,n)=>E(e,e=>{const r=xa(t,e,o,y);return De(e,n,r)}),Sa=(e,t,o)=>{const n=t.colDelta<0?Ta:h,r=t.rowDelta<0?Ca:h,s=Cr(e),l=Be(e[0]),a=O(s,e=>e===l-1),c=n(e,Math.abs(t.colDelta),o,a?l-1:l),i=Cr(c);return r(c,Math.abs(t.rowDelta),o,I(i,x))},Ra=(e,t,o,n)=>{const r=b(n,_e(e[t],o).element),s=e[t];return e.length>1&&Be(s)>1&&(o>0&&r(Ne(s,o-1))||o<s.cells.length-1&&r(Ne(s,o+1))||t>0&&r(Ne(e[t-1],o))||t<e.length-1&&r(Ne(e[t+1],o)))},Da=(e,t,o)=>B(o,o=>o>=e.column&&o<=Be(t[0])+e.column),Oa=(e,t,o,n,r)=>{((e,t,o,n)=>{t>0&&t<e[0].cells.length&&_(e,e=>{const r=e.cells[t-1];let s=0;const l=n();for(;e.cells.length>t+s&&o(r.element,e.cells[t+s].element);)ke(e,t+s,Se(l,!0,e.cells[t+s].isLocked)),s++})})(t,e,r,n.cell);const s=ya(o,t),l=Sa(o,s,n),a=ya(t,l),c=Sa(t,a,n);return E(c,(t,o)=>De(t,e,l[o].cells))},ka=(e,t,o,n,r)=>{((e,t,o,n)=>{const r=ze(e).rows;if(t>0&&t<r.length){const e=((e,t)=>A(e,(e,o)=>O(e,e=>t(e.element,o.element))?e:e.concat([o]),[]))(r[t-1].cells,o);_(e,e=>{let s=C.none();for(let l=t;l<r.length;l++)for(let t=0;t<Be(r[0]);t++){const a=r[l],c=_e(a,t);o(c.element,e.element)&&(s.isNone()&&(s=C.some(n())),s.each(e=>{ke(a,t,Se(e,!0,c.isLocked))}))}})}})(t,e,r,n.cell);const s=Cr(t),l=va(t,o),a={...l,colDelta:l.colDelta-s.length},c=Sa(t,a,n),{cols:i,rows:m}=ze(c),d=Cr(c),u=va(o,t),f={...u,colDelta:u.colDelta+d.length},g=(p=n,b=d,E(o,e=>A(b,(t,o)=>{const n=xa(1,e,p,x)[0];return Oe(t,o,n)},e))),h=Sa(g,f,n);var p,b;return[...i,...m.slice(0,e),...h,...m.slice(e,m.length)]},Ea=(e,t,o,n,r)=>{const{rows:s,cols:l}=ze(e),a=s.slice(0,t),c=s.slice(t);return[...l,...a,((e,t,o,n)=>Ae(e,e=>n(e,o),t))(s[o],(e,o)=>t>0&&t<s.length&&n(Ne(s[t-1],o),Ne(s[t],o))?_e(s[t],o):Se(r(e.element,n),!0,e.isLocked),n,r),...c]},_a=(e,t,o,n,r)=>E(e,e=>{const s=t>0&&t<Be(e)&&n(Ne(e,t-1),Ne(e,t)),l=((e,t,o,n,r,s,l)=>{if("colgroup"!==o&&n)return _e(e,t);{const t=_e(e,r);return Se(l(t.element,s),!0,!1)}})(e,t,e.section,s,o,n,r);return Oe(e,t,l)}),Na=(e,t,o,n)=>((e,t,o,n)=>void 0!==Ne(e[t],o)&&t>0&&n(Ne(e[t-1],o),Ne(e[t],o)))(e,t,o,n)||((e,t,o)=>t>0&&o(Ne(e,t-1),Ne(e,t)))(e[t],o,n),Ba=(e,t,o,n)=>{const r=e=>(e=>"row"===e?(e=>Zn(e,"rowspan")>1)(t):er(t))(e)?`${e}group`:e;return e?ur(t)?r(o):null:n&&ur(t)?r("row"===o?"col":"row"):null},za=(e,t,o)=>Se(o(e.element,t),!0,e.isLocked),Aa=(e,t,o,n,r,s,l)=>E(e,(e,a)=>(e=>{const c=e.cells,i=E(c,(e,c)=>{if((e=>O(t,t=>o(e.element,t.element)))(e)){const t=l(e,a,c)?r(e,o,n):e;return s(t,a,c).each(e=>{var o,n;o=t.element,n={scope:C.from(e)},G(n,(e,t)=>{e.fold(()=>{bo(o,t)},e=>{uo(o.dom,t,e)})})}),t}return e});return Re(e.element,i,e.section,e.isNew)})(e)),La=(e,t,o)=>j(e,(n,r)=>Na(e,r,t,o)?[]:[_e(n,t)]),Ma=(e,t,o,n,r)=>{const s=ze(e).rows,l=j(t,e=>La(s,e,n)),a=E(s,e=>fr(e.cells)),c=((e,t)=>P(t,h)&&fr(e)?x:(e,o,n)=>!("th"===Nt(e.element)&&t[o]))(l,a),i=((e,t)=>(o,n)=>C.some(Ba(e,o.element,"row",t[n])))(o,a);return Aa(e,l,n,r,za,i,c)},Wa=(e,t,o,n)=>{const r=ze(e).rows,s=E(t,e=>_e(r[e.row],e.column));return Aa(e,s,o,n,za,C.none,x)},ja=e=>A(e,(e,t)=>O(e,e=>e.column===t.column)?e:e.concat([t]),[]).sort((e,t)=>e.column-t.column),Pa=e=>gn(e,!0),Ia=e=>{0===ar(e).length&&yo(e)},Fa=(e,t)=>({grid:e,cursor:t}),Ha=(e,t,o)=>{const n=((e,t,o)=>{const n=ze(e).rows;return C.from(n[t]?.cells[o]?.element).filter(Pa).orThunk(()=>(e=>V(e,e=>V(e.cells,e=>{const t=e.element;return de(Pa(t),t)})))(n))})(e,t,o);return Fa(e,n)},$a=e=>A(e,(e,t)=>O(e,e=>e.row===t.row)?e:e.concat([t]),[]).sort((e,t)=>e.row-t.row),Va=(e,t,o,n)=>{const r=t[0].row,s=$a(t),l=z(s,(e,t)=>({grid:Ea(e.grid,r,t.row+e.delta,o,n.getOrInit),delta:e.delta+1}),{grid:e,delta:0}).grid;return Ha(l,r,t[0].column)},qa=(e,t,o,n)=>{const r=$a(t),s=r[r.length-1],l=s.row+s.rowspan,a=z(r,(e,t)=>Ea(e,l,t.row,o,n.getOrInit),e);return Ha(a,l,t[0].column)},Ua=(e,t,o,n)=>{const r=t.details,s=ja(r),l=s[0].column,a=z(s,(e,t)=>({grid:_a(e.grid,l,t.column+e.delta,o,n.getOrInit),delta:e.delta+1}),{grid:e,delta:0}).grid;return Ha(a,r[0].row,l)},Ga=(e,t,o,n)=>{const r=t.details,s=r[r.length-1],l=s.column+s.colspan,a=ja(r),c=z(a,(e,t)=>_a(e,l,t.column,o,n.getOrInit),e);return Ha(c,r[0].row,l)},Ka=(e,t,o,n)=>{const r=ja(t),s=E(r,e=>e.column),l=Ma(e,s,!0,o,n.replaceOrInit);return Ha(l,t[0].row,t[0].column)},Ya=(e,t,o,n)=>{const r=Wa(e,t,o,n.replaceOrInit);return Ha(r,t[0].row,t[0].column)},Ja=(e,t,o,n)=>{const r=ja(t),s=E(r,e=>e.column),l=Ma(e,s,!1,o,n.replaceOrInit);return Ha(l,t[0].row,t[0].column)},Qa=(e,t,o,n)=>{const r=Wa(e,t,o,n.replaceOrInit);return Ha(r,t[0].row,t[0].column)},Xa=(e,t)=>(o,n,r,s,l)=>{const a=$a(n),c=E(a,e=>e.row),i=((e,t,o,n,r,s,l)=>{const{cols:a,rows:c}=ze(e),i=c[t[0]],m=j(t,e=>((e,t,o)=>{const n=e[t];return j(n.cells,(n,r)=>Na(e,t,r,o)?[]:[n])})(c,e,r)),d=E(i.cells,(e,t)=>fr(La(c,t,r))),u=[...c];_(t,e=>{u[e]=l.transformRow(c[e],o)});const f=[...a,...u],g=((e,t)=>P(t,h)&&fr(e.cells)?x:(e,o,n)=>!("th"===Nt(e.element)&&t[n]))(i,d),p=((e,t)=>(o,n,r)=>C.some(Ba(e,o.element,"col",t[r])))(n,d);return Aa(f,m,r,s,l.transformCell,p,g)})(o,c,e,t,r,s.replaceOrInit,l);return Ha(i,n[0].row,n[0].column)},Za=Xa("thead",!0),ec=Xa("tbody",!1),tc=Xa("tfoot",!1),oc=(e,t,o,n)=>{const r=ja(t.details),s=((e,t)=>j(e,e=>{const o=e.cells,n=z(t,(e,t)=>t>=0&&t<e.length?e.slice(0,t).concat(e.slice(t+1)):e,o);return n.length>0?[Re(e.element,n,e.section,e.isNew)]:[]}))(e,E(r,e=>e.column)),l=s.length>0?s[0].cells.length-1:0;return Ha(s,r[0].row,Math.min(r[0].column,l))},nc=(e,t,o,n)=>{const r=$a(t),s=((e,t,o)=>{const{rows:n,cols:r}=ze(e);return[...r,...n.slice(0,t),...n.slice(o+1)]})(e,r[0].row,r[r.length-1].row),l=Math.max(ze(s).rows.length-1,0);return Ha(s,Math.min(t[0].row,l),t[0].column)},rc=(e,t,o,n)=>{const r=t.cells;na(r);const s=((e,t,o,n)=>{const r=ze(e).rows;if(0===r.length)return e;for(let e=t.startRow;e<=t.finishRow;e++)for(let o=t.startCol;o<=t.finishCol;o++){const t=r[e],s=_e(t,o).isLocked;ke(t,o,Se(n(),!1,s))}return e})(e,t.bounds,0,n.merge(r));return Fa(s,C.from(r[0]))},sc=(e,t,o,n)=>{const r=z(t,(e,t)=>wa(e,t,o,n.unmerge(t)),e);return Fa(r,C.from(t[0]))},lc=(e,t,o,n)=>{const r=((e,t)=>{const o=Dr(e);return Hs(o,t,!0)})(t.clipboard,t.generators);var s,l;return((e,t,o,n,r)=>{const s=Cr(t),l=((e,t,o)=>{const n=Be(t[0]),r=ze(t).cols.length+e.row,s=k(n-e.column,t=>t+e.column);return{row:r,column:L(s,e=>P(o,t=>t!==e)).getOr(n-1)}})(e,t,s),a=ze(o).rows,c=Da(l,a,s),i=((e,t,o)=>{if(e.row>=t.length||e.column>Be(t[0]))return le.error("invalid start address out of table bounds, row: "+e.row+", column: "+e.column);const n=t.slice(e.row),r=n[0].cells.slice(e.column),s=Be(o[0]),l=o.length;return le.value({rowDelta:n.length-l,colDelta:r.length-s})})(l,t,a);return i.map(e=>{const o={...e,colDelta:e.colDelta-c.length},s=Sa(t,o,n),i=Cr(s),m=Da(l,a,i);return((e,t,o,n,r,s)=>{const l=e.row,a=e.column,c=l+o.length,i=a+Be(o[0])+s.length,m=I(s,x);for(let e=l;e<c;e++){let s=0;for(let c=a;c<i;c++){if(m[c]){s++;continue}Ra(t,e,c,r)&&wa(t,Ne(t[e],c),r,n.cell);const i=c-a-s,d=_e(o[e-l],i),u=d.element,f=n.replace(u);ke(t[e],c,Se(f,!0,d.isLocked))}}return t})(l,s,a,n,r,m)})})((s=t.row,l=t.column,{row:s,column:l}),e,r,t.generators,o).fold(()=>Fa(e,C.some(t.element)),e=>Ha(e,t.row,t.column))},ac=(e,t,o)=>{const n=((e,t)=>br(e,()=>t))(e,o.section),r=Or(n);return Hs(r,t,!0)},cc=(e,t,o,n)=>{const r=ze(e).rows,s=t.cells[0].column,l=r[t.cells[0].row],a=ac(t.clipboard,t.generators,l),c=Oa(s,e,a,t.generators,o);return Ha(c,t.cells[0].row,t.cells[0].column)},ic=(e,t,o,n)=>{const r=ze(e).rows,s=t.cells[t.cells.length-1].column+t.cells[t.cells.length-1].colspan,l=r[t.cells[0].row],a=ac(t.clipboard,t.generators,l),c=Oa(s,e,a,t.generators,o);return Ha(c,t.cells[0].row,s)},mc=(e,t,o,n)=>{const r=ze(e).rows,s=t.cells[0].row,l=r[s],a=ac(t.clipboard,t.generators,l),c=ka(s,e,a,t.generators,o);return Ha(c,t.cells[0].row,t.cells[0].column)},dc=(e,t,o,n)=>{const r=ze(e).rows,s=t.cells[t.cells.length-1].row+t.cells[t.cells.length-1].rowspan,l=r[t.cells[0].row],a=ac(t.clipboard,t.generators,l),c=ka(s,e,a,t.generators,o);return Ha(c,s,t.cells[0].column)},uc=(e,t,o,n)=>((e,t,o,n)=>{const r=Or(t),s=n.getWidths(r,n);tl(r,s,n)})(0,t,0,n.sizing),fc=(e,t,o,n)=>((e,t,o,n,r)=>{const s=Or(t),l=n.getWidths(s,n),a=n.pixelWidth(),{newSizes:c,delta:i}=r.calcRedestributedWidths(l,a,o.pixelDelta,n.isRelative);tl(s,c,n),n.adjustTableWidth(i)})(0,t,o,n.sizing,n.resize),gc=(e,t)=>O(t,e=>0===e.column&&e.isLocked),hc=(e,t)=>O(t,t=>t.column+t.colspan>=e.grid.columns&&t.isLocked),pc=(e,t)=>{const o=Vr(e),n=ja(t);return A(n,(e,t)=>e+o[t.column].map(Ho).getOr(0),0)},bc=e=>(t,o)=>Ys(t,o).filter(o=>!(e?gc:hc)(t,o)).map(e=>({details:e,pixelDelta:pc(t,e)})),wc=(e,t)=>Js(e,t).map(t=>({details:t,pixelDelta:-pc(e,t)})),vc=e=>(t,o)=>Ks(t,o).filter(o=>!(e?gc:hc)(t,o.cells)),yc=gl("th"),xc=gl("td"),Cc=(e,t,o,n)=>Us(Va,Ys,f,f,fl,e,t,o,n),Tc=(e,t,o,n)=>Us(qa,Ys,f,f,fl,e,t,o,n),Sc=(e,t,o,n)=>Us(Ua,bc(!0),fc,f,fl,e,t,o,n),Rc=(e,t,o,n)=>Us(Ga,bc(!1),fc,f,fl,e,t,o,n),Dc=(e,t,o,n)=>Us(oc,wc,fc,Ia,fl,e,t,o,n),Oc=(e,t,o,n)=>Us(nc,Ys,f,Ia,fl,e,t,o,n),kc=(e,t,o,n)=>Us(Ka,Js,f,f,yc,e,t,o,n),Ec=(e,t,o,n)=>Us(Ja,Js,f,f,xc,e,t,o,n),_c=(e,t,o,n)=>Us(Za,Ys,f,f,yc,e,t,o,n),Nc=(e,t,o,n)=>Us(ec,Ys,f,f,xc,e,t,o,n),Bc=(e,t,o,n)=>Us(tc,Ys,f,f,xc,e,t,o,n),zc=(e,t,o,n)=>Us(Ya,Js,f,f,yc,e,t,o,n),Ac=(e,t,o,n)=>Us(Qa,Js,f,f,xc,e,t,o,n),Lc=(e,t,o,n)=>Us(rc,Xs,uc,f,hl,e,t,o,n),Mc=(e,t,o,n)=>Us(sc,Zs,uc,f,hl,e,t,o,n),Wc=(e,t,o,n)=>Us(lc,Gs,uc,f,fl,e,t,o,n),jc=(e,t,o,n)=>Us(cc,vc(!0),f,f,fl,e,t,o,n),Pc=(e,t,o,n)=>Us(ic,vc(!1),f,f,fl,e,t,o,n),Ic=(e,t,o,n)=>Us(mc,Ks,f,f,fl,e,t,o,n),Fc=(e,t,o,n)=>Us(dc,Ks,f,f,fl,e,t,o,n),Hc=(e,t)=>{const o=Dr(e);return Ys(o,t).bind(e=>{const t=e[e.length-1],n=e[0].column,r=t.column+t.colspan,s=W(E(o.all,e=>B(e.cells,e=>e.column>=n&&e.column<r)));return pr(s)}).getOr("")},$c=(e,t)=>{const o=Dr(e);return Ys(o,t).bind(pr).getOr("")},Vc=(e,t)=>{const o=Dr(e);return Ys(o,t).bind(e=>{const t=e[e.length-1],n=e[0].row,r=t.row+t.rowspan;return(e=>{const t=E(e,e=>hr(e).type),o=D(t,"header"),n=D(t,"footer");if(o||n){const e=D(t,"body");return!o||e||n?o||e||!n?C.none():C.some("footer"):C.some("header")}return C.some("body")})(o.all.slice(n,r))}).getOr("")},qc=(e,t)=>{const o=t.column,n=t.column+t.colspan-1,r=t.row,s=t.row+t.rowspan-1;return o<=e.finishCol&&n>=e.startCol&&r<=e.finishRow&&s>=e.startRow},Uc=(e,t)=>t.column>=e.startCol&&t.column+t.colspan-1<=e.finishCol&&t.row>=e.startRow&&t.row+t.rowspan-1<=e.finishRow,Gc=(e,t,o)=>{const n=Er(e,t,Je),r=Er(e,o,Je);return n.bind(e=>r.map(t=>{return o=e,n=t,{startRow:Math.min(o.row,n.row),startCol:Math.min(o.column,n.column),finishRow:Math.max(o.row+o.rowspan-1,n.row+n.rowspan-1),finishCol:Math.max(o.column+o.colspan-1,n.column+n.colspan-1)};var o,n}))},Kc=(e,t,o)=>Gc(e,t,o).map(t=>{const o=_r(e,b(qc,t));return E(o,e=>e.element)}),Yc=(e,t)=>Er(e,t,(e,t)=>Qe(t,e)).map(e=>e.element),Jc=(e,t,o)=>{const n=Xc(e);return Kc(n,t,o)},Qc=(e,t,o,n,r)=>{const s=Xc(e),l=Je(e,o)?C.some(t):Yc(s,t),a=Je(e,r)?C.some(n):Yc(s,n);return l.bind(e=>a.bind(t=>Kc(s,e,t)))},Xc=Dr,Zc={styles:{"border-collapse":"collapse",width:"100%"},attributes:{border:"1"},colGroups:!1},ei=()=>Me.fromTag("th"),ti=()=>Me.fromTag("td"),oi=(e,t,o,n)=>k(e,e=>((e,t,o,n)=>{const r=Me.fromTag("tr");for(let s=0;s<e;s++){const e=n<t||s<o?ei():ti();s<o&&fo(e,"scope","row"),n<t&&fo(e,"scope","col"),ao(e,Me.fromTag("br")),ao(r,e)}return r})(t,o,n,e)),ni=e=>{let t=[];return{bind:e=>{if(void 0===e)throw new Error("Event bind error: undefined handler");t.push(e)},unbind:e=>{t=B(t,t=>t!==e)},trigger:(...o)=>{const n={};_(e,(e,t)=>{n[e]=o[t]}),_(t,e=>{e(n)})}}},ri=e=>({registry:K(e,e=>({bind:e.bind,unbind:e.unbind})),trigger:K(e,e=>e.trigger)}),si=ne(["compare","extract","mutate","sink"]),li=ne(["element","start","stop","destroy"]),ai=ne(["forceDrop","drop","move","delayDrop"]),ci=()=>{const e=(()=>{const e=ri({move:ni(["info"])});return{onEvent:f,reset:f,events:e.registry}})(),t=(()=>{let e=C.none();const t=ri({move:ni(["info"])});return{onEvent:(o,n)=>{n.extract(o).each(o=>{const r=((t,o)=>{const n=e.map(e=>t.compare(e,o));return e=C.some(o),n})(n,o);r.each(e=>{t.trigger.move(e)})})},reset:()=>{e=C.none()},events:t.registry}})();let o=e;return{on:()=>{o.reset(),o=t},off:()=>{o.reset(),o=e},isOn:()=>o===t,onEvent:(e,t)=>{o.onEvent(e,t)},events:t.events}},ii=ce("ephox-dragster").resolve;var mi=si({compare:(e,t)=>qo(t.left-e.left,t.top-e.top),extract:e=>C.some(qo(e.x,e.y)),sink:(e,t)=>{const o=(e=>{const t={layerClass:ii("blocker"),...e},o=Me.fromTag("div");return fo(o,"role","presentation"),fo(o,"data-mce-bogus","all"),_o(o,{position:"fixed",left:"0px",top:"0px",width:"100%",height:"100%"}),dn(o,ii("blocker")),dn(o,t.layerClass),{element:g(o),destroy:()=>{yo(o)}}})(t),n=oo(o.element(),"mousedown",e.forceDrop),r=oo(o.element(),"mouseup",e.drop),s=oo(o.element(),"mousemove",e.move),l=oo(o.element(),"mouseout",e.delayDrop);return li({element:o.element,start:e=>{ao(e,o.element())},stop:()=>{yo(o.element())},destroy:()=>{o.destroy(),r.unbind(),s.unbind(),l.unbind(),n.unbind()}})},mutate:(e,t)=>{e.mutate(t.left,t.top)}});const di=ce("ephox-snooker").resolve,ui=di("resizer-bar"),fi=di("resizer-rows"),gi=di("resizer-cols"),hi=e=>{const t=vn(e.parent(),"."+ui);_(t,yo)},pi=(e,t,o)=>{const n=e.origin();_(t,t=>{t.each(t=>{const r=o(n,t);dn(r,ui),ao(e.parent(),r)})})},bi=(e,t,o,n,r)=>{const s=Go(o),l=t.isResizable,a=n.length>0?ns.positions(n,o):[],c=a.length>0?((e,t)=>j(e.all,(e,o)=>t(e.element)?[o]:[]))(e,l):[];((e,t,o,n)=>{pi(e,t,(e,t)=>{const r=((e,t,o,n)=>{const r=Me.fromTag("div");return _o(r,{position:"absolute",left:t+"px",top:o-3.5+"px",height:"7px",width:n+"px"}),go(r,{"data-mce-bogus":"all","data-row":e,role:"presentation"}),r})(t.row,o.left-e.left,t.y-e.top,n);return dn(r,fi),r})})(t,B(a,(e,t)=>O(c,e=>t===e)),s,Ho(o));const i=r.length>0?ss.positions(r,o):[],m=i.length>0?((e,t)=>{const o=[];return k(e.grid.columns,n=>{Ar(e,n).map(e=>e.element).forall(t)&&o.push(n)}),B(o,o=>{const n=_r(e,e=>e.column===o);return P(n,e=>t(e.element))})})(e,l):[];((e,t,o,n)=>{pi(e,t,(e,t)=>{const r=((e,t,o,n,r)=>{const s=Me.fromTag("div");return _o(s,{position:"absolute",left:t-3.5+"px",top:o+"px",height:r+"px",width:"7px"}),go(s,{"data-mce-bogus":"all","data-column":e,role:"presentation"}),s})(t.col,t.x-e.left,o.top-e.top,0,n);return dn(r,gi),r})})(t,B(i,(e,t)=>O(m,e=>t===e)),s,Po(o))},wi=(e,t)=>{if(hi(e),e.isResizable(t)){const o=Dr(t),n=Ur(o),r=Vr(o);bi(o,e,t,n,r)}},vi=(e,t)=>{const o=vn(e.parent(),"."+ui);_(o,t)},yi=e=>{vi(e,e=>{Eo(e,"display","none")})},xi=e=>{vi(e,e=>{Eo(e,"display","block")})},Ci=di("resizer-bar-dragging"),Ti=e=>{const t=(()=>{const e=ri({drag:ni(["xDelta","yDelta","target"])});let t=C.none();const o=(()=>{const e=ri({drag:ni(["xDelta","yDelta"])});return{mutate:(t,o)=>{e.trigger.drag(t,o)},events:e.registry}})();return o.events.drag.bind(o=>{t.each(t=>{e.trigger.drag(o.xDelta,o.yDelta,t)})}),{assign:e=>{t=C.some(e)},get:()=>t,mutate:o.mutate,events:e.registry}})(),o=((e,t={})=>((e,t,o)=>{let n=!1;const r=ri({start:ni([]),stop:ni([])}),s=ci(),l=()=>{m.stop(),s.isOn()&&(s.off(),r.trigger.stop())},c=(e=>{let t=null;const o=()=>{a(t)||(clearTimeout(t),t=null)};return{cancel:o,throttle:(...n)=>{o(),t=setTimeout(()=>{t=null,e.apply(null,n)},200)}}})(l);s.events.move.bind(o=>{t.mutate(e,o.info)});const i=e=>(...t)=>{n&&e.apply(null,t)},m=t.sink(ai({forceDrop:l,drop:i(l),move:i(e=>{c.cancel(),s.onEvent(e,t)}),delayDrop:i(c.throttle)}),o);return{element:m.element,go:e=>{m.start(e),s.on(),r.trigger.start()},on:()=>{n=!0},off:()=>{n=!1},isActive:()=>n,destroy:()=>{m.destroy()},events:r.registry}})(e,t.mode??mi,t))(t,{});let n=C.none();const r=(e,t)=>C.from(ho(e,t));t.events.drag.bind(e=>{r(e.target,"data-row").each(t=>{const o=tr(e.target,"top");Eo(e.target,"top",o+e.yDelta+"px")}),r(e.target,"data-column").each(t=>{const o=tr(e.target,"left");Eo(e.target,"left",o+e.xDelta+"px")})});const s=(e,t)=>tr(e,t)-Xn(e,"data-initial-"+t,0);o.events.stop.bind(()=>{t.get().each(t=>{n.each(o=>{r(t,"data-row").each(e=>{const n=s(t,"top");bo(t,"data-initial-top"),d.trigger.adjustHeight(o,n,parseInt(e,10))}),r(t,"data-column").each(e=>{const n=s(t,"left");bo(t,"data-initial-left"),d.trigger.adjustWidth(o,n,parseInt(e,10))}),wi(e,o)})})});const l=(n,r)=>{d.trigger.startAdjust(),t.assign(n),fo(n,"data-initial-"+r,tr(n,r)),dn(n,Ci),Eo(n,"opacity","0.2"),o.go(e.dragContainer())},c=oo(e.parent(),"mousedown",e=>{var t;t=e.target,un(t,fi)&&l(e.target,"top"),(e=>un(e,gi))(e.target)&&l(e.target,"left")}),i=t=>Je(t,e.view()),m=oo(e.view(),"mouseover",t=>{var r;(r=t.target,an(r,"table",i).filter(gn)).fold(()=>{Oo(t.target)&&!(e=>un(e,"ephox-snooker-resizer-bar")||un(e,"ephox-dragster-blocker"))(t.target)&&hi(e)},t=>{o.isActive()&&(n=C.some(t),wi(e,t))})}),d=ri({adjustHeight:ni(["table","delta","row"]),adjustWidth:ni(["table","delta","column"]),startAdjust:ni([])});return{destroy:()=>{c.unbind(),m.unbind(),o.destroy(),hi(e)},refresh:t=>{wi(e,t)},on:o.on,off:o.off,hideBars:b(yi,e),showBars:b(xi,e),events:d.registry}},Si=e=>t=>t.options.get(e),Ri="100%",Di=e=>{const t=e.dom,o=t.getParent(e.selection.getStart(),t.isBlock)??e.getBody();return $o(Me.fromDom(o))+"px"},Oi=e=>C.from(e.options.get("table_clone_elements")),ki=Si("table_header_type"),Ei=Si("table_column_resizing"),_i=e=>"preservetable"===Ei(e),Ni=e=>"resizetable"===Ei(e),Bi=Si("table_sizing_mode"),zi=e=>"relative"===Bi(e),Ai=e=>"fixed"===Bi(e),Li=e=>"responsive"===Bi(e),Mi=Si("table_resize_bars"),Wi=Si("table_style_by_css"),ji=Si("table_merge_content_on_paste"),Pi=Si("table_default_header_rows"),Ii=Si("table_default_header_cols"),Fi=e=>{const t=e.options,o=t.get("table_default_attributes");return t.isSet("table_default_attributes")?o:((e,t)=>Li(e)||Wi(e)?t:Ai(e)?{...t,width:Di(e)}:{...t,width:Ri})(e,o)},Hi=Si("table_use_colgroups"),$i=e=>Me.fromDom(e.getBody()),Vi=e=>t=>Je(t,$i(e)),qi=e=>{bo(e,"data-mce-style");const t=e=>bo(e,"data-mce-style");_(ar(e),t),_(cr(e),t),_(mr(e),t)},Ui=e=>Me.fromDom(e.selection.getStart()),Gi=e=>e.getBoundingClientRect().width,Ki=e=>e.getBoundingClientRect().height,Yi=e=>/^\d+(\.\d+)?$/.test(e)?e+"px":e,Ji=e=>(t,o)=>{const n=t.dom.getStyle(o,e)||t.dom.getAttrib(o,e);return C.from(n).filter(ve).map(Yi)},Qi=Ji("width"),Xi=Ji("height"),Zi=e=>nn(e,It("table")).exists(gn),em=e=>rn(e,"table"),tm=(e,t,o)=>{const n=e=>t=>void 0!==o&&o(t)||Je(t,e);return Je(e,t)?C.some({boxes:C.some([e]),start:e,finish:t}):em(e).bind(r=>em(t).bind(s=>{if(Je(r,s))return C.some({boxes:Jc(r,e,t),start:e,finish:t});if(Qe(r,s)){const o=bn(t,"td,th",n(r)),l=o.length>0?o[o.length-1]:t;return C.some({boxes:Qc(r,e,r,t,s),start:e,finish:l})}if(Qe(s,r)){const o=bn(e,"td,th",n(s)),l=o.length>0?o[o.length-1]:e;return C.some({boxes:Qc(s,e,r,t,s),start:e,finish:l})}return((e,t)=>((e,t,o,n=y)=>{const r=[t].concat(e.up().all(t)),s=[o].concat(e.up().all(o)),l=e=>M(e,n).fold(()=>e,t=>e.slice(0,t+1)),a=l(r),c=l(s),i=L(a,t=>O(c,((e,t)=>b(e.eq,t))(e,t)));return{firstpath:a,secondpath:c,shared:i}})(Xl,e,t,void 0))(e,t).shared.bind(l=>an(l,"table",o).bind(o=>{const l=bn(t,"td,th",n(o)),a=l.length>0?l[l.length-1]:t,c=bn(e,"td,th",n(o)),i=c.length>0?c[c.length-1]:e;return C.some({boxes:Qc(o,e,r,t,s),start:i,finish:a})}))}))},om=(e,t)=>{const o=vn(e,t);return o.length>0?C.some(o):C.none()},nm=(e,t,o)=>ln(e,t).bind(t=>ln(e,o).bind(e=>Zl(em,[t,e]).map(o=>({first:t,last:e,table:o})))),rm=(e,t,o,n,r)=>((e,t)=>L(e,e=>Ge(e,t)))(e,r).bind(e=>((e,t,o)=>ir(e).bind(n=>((e,t,o,n)=>Er(e,t,Je).bind(t=>{const r=o>0?t.row+t.rowspan-1:t.row,s=n>0?t.column+t.colspan-1:t.column;return kr(e,r+o,s+n).map(e=>e.element)}))(Xc(n),e,t,o)))(e,t,o).bind(e=>((e,t)=>rn(e,"table").bind(o=>ln(o,t).bind(t=>tm(t,e).bind(e=>e.boxes.map(t=>({boxes:t,start:e.start,finish:e.finish}))))))(e,n))),sm=(e,t)=>om(e,t),lm=(e,t,o)=>nm(e,t,o).bind(t=>{const o=t=>Je(e,t),n="thead,tfoot,tbody,table",r=rn(t.first,n,o),s=rn(t.last,n,o);return r.bind(e=>s.bind(o=>Je(e,o)?((e,t,o)=>((e,t,o)=>Gc(e,t,o).bind(t=>((e,t)=>{let o=!0;const n=b(Uc,t);for(let r=t.startRow;r<=t.finishRow;r++)for(let s=t.startCol;s<=t.finishCol;s++)o=o&&kr(e,r,s).exists(n);return o?C.some(t):C.none()})(e,t)))(Xc(e),t,o))(t.table,t.first,t.last):C.none()))}),am=h,cm=e=>{const t=(e,t)=>po(e,t).exists(e=>parseInt(e,10)>1);return e.length>0&&P(e,e=>t(e,"rowspan")||t(e,"colspan"))?C.some(e):C.none()},im=(e,t,o)=>t.length<=1?C.none():lm(e,o.firstSelectedSelector,o.lastSelectedSelector).map(e=>({bounds:e,cells:t})),mm=(e,t)=>({selection:e,kill:t}),dm=()=>({tag:"none"}),um=e=>({tag:"multiple",elements:e}),fm=e=>({tag:"single",element:e}),gm=(e,t,o,n)=>({start:kn.on(e,t),finish:kn.on(o,n)}),hm=(e,t)=>{const o=Ue(e,t);return Dn(Me.fromDom(o.startContainer),o.startOffset,Me.fromDom(o.endContainer),o.endOffset)},pm=gm,bm=(e,t,o,n,r)=>Je(o,n)?C.none():tm(o,n,t).bind(t=>{const n=t.boxes.getOr([]);return n.length>1?(r(e,n,t.start,t.finish),C.some(mm(C.some(pm(o,0,o,yn(o))),!0))):C.none()}),wm=Z([{none:["message"]},{success:[]},{failedUp:["cell"]},{failedDown:["cell"]}]),vm=e=>an(e,"tr"),ym={...wm,verify:(e,t,o,n,r,s,l)=>an(n,"td,th",l).bind(o=>an(t,"td,th",l).map(t=>Je(o,t)?Je(n,o)&&yn(o)===r?s(t):wm.none("in same cell"):Zl(vm,[o,t]).fold(()=>((e,t,o)=>{const n=e.getRect(t),r=e.getRect(o);return r.right>n.left&&r.left<n.right})(e,t,o)?wm.success():s(t),e=>s(t)))).getOr(wm.none("default")),cata:(e,t,o,n,r)=>e.fold(t,o,n,r)},xm=It("br"),Cm=(e,t,o)=>t(e,o).bind(e=>Wt(e)&&0===Jo(e).trim().length?Cm(e,t,o):C.some(e)),Tm=(e,t,o,n)=>((e,t)=>Yt(e,t).filter(xm).orThunk(()=>Yt(e,t-1).filter(xm)))(t,o).bind(t=>n.traverse(t).fold(()=>Cm(t,n.gather,e).map(n.relative),e=>(e=>$t(e).bind(t=>{const o=Kt(t);return((e,t)=>M(e,b(Je,t)))(o,e).map(n=>((e,t,o,n)=>({parent:e,children:t,element:o,index:n}))(t,o,e,n))}))(e).map(e=>kn.on(e.parent,e.index)))),Sm=(e,t)=>({left:e.left,top:e.top+t,right:e.right,bottom:e.bottom+t}),Rm=(e,t)=>({left:e.left,top:e.top-t,right:e.right,bottom:e.bottom-t}),Dm=(e,t,o)=>({left:e.left+t,top:e.top+o,right:e.right+t,bottom:e.bottom+o}),Om=e=>({left:e.left,top:e.top,right:e.right,bottom:e.bottom}),km=(e,t)=>C.some(e.getRect(t)),Em=(e,t,o)=>Mt(t)?km(e,t).map(Om):Wt(t)?((e,t,o)=>o>=0&&o<yn(t)?e.getRangedRect(t,o,t,o+1):o>0?e.getRangedRect(t,o-1,t,o):C.none())(e,t,o).map(Om):C.none(),_m=(e,t)=>Mt(t)?km(e,t).map(Om):Wt(t)?e.getRangedRect(t,0,t,yn(t)).map(Om):C.none(),Nm=Z([{none:[]},{retry:["caret"]}]),Bm=(e,t,o)=>nn(t,ta).fold(y,t=>_m(e,t).exists(e=>((e,t)=>e.left<t.left||Math.abs(t.right-e.left)<1||e.left>t.right)(o,e))),zm={point:e=>e.bottom,adjuster:(e,t,o,n,r)=>{const s=Sm(r,5);return Math.abs(o.bottom-n.bottom)<1||o.top>r.bottom?Nm.retry(s):o.top===r.bottom?Nm.retry(Sm(r,1)):Bm(e,t,r)?Nm.retry(Dm(s,5,0)):Nm.none()},move:Sm,gather:Kl},Am=(e,t,o,n,r)=>0===r?C.some(n):((e,t,o)=>e.elementFromPoint(t,o).filter(e=>"table"===Nt(e)).isSome())(e,n.left,t.point(n))?((e,t,o,n,r)=>Am(e,t,o,t.move(n,5),r))(e,t,o,n,r-1):e.situsFromPoint(n.left,t.point(n)).bind(s=>s.start.fold(C.none,s=>_m(e,s).bind(l=>t.adjuster(e,s,l,o,n).fold(C.none,n=>Am(e,t,o,n,r-1))).orThunk(()=>C.some(n)),C.none)),Lm=(e,t,o)=>{const n=e.move(o,5),r=Am(t,e,o,n,100).getOr(n);return((e,t,o)=>e.point(t)>o.getInnerHeight()?C.some(e.point(t)-o.getInnerHeight()):e.point(t)<0?C.some(-e.point(t)):C.none())(e,r,t).fold(()=>t.situsFromPoint(r.left,e.point(r)),o=>(t.scrollBy(0,o),t.situsFromPoint(r.left,e.point(r)-o)))},Mm={tryUp:b(Lm,{point:e=>e.top,adjuster:(e,t,o,n,r)=>{const s=Rm(r,5);return Math.abs(o.top-n.top)<1||o.bottom<r.top?Nm.retry(s):o.bottom===r.top?Nm.retry(Rm(r,1)):Bm(e,t,r)?Nm.retry(Dm(s,5,0)):Nm.none()},move:Rm,gather:Gl}),tryDown:b(Lm,zm),getJumpSize:g(5)},Wm=(e,t,o)=>e.getSelection().bind(n=>((e,t,o,n)=>{const r=xm(t)?((e,t,o)=>o.traverse(t).orThunk(()=>Cm(t,o.gather,e)).map(o.relative))(e,t,n):Tm(e,t,o,n);return r.map(e=>({start:e,finish:e}))})(t,n.finish,n.foffset,o).fold(()=>C.some(Wl(n.finish,n.foffset)),r=>{const s=e.fromSitus(r);return l=ym.verify(e,n.finish,n.foffset,s.finish,s.foffset,o.failure,t),ym.cata(l,e=>C.none(),()=>C.none(),e=>C.some(Wl(e,0)),e=>C.some(Wl(e,yn(e))));var l})),jm=(e,t,o,n,r,s)=>0===s?C.none():Fm(e,t,o,n,r).bind(l=>{const a=e.fromSitus(l),c=ym.verify(e,o,n,a.finish,a.foffset,r.failure,t);return ym.cata(c,()=>C.none(),()=>C.some(l),l=>Je(o,l)&&0===n?Pm(e,o,n,Rm,r):jm(e,t,l,0,r,s-1),l=>Je(o,l)&&n===yn(l)?Pm(e,o,n,Sm,r):jm(e,t,l,yn(l),r,s-1))}),Pm=(e,t,o,n,r)=>Em(e,t,o).bind(t=>Im(e,r,n(t,Mm.getJumpSize()))),Im=(e,t,o)=>{const n=kt().browser;return n.isChromium()||n.isSafari()||n.isFirefox()?t.retry(e,o):C.none()},Fm=(e,t,o,n,r)=>Em(e,o,n).bind(t=>Im(e,r,t)),Hm=(e,t,o,n,r)=>an(n,"td,th",t).bind(n=>an(n,"table",t).bind(s=>((e,t)=>on(e,e=>$t(e).exists(e=>Je(e,t)),void 0).isSome())(r,s)?((e,t,o)=>Wm(e,t,o).bind(n=>jm(e,t,n.element,n.offset,o,20).map(e.fromSitus)))(e,t,o).bind(e=>an(e.finish,"td,th",t).map(t=>({start:n,finish:t,range:e}))):C.none())),$m=(e,t,o,n,r,s)=>s(n,t).orThunk(()=>Hm(e,t,o,n,r).map(e=>{const t=e.range;return mm(C.some(pm(t.start,t.soffset,t.finish,t.foffset)),!0)})),Vm=(e,t)=>an(e,"tr",t).bind(e=>an(e,"table",t).bind(o=>{const n=vn(o,"tr");return Je(e,n[0])?((e,t,o)=>Vl(Ul,e,e=>Sn(e).isSome(),o))(o,0,t).map(e=>{const t=yn(e);return mm(C.some(pm(e,t,e,t)),!0)}):C.none()})),qm=(e,t)=>an(e,"tr",t).bind(e=>an(e,"table",t).bind(o=>{const n=vn(o,"tr");return Je(e,n[n.length-1])?((e,t,o)=>ql(Ul,e,e=>Tn(e).isSome(),o))(o,0,t).map(e=>mm(C.some(pm(e,0,e,0)),!0)):C.none()})),Um=(e,t,o,n,r,s,l)=>Hm(e,o,n,r,s).bind(e=>bm(t,o,e.start,e.finish,l)),Gm=(e,t)=>an(e,"td,th",t),Km=e=>Vt(e).exists(gn),Ym={traverse:Gt,gather:Kl,relative:kn.before,retry:Mm.tryDown,failure:ym.failedDown},Jm={traverse:Ut,gather:Gl,relative:kn.before,retry:Mm.tryUp,failure:ym.failedUp},Qm=e=>t=>t===e,Xm=Qm(38),Zm=Qm(40),ed=e=>e>=37&&e<=40,td={isBackward:Qm(37),isForward:Qm(39)},od={isBackward:Qm(39),isForward:Qm(37)},nd=e=>({elementFromPoint:(t,o)=>Me.fromPoint(Me.fromDom(e.document),t,o),getRect:e=>e.dom.getBoundingClientRect(),getRangedRect:(t,o,n,r)=>{const s=_n.exact(t,o,n,r);return((e,t)=>(e=>{const t=e.getClientRects(),o=t.length>0?t[0]:e.getBoundingClientRect();return o.width>0||o.height>0?C.some(o).map(He):C.none()})(Ue(e,t)))(e,s)},getSelection:()=>Fn(e).map(t=>hm(e,t)),fromSitus:t=>{const o=_n.relative(t.start,t.finish);return hm(e,o)},situsFromPoint:(t,o)=>Hn(e,t,o).map(e=>gm(e.start,e.soffset,e.finish,e.foffset)),clearSelection:()=>{(e=>{Bn(e).each(e=>e.removeAllRanges())})(e)},collapseSelection:(t=!1)=>{Fn(e).each(o=>o.fold(e=>e.collapse(t),(o,n)=>{const r=t?o:n;Wn(e,r,r)},(o,n,r,s)=>{const l=t?o:r,a=t?n:s;Mn(e,l,a,l,a)}))},setSelection:t=>{Mn(e,t.start,t.soffset,t.finish,t.foffset)},setRelativeSelection:(t,o)=>{Wn(e,t,o)},selectNode:t=>{In(e,t,!1)},selectContents:t=>{In(e,t)},getInnerHeight:()=>e.innerHeight,getScrollY:()=>(e=>{const t=void 0!==e?e.dom:document,o=t.body.scrollLeft||t.documentElement.scrollLeft,n=t.body.scrollTop||t.documentElement.scrollTop;return qo(o,n)})(Me.fromDom(e.document)).top,scrollBy:(t,o)=>{((e,t,o)=>{const n=(void 0!==o?o.dom:document).defaultView;n&&n.scrollBy(e,t)})(t,o,Me.fromDom(e.document))}}),rd=(e,t)=>({rows:e,cols:t}),sd=e=>nn(e,Lt).exists(gn),ld=(e,t)=>sd(e)||sd(t),ad="data-mce-selected",cd="data-mce-first-selected",id="data-mce-last-selected",md="["+ad+"]",dd={selected:ad,selectedSelector:"td["+ad+"],th["+ad+"]",firstSelected:cd,firstSelectedSelector:"td["+cd+"],th["+cd+"]",lastSelected:id,lastSelectedSelector:"td["+id+"],th["+id+"]"},ud=(e,t,o)=>({element:o,mergable:im(t,e,dd),unmergable:cm(e),selection:am(e)}),fd=e=>(t,o)=>{const n=Nt(t),r="col"===n||"colgroup"===n?ir(s=t).bind(e=>sm(e,dd.firstSelectedSelector)).fold(g(s),e=>e[0]):t;var s;return an(r,e,o)},gd=fd("th,td,caption"),hd=fd("th,td"),pd=e=>{return t=e.model.table.getSelectedCells(),E(t,Me.fromDom);var t},bd=(e,t)=>{e.on("BeforeGetContent",t=>{const o=o=>{t.preventDefault(),(e=>ir(e[0]).map(e=>{const t=((e,t)=>{const o=e=>Ge(e.element,t),n=So(e),r=vr(n),s=As(e),l=Or(r),a=((e,t)=>{const o=e.grid.columns;let n=e.grid.rows,r=o,s=0,l=0;const a=[],c=[];return G(e.access,e=>{if(a.push(e),t(e)){c.push(e);const t=e.row,o=t+e.rowspan-1,a=e.column,i=a+e.colspan-1;t<n?n=t:o>s&&(s=o),a<r?r=a:i>l&&(l=i)}}),((e,t,o,n,r,s)=>({minRow:e,minCol:t,maxRow:o,maxCol:n,allCells:r,selectedCells:s}))(n,r,s,l,a,c)})(l,o),c="th:not("+t+"),td:not("+t+")",i=sr(n,"th,td",e=>Ge(e,c));_(i,yo),((e,t,o,n)=>{const r=B(e,e=>"colgroup"!==e.section),s=t.grid.columns,l=t.grid.rows;for(let e=0;e<l;e++){let l=!1;for(let a=0;a<s;a++)e<o.minRow||e>o.maxRow||a<o.minCol||a>o.maxCol||(kr(t,e,a).filter(n).isNone()?al(r,l,e):l=!0)}})(r,l,a,o);const m=((e,t,o,n)=>{if(0===n.minCol&&t.grid.columns===n.maxCol+1)return 0;const r=Es(t,e,o),s=A(r,(e,t)=>e+t,0),l=A(r.slice(n.minCol,n.maxCol+1),(e,t)=>e+t,0),a=l/s*o.pixelWidth()-o.pixelWidth();return o.getCellDelta(a)})(e,Dr(e),s,a);return((e,t,o,n)=>{G(o.columns,e=>{(e.column<t.minCol||e.column>t.maxCol)&&yo(e.element)});const r=B(rr(e,"tr"),e=>0===e.dom.childElementCount);_(r,yo),t.minCol!==t.maxCol&&t.minRow!==t.maxRow||_(rr(e,"th,td"),e=>{bo(e,"rowspan"),bo(e,"colspan")}),bo(e,yr),bo(e,"data-snooker-col-series"),As(e).adjustTableWidth(n)})(n,a,l,m),n})(e,md);return qi(t),[t]}))(o).each(o=>{const n="text"===t.format?((e,t)=>{const o=e.getDoc(),n=Qt(Me.fromDom(e.getBody())),r=Me.fromTag("div",o);fo(r,"data-mce-bogus","all"),_o(r,{position:"fixed",left:"-9999999px",top:"0",overflow:"hidden",opacity:"0"});const s=(e=>Jt(e)?e:Me.fromDom(Ht(e).dom.body))(n);mo(r,t),ao(s,r);const l=r.dom.innerText;return yo(r),l})(e,o):((e,t)=>E(t,t=>e.selection.serializer.serialize(t.dom,{})).join(""))(e,o);t.content=n})};if(!0===t.selection){const t=(e=>B(pd(e),e=>Ge(e,dd.selectedSelector)))(e);t.length>=1&&o(t)}}),e.on("BeforeSetContent",o=>{if(!0===o.selection&&!0===o.paste){const n=pd(e);H(n).each(n=>{ir(n).each(r=>{const s=B((e=>{const t=document.createElement("div");return t.innerHTML=e,Kt(Me.fromDom(t))})(o.content),e=>"meta"!==Nt(e)),l=It("table");if(ji(e)&&1===s.length&&l(s[0])){o.preventDefault();const l=Me.fromDom(e.getDoc()),a=pa(l),c=((e,t,o)=>({element:e,clipboard:t,generators:o}))(n,s[0],a);t.pasteCells(r,c).each(()=>{e.focus()})}})})}})},wd=(e,t)=>e.dispatch("NewRow",{node:t}),vd=(e,t)=>e.dispatch("NewCell",{node:t}),yd=(e,t,o)=>{e.dispatch("TableModified",{...o,table:t})},xd={structure:!1,style:!0},Cd={structure:!0,style:!1},Td={structure:!0,style:!0},Sd=(e,t)=>zi(e)?Ms(t):Ai(e)?Ls(t):As(t),Rd=(e,t,o)=>{const n=e=>"table"===Nt($i(e)),r=Oi(e),s=Ni(e)?f:rl,l=t=>{switch(ki(e)){case"section":return Ir();case"sectionCells":return Fr();case"cells":return Hr();default:return((e,t)=>{var o;switch((o=Dr(e),V(o.all,e=>{const t=hr(e);return"header"===t.type?C.from(t.subType):C.none()})).getOr(t)){case"section":return Wr();case"sectionCells":return jr();case"cells":return Pr()}})(t,"section")}},a=(n,s,a,c)=>(i,m,d=!1)=>{qi(i);const u=Me.fromDom(e.getDoc()),f=ha(a,u,r),g={sizing:Sd(e,i),resize:Ni(e)?Jn():Qn(),section:l(i)};return s(i)?n(i,m,f,g).bind(n=>{t.refresh(i.dom),_(n.newRows,t=>{wd(e,t.dom)}),_(n.newCells,t=>{vd(e,t.dom)});const r=((t,n)=>n.cursor.fold(()=>{const n=ar(t);return H(n).filter(Oo).map(n=>{o.clearSelectedCells(t.dom);const r=e.dom.createRng();return r.selectNode(n.dom),e.selection.setRng(r),fo(n,"data-mce-selected","1"),r})},n=>{const r=Fl(Hl,n),s=e.dom.createRng();return s.setStart(r.element.dom,r.offset),s.setEnd(r.element.dom,r.offset),e.selection.setRng(s),o.clearSelectedCells(t.dom),C.some(s)}))(i,n);return Oo(i)&&(qi(i),d||yd(e,i.dom,c)),r.map(e=>({rng:e,effect:c}))}):C.none()},c=a(Oc,t=>!n(e)||ba(t).rows>1,f,Cd),i=a(Dc,t=>!n(e)||ba(t).columns>1,f,Cd);return{deleteRow:c,deleteColumn:i,insertRowsBefore:a(Cc,x,f,Cd),insertRowsAfter:a(Tc,x,f,Cd),insertColumnsBefore:a(Sc,x,s,Cd),insertColumnsAfter:a(Rc,x,s,Cd),mergeCells:a(Lc,x,f,Cd),unmergeCells:a(Mc,x,f,Cd),pasteColsBefore:a(jc,x,f,Cd),pasteColsAfter:a(Pc,x,f,Cd),pasteRowsBefore:a(Ic,x,f,Cd),pasteRowsAfter:a(Fc,x,f,Cd),pasteCells:a(Wc,x,f,Td),makeCellsHeader:a(zc,x,f,Cd),unmakeCellsHeader:a(Ac,x,f,Cd),makeColumnsHeader:a(kc,x,f,Cd),unmakeColumnsHeader:a(Ec,x,f,Cd),makeRowsHeader:a(_c,x,f,Cd),makeRowsBody:a(Nc,x,f,Cd),makeRowsFooter:a(Bc,x,f,Cd),getTableRowType:Vc,getTableCellType:$c,getTableColType:Hc}},Dd=(e,t)=>{e.selection.select(t.dom,!0),e.selection.collapse(!0)},Od=(e,t,o,n,s)=>{const l=(e=>{const t=e.options,o=t.get("table_default_styles");return t.isSet("table_default_styles")?o:((e,t)=>Li(e)||!Wi(e)?t:Ai(e)?{...t,width:Di(e)}:{...t,width:Ri})(e,o)})(e),a={styles:l,attributes:Fi(e),colGroups:Hi(e)};return e.undoManager.ignore(()=>{const r=((e,t,o,n,r,s=Zc)=>{const l=Me.fromTag("table"),a="cells"!==r;_o(l,s.styles),go(l,s.attributes),s.colGroups&&ao(l,(e=>{const t=Me.fromTag("colgroup");return k(e,()=>ao(t,Me.fromTag("col"))),t})(t));const c=Math.min(e,o);if(a&&o>0){const e=Me.fromTag("thead");ao(l,e);const s=oi(o,t,"sectionCells"===r?c:0,n);mo(e,s)}const i=Me.fromTag("tbody");ao(l,i);const m=oi(a?e-c:e,t,a?0:o,n);return mo(i,m),l})(o,t,s,n,ki(e),a);fo(r,"data-mce-id","__mce");const l=(e=>{const t=Me.fromTag("div"),o=Me.fromDom(e.dom.cloneNode(!0));return ao(t,o),(e=>e.dom.innerHTML)(t)})(r);e.insertContent(l),e.addVisual()}),ln($i(e),'table[data-mce-id="__mce"]').map(t=>(Ai(e)?la(t):Li(e)?aa(t):(zi(e)||(e=>r(e)&&-1!==e.indexOf("%"))(l.width))&&sa(t),qi(t),bo(t,"data-mce-id"),((e,t)=>{_(vn(t,"tr"),t=>{wd(e,t.dom),_(vn(t,"th,td"),t=>{vd(e,t.dom)})})})(e,t),((e,t)=>{ln(t,"td,th").each(b(Dd,e))})(e,t),t.dom)).getOrNull()};var kd=tinymce.util.Tools.resolve("tinymce.FakeClipboard");const Ed="x-tinymce/dom-table-",_d=Ed+"rows",Nd=Ed+"columns",Bd=e=>{const t=kd.FakeClipboardItem(e);kd.write([t])},zd=e=>{const t=kd.read()??[];return V(t,t=>C.from(t.getType(e)))},Ad=e=>{zd(e).isSome()&&kd.clear()},Ld=e=>{e.fold(Wd,e=>Bd({[_d]:e}))},Md=()=>zd(_d),Wd=()=>Ad(_d),jd=e=>{e.fold(Id,e=>Bd({[Nd]:e}))},Pd=()=>zd(Nd),Id=()=>Ad(Nd),Fd=e=>gd(Ui(e),Vi(e)).filter(Zi),Hd=(e,t)=>{const o=Vi(e),n=e=>ir(e,o),l=t=>(e=>hd(Ui(e),Vi(e)).filter(Zi))(e).bind(e=>n(e).map(o=>t(o,e))),a=t=>{e.focus()},c=(t,o=!1)=>l((n,r)=>{const s=ud(pd(e),n,r);t(n,s,o).each(a)}),i=()=>l((t,o)=>((e,t,o)=>{const n=Dr(e);return Ys(n,t).bind(e=>{const t=Hs(n,o,!1),r=ze(t).rows.slice(e[0].row,e[e.length-1].row+e[e.length-1].rowspan),s=j(r,e=>{const t=B(e.cells,e=>!e.isLocked);return t.length>0?[{...e,cells:t}]:[]}),l=$s(s);return de(l.length>0,l)}).map(e=>E(e,e=>{const t=To(e.element);return _(e.cells,e=>{const o=So(e.element);Ws(o,"colspan",e.colspan,1),Ws(o,"rowspan",e.rowspan,1),ao(t,o)}),t}))})(t,ud(pd(e),t,o),ha(f,Me.fromDom(e.getDoc()),C.none()))),m=()=>l((t,o)=>((e,t)=>{const o=Dr(e);return Js(o,t).map(e=>{const t=e[e.length-1],n=e[0].column,r=t.column+t.colspan,s=((e,t,o)=>{if(zr(e)){const n=B(Br(e),ll(t,o)),r=E(n,e=>{const n=So(e.element);return sl(n,"span",o-t),n}),s=Me.fromTag("colgroup");return mo(s,r),[s]}return[]})(o,n,r),l=((e,t,o)=>E(e.all,e=>{const n=B(e.cells,ll(t,o)),r=E(n,e=>{const n=So(e.element);return sl(n,"colspan",o-t),n}),s=Me.fromTag("tr");return mo(s,r),s}))(o,n,r);return[...s,...l]})})(t,ud(pd(e),t,o))),d=(t,o)=>o().each(o=>{const n=E(o,e=>So(e));l((o,r)=>{const s=pa(Me.fromDom(e.getDoc())),l=((e,t,o,n)=>({selection:am(e),clipboard:o,generators:n}))(pd(e),0,n,s);t(o,l).each(a)})}),g=e=>(t,o)=>((e,t)=>X(e,t)?C.from(e[t]):C.none())(o,"type").each(t=>{c(e(t),o.no_events)});G({mceTableSplitCells:()=>c(t.unmergeCells),mceTableMergeCells:()=>c(t.mergeCells),mceTableInsertRowBefore:()=>c(t.insertRowsBefore),mceTableInsertRowAfter:()=>c(t.insertRowsAfter),mceTableInsertColBefore:()=>c(t.insertColumnsBefore),mceTableInsertColAfter:()=>c(t.insertColumnsAfter),mceTableDeleteCol:()=>c(t.deleteColumn),mceTableDeleteRow:()=>c(t.deleteRow),mceTableCutCol:()=>m().each(e=>{jd(e),c(t.deleteColumn)}),mceTableCutRow:()=>i().each(e=>{Ld(e),c(t.deleteRow)}),mceTableCopyCol:()=>m().each(e=>jd(e)),mceTableCopyRow:()=>i().each(e=>Ld(e)),mceTablePasteColBefore:()=>d(t.pasteColsBefore,Pd),mceTablePasteColAfter:()=>d(t.pasteColsAfter,Pd),mceTablePasteRowBefore:()=>d(t.pasteRowsBefore,Md),mceTablePasteRowAfter:()=>d(t.pasteRowsAfter,Md),mceTableDelete:()=>Fd(e).each(t=>{ir(t,o).filter(w(o)).each(t=>{const o=Me.fromText("");if(so(t,o),yo(t),e.dom.isEmpty(e.getBody()))e.setContent(""),e.selection.setCursorLocation();else{const t=e.dom.createRng();t.setStart(o.dom,0),t.setEnd(o.dom,0),e.selection.setRng(t),e.nodeChanged()}})}),mceTableCellToggleClass:(t,o)=>{l(t=>{const n=pd(e),r=P(n,t=>e.formatter.match("tablecellclass",{value:o},t.dom)),s=r?e.formatter.remove:e.formatter.apply;_(n,e=>s("tablecellclass",{value:o},e.dom)),yd(e,t.dom,xd)})},mceTableToggleClass:(t,o)=>{l(t=>{e.formatter.toggle("tableclass",{value:o},t.dom),yd(e,t.dom,xd)})},mceTableToggleCaption:()=>{Fd(e).each(t=>{ir(t,o).each(o=>{sn(o,"caption").fold(()=>{const t=Me.fromTag("caption");ao(t,Me.fromText("Caption")),((e,t)=>{Yt(e,0).fold(()=>{ao(e,t)},e=>{ro(e,t)})})(o,t),e.selection.setCursorLocation(t.dom,0)},n=>{It("caption")(t)&&Ye("td",o).each(t=>e.selection.setCursorLocation(t.dom,0)),yo(n)}),yd(e,o.dom,Cd)})})},mceTableSizingMode:(t,n)=>(t=>Fd(e).each(n=>{Li(e)||Ai(e)||zi(e)||ir(n,o).each(o=>{"relative"!==t||Rl(o)?"fixed"!==t||Dl(o)?"responsive"!==t||Ol(o)||aa(o):la(o):sa(o),qi(o),yd(e,o.dom,Cd)})}))(n),mceTableCellType:g(e=>"th"===e?t.makeCellsHeader:t.unmakeCellsHeader),mceTableColType:g(e=>"th"===e?t.makeColumnsHeader:t.unmakeColumnsHeader),mceTableRowType:g(e=>{switch(e){case"header":return t.makeRowsHeader;case"footer":return t.makeRowsFooter;default:return t.makeRowsBody}})},(t,o)=>e.addCommand(o,t)),e.addCommand("mceInsertTable",(t,o)=>{((e,t,o,n={})=>{const r=e=>u(e)&&e>0;if(r(t)&&r(o)){const r=n.headerRows??Pi(e),s=n.headerColumns??Ii(e);return Od(e,o,t,s,r)}console.error("Invalid values for mceInsertTable - rows and columns values are required to insert a table.")})(e,o.rows,o.columns,o.options)}),e.addCommand("mceTableApplyCellStyle",(t,o)=>{const l=e=>"tablecell"+e.toLowerCase().replace("-","");if(!s(o))return;const a=B(pd(e),Zi);if(0===a.length)return;const c=((e,t)=>{const o={};return((e,t,o,n)=>{G(e,(e,r)=>{(t(e,r)?o:n)(e,r)})})(e,t,(e=>(t,o)=>{e[o]=t})(o),f),o})(o,(t,o)=>e.formatter.has(l(o))&&r(t));(e=>{for(const t in e)if(U.call(e,t))return!1;return!0})(c)||(G(c,(t,o)=>{const n=l(o);_(a,o=>{""===t?e.formatter.remove(n,{value:null},o.dom,!0):e.formatter.apply(n,{value:t},o.dom)})}),n(a[0]).each(t=>yd(e,t.dom,xd)))})},$d=e=>!un(Me.fromDom(e.target),"ephox-snooker-resizer-bar"),Vd=(e,t)=>{const o=(r=dd.selectedSelector,{get:()=>sm(Me.fromDom(e.getBody()),r).fold(()=>hd(Ui(e),Vi(e)).fold(dm,fm),um)}),n=((e,t,o)=>{const n=t=>{bo(t,e.selected),bo(t,e.firstSelected),bo(t,e.lastSelected)},r=t=>{fo(t,e.selected,"1")},s=e=>{l(e),o()},l=t=>{const o=vn(t,`${e.selectedSelector},${e.firstSelectedSelector},${e.lastSelectedSelector}`);_(o,n)};return{clearBeforeUpdate:l,clear:s,selectRange:(o,n,l,a)=>{s(o),_(n,r),fo(l,e.firstSelected,"1"),fo(a,e.lastSelected,"1"),t(n,l,a)},selectedSelector:e.selectedSelector,firstSelectedSelector:e.firstSelectedSelector,lastSelectedSelector:e.lastSelectedSelector}})(dd,(t,o,n)=>{ir(o).each(r=>{const s=E(t,e=>e.dom),l=Oi(e),a=ha(f,Me.fromDom(e.getDoc()),l),c=((e,t,o)=>{const n=Dr(e);return Ys(n,t).map(e=>{const t=Hs(n,o,!1),{rows:r}=ze(t),s=((e,t)=>{const o=e.slice(0,t[t.length-1].row+1),n=$s(o);return j(n,e=>{const o=e.cells.slice(0,t[t.length-1].column+1);return E(o,e=>e.element)})})(r,e),l=((e,t)=>{const o=e.slice(t[0].row+t[0].rowspan-1,e.length),n=$s(o);return j(n,e=>{const o=e.cells.slice(t[0].column+t[0].colspan-1,e.cells.length);return E(o,e=>e.element)})})(r,e);return{upOrLeftCells:s,downOrRightCells:l}})})(r,{selection:pd(e)},a).map(e=>K(e,e=>E(e,e=>e.dom))).getOrUndefined();((e,t,o,n,r)=>{e.dispatch("TableSelectionChange",{cells:t,start:o,finish:n,otherCells:r})})(e,s,o.dom,n.dom,c)})},()=>(e=>{e.dispatch("TableSelectionClear")})(e));var r;return e.on("init",o=>{const r=e.getWin(),s=$i(e),l=Vi(e),a=((e,t,o,n)=>{const r=((e,t,o,n)=>{const r=fe(),s=r.clear,l=s=>{r.on(r=>{n.clearBeforeUpdate(t),Gm(s.target,o).each(l=>{tm(r,l,o).each(o=>{const r=o.boxes.getOr([]);if(1===r.length){const e=r[0],o="false"===hn(e),l=ie(fn(s.target),e,Je);o&&l&&n.selectRange(t,r,e,e)}else r.length>1&&(n.selectRange(t,r,o.start,o.finish),e.selectContents(l))})})})};return{clearstate:s,mousedown:e=>{n.clear(t),Gm(e.target,o).filter(Km).each(r.set)},mouseover:e=>{l(e)},mouseup:e=>{l(e),s()}}})(nd(e),t,o,n);return{clearstate:r.clearstate,mousedown:r.mousedown,mouseover:r.mouseover,mouseup:r.mouseup}})(r,s,l,n),c=((e,t,o,n)=>{const r=nd(e),s=()=>(n.clear(t),C.none());return{keydown:(e,l,a,c,i,m)=>{const d=e.raw,u=d.which,f=!0===d.shiftKey,g=om(t,n.selectedSelector).fold(()=>(ed(u)&&!f&&n.clearBeforeUpdate(t),ed(u)&&f&&!ld(l,c)?C.none:Zm(u)&&f?b(Um,r,t,o,Ym,c,l,n.selectRange):Xm(u)&&f?b(Um,r,t,o,Jm,c,l,n.selectRange):Zm(u)?b($m,r,o,Ym,c,l,qm):Xm(u)?b($m,r,o,Jm,c,l,Vm):C.none),e=>{const o=o=>()=>{const s=V(o,o=>((e,t,o,n,r)=>rm(n,e,t,r.firstSelectedSelector,r.lastSelectedSelector).map(e=>(r.clearBeforeUpdate(o),r.selectRange(o,e.boxes,e.start,e.finish),e.boxes)))(o.rows,o.cols,t,e,n));return s.fold(()=>nm(t,n.firstSelectedSelector,n.lastSelectedSelector).map(e=>{const o=Zm(u)||m.isForward(u)?kn.after:kn.before;return r.setRelativeSelection(kn.on(e.first,0),o(e.table)),n.clear(t),mm(C.none(),!0)}),e=>C.some(mm(C.none(),!0)))};return ed(u)&&f&&!ld(l,c)?C.none:Zm(u)&&f?o([rd(1,0)]):Xm(u)&&f?o([rd(-1,0)]):m.isBackward(u)&&f?o([rd(0,-1),rd(-1,0)]):m.isForward(u)&&f?o([rd(0,1),rd(1,0)]):ed(u)&&!f?s:C.none});return g()},keyup:(e,r,s,l,a)=>om(t,n.selectedSelector).fold(()=>{const c=e.raw,i=c.which;return!0===c.shiftKey&&ed(i)&&ld(r,l)?((e,t,o,n,r,s,l)=>Je(o,r)&&n===s?C.none():an(o,"td,th",t).bind(o=>an(r,"td,th",t).bind(n=>bm(e,t,o,n,l))))(t,o,r,s,l,a,n.selectRange):C.none()},C.none)}})(r,s,l,n),i=((e,t,o,n)=>{const r=nd(e);return(e,s)=>{n.clearBeforeUpdate(t),tm(e,s,o).each(e=>{const o=e.boxes.getOr([]);n.selectRange(t,o,e.start,e.finish),r.selectContents(s),r.collapseSelection()})}})(r,s,l,n);e.on("TableSelectorChange",e=>i(e.start,e.finish));const m=(t,o)=>{(e=>!0===e.raw.shiftKey)(t)&&(o.kill&&t.kill(),o.selection.each(t=>{const o=_n.relative(t.start,t.finish),n=Ue(r,o);e.selection.setRng(n)}))},d=e=>0===e.button,u=(()=>{const e=ee(Me.fromDom(s)),t=ee(0);return{touchEnd:o=>{const n=Me.fromDom(o.target);if(It("td")(n)||It("th")(n)){const r=e.get(),s=t.get();Je(r,n)&&o.timeStamp-s<300&&(o.preventDefault(),i(n,n))}e.set(n),t.set(o.timeStamp)}}})();e.on("dragstart",e=>{a.clearstate()}),e.on("mousedown",e=>{d(e)&&$d(e)&&a.mousedown(no(e))}),e.on("mouseover",e=>{var t;(void 0===(t=e).buttons||1&t.buttons)&&$d(e)&&a.mouseover(no(e))}),e.on("mouseup",e=>{d(e)&&$d(e)&&a.mouseup(no(e))}),e.on("touchend",u.touchEnd),e.on("keyup",t=>{const o=no(t);if(o.raw.shiftKey&&ed(o.raw.which)){const t=e.selection.getRng(),n=Me.fromDom(t.startContainer),r=Me.fromDom(t.endContainer);c.keyup(o,n,t.startOffset,r,t.endOffset).each(e=>{m(o,e)})}}),e.on("keydown",o=>{const n=no(o);t.hide();const r=e.selection.getRng(),s=Me.fromDom(r.startContainer),l=Me.fromDom(r.endContainer),a=Zo(td,od)(Me.fromDom(e.selection.getStart()));c.keydown(n,s,r.startOffset,l,r.endOffset,a).each(e=>{m(n,e)}),t.show()}),e.on("NodeChange",()=>{const t=e.selection,o=Me.fromDom(t.getStart()),r=Me.fromDom(t.getEnd());Zl(ir,[o,r]).fold(()=>n.clear(s),f)})}),e.on("PreInit",()=>{e.serializer.addTempAttr(dd.firstSelected),e.serializer.addTempAttr(dd.lastSelected)}),{getSelectedCells:()=>((e,t)=>{switch(e.tag){case"none":return t();case"single":return(e=>[e.dom])(e.element);case"multiple":return(e=>E(e,e=>e.dom))(e.elements)}})(o.get(),g([])),clearSelectedCells:e=>n.clear(Me.fromDom(e))}},qd=e=>m(e)&&"TABLE"===e.nodeName,Ud="bar-",Gd=e=>"false"!==ho(e,"data-mce-resize"),Kd=e=>{const t=fe(),o=fe(),n=fe();let r,s,l,a;const c=t=>Sd(e,t),i=()=>_i(e)?Qn():Jn(),m=(t,o,n,m)=>{const d=(e=>{return pe(t=e,"corner-")?(e=>e.substring(7))(t):t;var t})(o),u=be(d,"e"),f=pe(d,"n");if(""===s&&sa(t),""===a&&(e=>{const t=(e=>jo(e)+"px")(e);Sl(e,C.none(),C.some(t)),ra(e)})(t),n!==r&&""!==s){Eo(t,"width",s);const o=i(),l=c(t),a=_i(e)||u?(e=>ba(e).columns)(t)-1:0;ol(t,n-r,a,o,l)}else if((e=>/^(\d+(\.\d+)?)%$/.test(e))(s)){const e=parseFloat(s.replace("%",""));Eo(t,"width",n*e/r+"%")}if((e=>/^(\d+(\.\d+)?)px$/.test(e))(s)&&(e=>{const t=Dr(e);zr(t)||_(ar(e),e=>{const t=No(e,"width");Eo(e,"width",t),bo(e,"width")})})(t),m!==l&&""!==a){Eo(t,"height",a);const e=f?0:(e=>ba(e).rows)(t)-1;nl(t,m-l,e)}};e.on("init",()=>{const r=((e,t)=>((e,t)=>({parent:g(e),view:g(e),dragContainer:g(e),origin:()=>Go(e),isResizable:t}))(Me.fromDom(e.getBody()),t))(e,Gd);if(n.set(r),(e=>{const t=e.options.get("object_resizing");return D(t.split(","),"table")})(e)&&Mi(e)){const n=((e,t,o)=>{const n=ns,r=ss,s=Ti(e),l=ri({beforeResize:ni(["table","type"]),afterResize:ni(["table","type"]),startDrag:ni([])});return s.events.adjustHeight.bind(e=>{const t=e.table;l.trigger.beforeResize(t,"row");const o=n.delta(e.delta,t);nl(t,o,e.row),l.trigger.afterResize(t,"row")}),s.events.startAdjust.bind(e=>{l.trigger.startDrag()}),s.events.adjustWidth.bind(e=>{const n=e.table;l.trigger.beforeResize(n,"col");const s=r.delta(e.delta,n),a=o(n);ol(n,s,e.column,t,a),l.trigger.afterResize(n,"col")}),{on:s.on,off:s.off,refreshBars:s.refresh,hideBars:s.hideBars,showBars:s.showBars,destroy:s.destroy,events:l.registry}})(r,i(),c);e.mode.isReadOnly()||n.on(),n.events.startDrag.bind(o=>{t.set(e.selection.getRng())}),n.events.beforeResize.bind(t=>{const o=t.table.dom;((e,t,o,n,r)=>{e.dispatch("ObjectResizeStart",{target:t,width:o,height:n,origin:r})})(e,o,Gi(o),Ki(o),Ud+t.type)}),n.events.afterResize.bind(o=>{const n=o.table,r=n.dom;qi(n),t.on(t=>{e.selection.setRng(t),e.focus()}),((e,t,o,n,r)=>{e.dispatch("ObjectResized",{target:t,width:o,height:n,origin:r})})(e,r,Gi(r),Ki(r),Ud+o.type),e.undoManager.add()}),o.set(n)}}),e.on("ObjectResizeStart",t=>{const o=t.target;if(qd(o)&&!e.mode.isReadOnly()){const n=Me.fromDom(o);_(e.dom.select(".mce-clonedresizable"),t=>{e.dom.addClass(t,"mce-"+Ei(e)+"-columns")}),!Dl(n)&&Ai(e)?la(n):!Rl(n)&&zi(e)&&sa(n),Ol(n)&&pe(t.origin,Ud)&&sa(n),r=t.width,s=Li(e)?"":Qi(e,o).getOr(""),l=t.height,a=Xi(e,o).getOr("")}}),e.on("ObjectResized",t=>{const o=t.target;if(qd(o)){const n=Me.fromDom(o),r=t.origin;(e=>pe(e,"corner-"))(r)&&m(n,r,t.width,t.height),qi(n),yd(e,n.dom,xd)}});const d=()=>{o.on(e=>{e.on(),e.showBars()})},u=()=>{o.on(e=>{e.off(),e.hideBars()})};return e.on("DisabledStateChange",e=>{e.state?u():d()}),e.on("SwitchMode",()=>{e.mode.isReadOnly()?u():d()}),e.on("dragstart dragend",e=>{"dragstart"===e.type?u():d()}),e.on("remove",()=>{o.on(e=>{e.destroy()})}),{refresh:e=>{o.on(t=>t.refreshBars(Me.fromDom(e)))},hide:()=>{o.on(e=>e.hideBars())},show:()=>{o.on(e=>e.showBars())}}},Yd=e=>{(e=>{const t=e.options.register;t("table_clone_elements",{processor:"string[]"}),t("table_use_colgroups",{processor:"boolean",default:!0}),t("table_header_type",{processor:e=>{const t=D(["section","cells","sectionCells","auto"],e);return t?{value:e,valid:t}:{valid:!1,message:"Must be one of: section, cells, sectionCells or auto."}},default:"section"}),t("table_sizing_mode",{processor:"string",default:"auto"}),t("table_default_attributes",{processor:"object",default:{border:"1"}}),t("table_default_styles",{processor:"object",default:{"border-collapse":"collapse"}}),t("table_column_resizing",{processor:e=>{const t=D(["preservetable","resizetable"],e);return t?{value:e,valid:t}:{valid:!1,message:"Must be preservetable, or resizetable."}},default:"preservetable"}),t("table_resize_bars",{processor:"boolean",default:!0}),t("table_style_by_css",{processor:"boolean",default:!0}),t("table_merge_content_on_paste",{processor:"boolean",default:!0}),t("table_default_header_rows",{processor:"number",default:0}),t("table_default_header_cols",{processor:"number",default:0})})(e);const t=Kd(e),o=Vd(e,t),n=Rd(e,t,o);return Hd(e,n),((e,t)=>{const o=Vi(e),n=t=>hd(Ui(e)).bind(n=>ir(n,o).map(o=>{const r=ud(pd(e),o,n);return t(o,r)})).getOr("");G({mceTableRowType:()=>n(t.getTableRowType),mceTableCellType:()=>n(t.getTableCellType),mceTableColType:()=>n(t.getTableColType)},(t,o)=>e.addQueryValueHandler(o,t))})(e,n),bd(e,n),{getSelectedCells:o.getSelectedCells,clearSelectedCells:o.clearSelectedCells}};e.add("dom",e=>({table:Yd(e)}))}();
+/**
+ * TinyMCE version 8.9.0 (2026-08-27)
+ */
+
+(function () {
+    'use strict';
+
+    var global$1 = tinymce.util.Tools.resolve('tinymce.ModelManager');
+
+    /* eslint-disable @typescript-eslint/no-wrapper-object-types */
+    const hasProto = (v, constructor, predicate) => {
+        if (predicate(v, constructor.prototype)) {
+            return true;
+        }
+        else {
+            // String-based fallback time
+            return v.constructor?.name === constructor.name;
+        }
+    };
+    const typeOf = (x) => {
+        const t = typeof x;
+        if (x === null) {
+            return 'null';
+        }
+        else if (t === 'object' && Array.isArray(x)) {
+            return 'array';
+        }
+        else if (t === 'object' && hasProto(x, String, (o, proto) => proto.isPrototypeOf(o))) {
+            return 'string';
+        }
+        else {
+            return t;
+        }
+    };
+    const isType$1 = (type) => (value) => typeOf(value) === type;
+    const isSimpleType = (type) => (value) => typeof value === type;
+    const eq$2 = (t) => (a) => t === a;
+    const isString = isType$1('string');
+    const isObject = isType$1('object');
+    const isArray = isType$1('array');
+    const isNull = eq$2(null);
+    const isBoolean = isSimpleType('boolean');
+    const isUndefined = eq$2(undefined);
+    const isNullable = (a) => a === null || a === undefined;
+    const isNonNullable = (a) => !isNullable(a);
+    const isFunction = isSimpleType('function');
+    const isNumber = isSimpleType('number');
+
+    const noop = () => { };
+    /** Compose a unary function with an n-ary function */
+    const compose = (fa, fb) => {
+        return (...args) => {
+            return fa(fb.apply(null, args));
+        };
+    };
+    /** Compose two unary functions. Similar to compose, but avoids using Function.prototype.apply. */
+    const compose1 = (fbc, fab) => (a) => fbc(fab(a));
+    const constant = (value) => {
+        return () => {
+            return value;
+        };
+    };
+    const identity = (x) => {
+        return x;
+    };
+    const tripleEquals = (a, b) => {
+        return a === b;
+    };
+    function curry(fn, ...initialArgs) {
+        return (...restArgs) => {
+            const all = initialArgs.concat(restArgs);
+            return fn.apply(null, all);
+        };
+    }
+    const not = (f) => (t) => !f(t);
+    const die = (msg) => {
+        return () => {
+            throw new Error(msg);
+        };
+    };
+    const apply = (f) => {
+        return f();
+    };
+    const never = constant(false);
+    const always = constant(true);
+
+    /**
+     * The `Optional` type represents a value (of any type) that potentially does
+     * not exist. Any `Optional<T>` can either be a `Some<T>` (in which case the
+     * value does exist) or a `None` (in which case the value does not exist). This
+     * module defines a whole lot of FP-inspired utility functions for dealing with
+     * `Optional` objects.
+     *
+     * Comparison with null or undefined:
+     * - We don't get fancy null coalescing operators with `Optional`
+     * - We do get fancy helper functions with `Optional`
+     * - `Optional` support nesting, and allow for the type to still be nullable (or
+     * another `Optional`)
+     * - There is no option to turn off strict-optional-checks like there is for
+     * strict-null-checks
+     */
+    class Optional {
+        tag;
+        value;
+        // Sneaky optimisation: every instance of Optional.none is identical, so just
+        // reuse the same object
+        static singletonNone = new Optional(false);
+        // The internal representation has a `tag` and a `value`, but both are
+        // private: able to be console.logged, but not able to be accessed by code
+        constructor(tag, value) {
+            this.tag = tag;
+            this.value = value;
+        }
+        // --- Identities ---
+        /**
+         * Creates a new `Optional<T>` that **does** contain a value.
+         */
+        static some(value) {
+            return new Optional(true, value);
+        }
+        /**
+         * Create a new `Optional<T>` that **does not** contain a value. `T` can be
+         * any type because we don't actually have a `T`.
+         */
+        static none() {
+            return Optional.singletonNone;
+        }
+        /**
+         * Perform a transform on an `Optional` type. Regardless of whether this
+         * `Optional` contains a value or not, `fold` will return a value of type `U`.
+         * If this `Optional` does not contain a value, the `U` will be created by
+         * calling `onNone`. If this `Optional` does contain a value, the `U` will be
+         * created by calling `onSome`.
+         *
+         * For the FP enthusiasts in the room, this function:
+         * 1. Could be used to implement all of the functions below
+         * 2. Forms a catamorphism
+         */
+        fold(onNone, onSome) {
+            if (this.tag) {
+                return onSome(this.value);
+            }
+            else {
+                return onNone();
+            }
+        }
+        /**
+         * Determine if this `Optional` object contains a value.
+         */
+        isSome() {
+            return this.tag;
+        }
+        /**
+         * Determine if this `Optional` object **does not** contain a value.
+         */
+        isNone() {
+            return !this.tag;
+        }
+        // --- Functor (name stolen from Haskell / maths) ---
+        /**
+         * Perform a transform on an `Optional` object, **if** there is a value. If
+         * you provide a function to turn a T into a U, this is the function you use
+         * to turn an `Optional<T>` into an `Optional<U>`. If this **does** contain
+         * a value then the output will also contain a value (that value being the
+         * output of `mapper(this.value)`), and if this **does not** contain a value
+         * then neither will the output.
+         */
+        map(mapper) {
+            if (this.tag) {
+                return Optional.some(mapper(this.value));
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Monad (name stolen from Haskell / maths) ---
+        /**
+         * Perform a transform on an `Optional` object, **if** there is a value.
+         * Unlike `map`, here the transform itself also returns an `Optional`.
+         */
+        bind(binder) {
+            if (this.tag) {
+                return binder(this.value);
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Traversable (name stolen from Haskell / maths) ---
+        /**
+         * For a given predicate, this function finds out if there **exists** a value
+         * inside this `Optional` object that meets the predicate. In practice, this
+         * means that for `Optional`s that do not contain a value it returns false (as
+         * no predicate-meeting value exists).
+         */
+        exists(predicate) {
+            return this.tag && predicate(this.value);
+        }
+        /**
+         * For a given predicate, this function finds out if **all** the values inside
+         * this `Optional` object meet the predicate. In practice, this means that
+         * for `Optional`s that do not contain a value it returns true (as all 0
+         * objects do meet the predicate).
+         */
+        forall(predicate) {
+            return !this.tag || predicate(this.value);
+        }
+        filter(predicate) {
+            if (!this.tag || predicate(this.value)) {
+                return this;
+            }
+            else {
+                return Optional.none();
+            }
+        }
+        // --- Getters ---
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value.
+         */
+        getOr(replacement) {
+            return this.tag ? this.value : replacement;
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value.  Unlike `getOr`, in this method the `replacement` object is also
+         * `Optional` - meaning that this method will always return an `Optional`.
+         */
+        or(replacement) {
+            return this.tag ? this : replacement;
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided `Optional` object does not contain a
+         * value. Unlike `getOr`, in this method the `replacement` value is
+         * "thunked" - that is to say that you don't pass a value to `getOrThunk`, you
+         * pass a function which (if called) will **return** the `value` you want to
+         * use.
+         */
+        getOrThunk(thunk) {
+            return this.tag ? this.value : thunk();
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, using a default
+         * `replacement` value if the provided Optional object does not contain a
+         * value.
+         *
+         * Unlike `or`, in this method the `replacement` value is "thunked" - that is
+         * to say that you don't pass a value to `orThunk`, you pass a function which
+         * (if called) will **return** the `value` you want to use.
+         *
+         * Unlike `getOrThunk`, in this method the `replacement` value is also
+         * `Optional`, meaning that this method will always return an `Optional`.
+         */
+        orThunk(thunk) {
+            return this.tag ? this : thunk();
+        }
+        /**
+         * Get the value out of the inside of the `Optional` object, throwing an
+         * exception if the provided `Optional` object does not contain a value.
+         *
+         * WARNING:
+         * You should only be using this function if you know that the `Optional`
+         * object **is not** empty (otherwise you're throwing exceptions in production
+         * code, which is bad).
+         *
+         * In tests this is more acceptable.
+         *
+         * Prefer other methods to this, such as `.each`.
+         */
+        getOrDie(message) {
+            if (!this.tag) {
+                throw new Error(message ?? 'Called getOrDie on None');
+            }
+            else {
+                return this.value;
+            }
+        }
+        // --- Interop with null and undefined ---
+        /**
+         * Creates an `Optional` value from a nullable (or undefined-able) input.
+         * Null, or undefined, is converted to `None`, and anything else is converted
+         * to `Some`.
+         */
+        static from(value) {
+            return isNonNullable(value) ? Optional.some(value) : Optional.none();
+        }
+        /**
+         * Converts an `Optional` to a nullable type, by getting the value if it
+         * exists, or returning `null` if it does not.
+         */
+        getOrNull() {
+            return this.tag ? this.value : null;
+        }
+        /**
+         * Converts an `Optional` to an undefined-able type, by getting the value if
+         * it exists, or returning `undefined` if it does not.
+         */
+        getOrUndefined() {
+            return this.value;
+        }
+        // --- Utilities ---
+        /**
+         * If the `Optional` contains a value, perform an action on that value.
+         * Unlike the rest of the methods on this type, `.each` has side-effects. If
+         * you want to transform an `Optional<T>` **into** something, then this is not
+         * the method for you. If you want to use an `Optional<T>` to **do**
+         * something, then this is the method for you - provided you're okay with not
+         * doing anything in the case where the `Optional` doesn't have a value inside
+         * it. If you're not sure whether your use-case fits into transforming
+         * **into** something or **doing** something, check whether it has a return
+         * value. If it does, you should be performing a transform.
+         */
+        each(worker) {
+            if (this.tag) {
+                worker(this.value);
+            }
+        }
+        /**
+         * Turn the `Optional` object into an array that contains all of the values
+         * stored inside the `Optional`. In practice, this means the output will have
+         * either 0 or 1 elements.
+         */
+        toArray() {
+            return this.tag ? [this.value] : [];
+        }
+        /**
+         * Turn the `Optional` object into a string for debugging or printing. Not
+         * recommended for production code, but good for debugging. Also note that
+         * these days an `Optional` object can be logged to the console directly, and
+         * its inner value (if it exists) will be visible.
+         */
+        toString() {
+            return this.tag ? `some(${this.value})` : 'none()';
+        }
+    }
+
+    const nativeSlice = Array.prototype.slice;
+    const nativeIndexOf = Array.prototype.indexOf;
+    const nativePush = Array.prototype.push;
+    const rawIndexOf = (ts, t) => nativeIndexOf.call(ts, t);
+    const contains$2 = (xs, x) => rawIndexOf(xs, x) > -1;
+    const exists = (xs, pred) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    const range$1 = (num, f) => {
+        const r = [];
+        for (let i = 0; i < num; i++) {
+            r.push(f(i));
+        }
+        return r;
+    };
+    const map$1 = (xs, f) => {
+        // pre-allocating array size when it's guaranteed to be known
+        // http://jsperf.com/push-allocated-vs-dynamic/22
+        const len = xs.length;
+        const r = new Array(len);
+        for (let i = 0; i < len; i++) {
+            const x = xs[i];
+            r[i] = f(x, i);
+        }
+        return r;
+    };
+    // Unwound implementing other functions in terms of each.
+    // The code size is roughly the same, and it should allow for better optimisation.
+    // const each = function<T, U>(xs: T[], f: (x: T, i?: number, xs?: T[]) => void): void {
+    const each$2 = (xs, f) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            f(x, i);
+        }
+    };
+    const eachr = (xs, f) => {
+        for (let i = xs.length - 1; i >= 0; i--) {
+            const x = xs[i];
+            f(x, i);
+        }
+    };
+    const partition = (xs, pred) => {
+        const pass = [];
+        const fail = [];
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            const arr = pred(x, i) ? pass : fail;
+            arr.push(x);
+        }
+        return { pass, fail };
+    };
+    const filter$2 = (xs, pred) => {
+        const r = [];
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                r.push(x);
+            }
+        }
+        return r;
+    };
+    const foldr = (xs, f, acc) => {
+        eachr(xs, (x, i) => {
+            acc = f(acc, x, i);
+        });
+        return acc;
+    };
+    const foldl = (xs, f, acc) => {
+        each$2(xs, (x, i) => {
+            acc = f(acc, x, i);
+        });
+        return acc;
+    };
+    const findUntil = (xs, pred, until) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                return Optional.some(x);
+            }
+            else if (until(x, i)) {
+                break;
+            }
+        }
+        return Optional.none();
+    };
+    const find$1 = (xs, pred) => {
+        return findUntil(xs, pred, never);
+    };
+    const findIndex = (xs, pred) => {
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            if (pred(x, i)) {
+                return Optional.some(i);
+            }
+        }
+        return Optional.none();
+    };
+    const flatten = (xs) => {
+        // Note, this is possible because push supports multiple arguments:
+        // http://jsperf.com/concat-push/6
+        // Note that in the past, concat() would silently work (very slowly) for array-like objects.
+        // With this change it will throw an error.
+        const r = [];
+        for (let i = 0, len = xs.length; i < len; ++i) {
+            // Ensure that each value is an array itself
+            if (!isArray(xs[i])) {
+                throw new Error('Arr.flatten item ' + i + ' was not an array, input: ' + xs);
+            }
+            nativePush.apply(r, xs[i]);
+        }
+        return r;
+    };
+    const bind$2 = (xs, f) => flatten(map$1(xs, f));
+    const forall = (xs, pred) => {
+        for (let i = 0, len = xs.length; i < len; ++i) {
+            const x = xs[i];
+            if (pred(x, i) !== true) {
+                return false;
+            }
+        }
+        return true;
+    };
+    const reverse = (xs) => {
+        const r = nativeSlice.call(xs, 0);
+        r.reverse();
+        return r;
+    };
+    const mapToObject = (xs, f) => {
+        const r = {};
+        for (let i = 0, len = xs.length; i < len; i++) {
+            const x = xs[i];
+            r[String(x)] = f(x, i);
+        }
+        return r;
+    };
+    const sort$1 = (xs, comparator) => {
+        const copy = nativeSlice.call(xs, 0);
+        copy.sort(comparator);
+        return copy;
+    };
+    const get$d = (xs, i) => i >= 0 && i < xs.length ? Optional.some(xs[i]) : Optional.none();
+    const head = (xs) => get$d(xs, 0);
+    const last$2 = (xs) => get$d(xs, xs.length - 1);
+    const findMap = (arr, f) => {
+        for (let i = 0; i < arr.length; i++) {
+            const r = f(arr[i], i);
+            if (r.isSome()) {
+                return r;
+            }
+        }
+        return Optional.none();
+    };
+
+    // There are many variations of Object iteration that are faster than the 'for-in' style:
+    // http://jsperf.com/object-keys-iteration/107
+    //
+    // Use the native keys if it is available (IE9+), otherwise fall back to manually filtering
+    const keys = Object.keys;
+    const hasOwnProperty = Object.hasOwnProperty;
+    const each$1 = (obj, f) => {
+        const props = keys(obj);
+        for (let k = 0, len = props.length; k < len; k++) {
+            const i = props[k];
+            const x = obj[i];
+            f(x, i);
+        }
+    };
+    const map = (obj, f) => {
+        return tupleMap(obj, (x, i) => ({
+            k: i,
+            v: f(x, i)
+        }));
+    };
+    const tupleMap = (obj, f) => {
+        const r = {};
+        each$1(obj, (x, i) => {
+            const tuple = f(x, i);
+            r[tuple.k] = tuple.v;
+        });
+        return r;
+    };
+    const objAcc = (r) => (x, i) => {
+        r[i] = x;
+    };
+    const internalFilter = (obj, pred, onTrue, onFalse) => {
+        each$1(obj, (x, i) => {
+            (pred(x, i) ? onTrue : onFalse)(x, i);
+        });
+    };
+    const filter$1 = (obj, pred) => {
+        const t = {};
+        internalFilter(obj, pred, objAcc(t), noop);
+        return t;
+    };
+    const mapToArray = (obj, f) => {
+        const r = [];
+        each$1(obj, (value, name) => {
+            r.push(f(value, name));
+        });
+        return r;
+    };
+    const values = (obj) => {
+        return mapToArray(obj, identity);
+    };
+    const get$c = (obj, key) => {
+        return has$1(obj, key) ? Optional.from(obj[key]) : Optional.none();
+    };
+    const has$1 = (obj, key) => hasOwnProperty.call(obj, key);
+    const hasNonNullableKey = (obj, key) => has$1(obj, key) && obj[key] !== undefined && obj[key] !== null;
+    const isEmpty = (r) => {
+        for (const x in r) {
+            if (hasOwnProperty.call(r, x)) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    /*
+     * Generates a church encoded ADT (https://en.wikipedia.org/wiki/Church_encoding)
+     * For syntax and use, look at the test code.
+     */
+    const generate$1 = (cases) => {
+        // validation
+        if (!isArray(cases)) {
+            throw new Error('cases must be an array');
+        }
+        if (cases.length === 0) {
+            throw new Error('there must be at least one case');
+        }
+        const constructors = [];
+        // adt is mutated to add the individual cases
+        const adt = {};
+        each$2(cases, (acase, count) => {
+            const keys$1 = keys(acase);
+            // validation
+            if (keys$1.length !== 1) {
+                throw new Error('one and only one name per case');
+            }
+            const key = keys$1[0];
+            const value = acase[key];
+            // validation
+            if (adt[key] !== undefined) {
+                throw new Error('duplicate key detected:' + key);
+            }
+            else if (key === 'cata') {
+                throw new Error('cannot have a case named cata (sorry)');
+            }
+            else if (!isArray(value)) {
+                // this implicitly checks if acase is an object
+                throw new Error('case arguments must be an array');
+            }
+            constructors.push(key);
+            //
+            // constructor for key
+            //
+            adt[key] = (...args) => {
+                const argLength = args.length;
+                // validation
+                if (argLength !== value.length) {
+                    throw new Error('Wrong number of arguments to case ' + key + '. Expected ' + value.length + ' (' + value + '), got ' + argLength);
+                }
+                const match = (branches) => {
+                    const branchKeys = keys(branches);
+                    if (constructors.length !== branchKeys.length) {
+                        throw new Error('Wrong number of arguments to match. Expected: ' + constructors.join(',') + '\nActual: ' + branchKeys.join(','));
+                    }
+                    const allReqd = forall(constructors, (reqKey) => {
+                        return contains$2(branchKeys, reqKey);
+                    });
+                    if (!allReqd) {
+                        throw new Error('Not all branches were specified when using match. Specified: ' + branchKeys.join(', ') + '\nRequired: ' + constructors.join(', '));
+                    }
+                    return branches[key].apply(null, args);
+                };
+                //
+                // the fold function for key
+                //
+                return {
+                    fold: (...foldArgs) => {
+                        // runtime validation
+                        if (foldArgs.length !== cases.length) {
+                            throw new Error('Wrong number of arguments to fold. Expected ' + cases.length + ', got ' + foldArgs.length);
+                        }
+                        const target = foldArgs[count];
+                        return target.apply(null, args);
+                    },
+                    match,
+                    // NOTE: Only for debugging.
+                    log: (label) => {
+                        // eslint-disable-next-line no-console
+                        console.log(label, {
+                            constructors,
+                            constructor: key,
+                            params: args
+                        });
+                    }
+                };
+            };
+        });
+        return adt;
+    };
+    const Adt = {
+        generate: generate$1
+    };
+
+    const Cell = (initial) => {
+        let value = initial;
+        const get = () => {
+            return value;
+        };
+        const set = (v) => {
+            value = v;
+        };
+        return {
+            get,
+            set
+        };
+    };
+
+    const sort = (arr) => {
+        return arr.slice(0).sort();
+    };
+    const reqMessage = (required, keys) => {
+        throw new Error('All required keys (' + sort(required).join(', ') + ') were not specified. Specified keys were: ' + sort(keys).join(', ') + '.');
+    };
+    const unsuppMessage = (unsupported) => {
+        throw new Error('Unsupported keys for object: ' + sort(unsupported).join(', '));
+    };
+    const validateStrArr = (label, array) => {
+        if (!isArray(array)) {
+            throw new Error('The ' + label + ' fields must be an array. Was: ' + array + '.');
+        }
+        each$2(array, (a) => {
+            if (!isString(a)) {
+                throw new Error('The value ' + a + ' in the ' + label + ' fields was not a string.');
+            }
+        });
+    };
+    const invalidTypeMessage = (incorrect, type) => {
+        throw new Error('All values need to be of type: ' + type + '. Keys (' + sort(incorrect).join(', ') + ') were not.');
+    };
+    const checkDupes = (everything) => {
+        const sorted = sort(everything);
+        const dupe = find$1(sorted, (s, i) => {
+            return i < sorted.length - 1 && s === sorted[i + 1];
+        });
+        dupe.each((d) => {
+            throw new Error('The field: ' + d + ' occurs more than once in the combined fields: [' + sorted.join(', ') + '].');
+        });
+    };
+
+    // Ensure that the object has all required fields. They must be functions.
+    const base = (handleUnsupported, required) => {
+        return baseWith(handleUnsupported, required, {
+            validate: isFunction,
+            label: 'function'
+        });
+    };
+    // Ensure that the object has all required fields. They must satisy predicates.
+    const baseWith = (handleUnsupported, required, pred) => {
+        if (required.length === 0) {
+            throw new Error('You must specify at least one required field.');
+        }
+        validateStrArr('required', required);
+        checkDupes(required);
+        return (obj) => {
+            const keys$1 = keys(obj);
+            // Ensure all required keys are present.
+            const allReqd = forall(required, (req) => {
+                return contains$2(keys$1, req);
+            });
+            if (!allReqd) {
+                reqMessage(required, keys$1);
+            }
+            handleUnsupported(required, keys$1);
+            const invalidKeys = filter$2(required, (key) => {
+                return !pred.validate(obj[key], key);
+            });
+            if (invalidKeys.length > 0) {
+                invalidTypeMessage(invalidKeys, pred.label);
+            }
+            return obj;
+        };
+    };
+    const handleExact = (required, keys) => {
+        const unsupported = filter$2(keys, (key) => {
+            return !contains$2(required, key);
+        });
+        if (unsupported.length > 0) {
+            unsuppMessage(unsupported);
+        }
+    };
+    const exactly = (required) => base(handleExact, required);
+
+    /**
+     * Creates a new `Result<T, E>` that **does** contain a value.
+     */
+    const value$1 = (value) => {
+        const applyHelper = (fn) => fn(value);
+        const constHelper = constant(value);
+        const outputHelper = () => output;
+        const output = {
+            // Debug info
+            tag: true,
+            inner: value,
+            // Actual Result methods
+            fold: (_onError, onValue) => onValue(value),
+            isValue: always,
+            isError: never,
+            map: (mapper) => Result.value(mapper(value)),
+            mapError: outputHelper,
+            bind: applyHelper,
+            exists: applyHelper,
+            forall: applyHelper,
+            getOr: constHelper,
+            or: outputHelper,
+            getOrThunk: constHelper,
+            orThunk: outputHelper,
+            getOrDie: constHelper,
+            each: (fn) => {
+                // Can't write the function inline because we don't want to return something by mistake
+                fn(value);
+            },
+            toOptional: () => Optional.some(value),
+        };
+        return output;
+    };
+    /**
+     * Creates a new `Result<T, E>` that **does not** contain a value, and therefore
+     * contains an error.
+     */
+    const error = (error) => {
+        const outputHelper = () => output;
+        const output = {
+            // Debug info
+            tag: false,
+            inner: error,
+            // Actual Result methods
+            fold: (onError, _onValue) => onError(error),
+            isValue: never,
+            isError: always,
+            map: outputHelper,
+            mapError: (mapper) => Result.error(mapper(error)),
+            bind: outputHelper,
+            exists: never,
+            forall: always,
+            getOr: identity,
+            or: identity,
+            getOrThunk: apply,
+            orThunk: apply,
+            getOrDie: die(String(error)),
+            each: noop,
+            toOptional: Optional.none,
+        };
+        return output;
+    };
+    /**
+     * Creates a new `Result<T, E>` from an `Optional<T>` and an `E`. If the
+     * `Optional` contains a value, so will the outputted `Result`. If it does not,
+     * the outputted `Result` will contain an error (and that error will be the
+     * error passed in).
+     */
+    const fromOption = (optional, err) => optional.fold(() => error(err), value$1);
+    const Result = {
+        value: value$1,
+        error,
+        fromOption
+    };
+
+    // Use window object as the global if it's available since CSP will block script evals
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    const Global = typeof window !== 'undefined' ? window : Function('return this;')();
+
+    // This API is intended to give the capability to return namespaced strings.
+    // For CSS, since dots are not valid class names, the dots are turned into dashes.
+    const css = (namespace) => {
+        const dashNamespace = namespace.replace(/\./g, '-');
+        const resolve = (str) => {
+            return dashNamespace + '-' + str;
+        };
+        return {
+            resolve
+        };
+    };
+
+    /**
+     * **Is** the value stored inside this Optional object equal to `rhs`?
+     */
+    const is$2 = (lhs, rhs, comparator = tripleEquals) => lhs.exists((left) => comparator(left, rhs));
+    const cat = (arr) => {
+        const r = [];
+        const push = (x) => {
+            r.push(x);
+        };
+        for (let i = 0; i < arr.length; i++) {
+            arr[i].each(push);
+        }
+        return r;
+    };
+    const bindFrom = (a, f) => (a !== undefined && a !== null) ? f(a) : Optional.none();
+    // This can help with type inference, by specifying the type param on the none case, so the caller doesn't have to.
+    const someIf = (b, a) => b ? Optional.some(a) : Optional.none();
+
+    /** path :: ([String], JsObj?) -> JsObj */
+    const path = (parts, scope) => {
+        let o = scope !== undefined && scope !== null ? scope : Global;
+        for (let i = 0; i < parts.length && o !== undefined && o !== null; ++i) {
+            o = o[parts[i]];
+        }
+        return o;
+    };
+    /** resolve :: (String, JsObj?) -> JsObj */
+    const resolve$2 = (p, scope) => {
+        const parts = p.split('.');
+        return path(parts, scope);
+    };
+
+    const singleton = (doRevoke) => {
+        const subject = Cell(Optional.none());
+        const revoke = () => subject.get().each(doRevoke);
+        const clear = () => {
+            revoke();
+            subject.set(Optional.none());
+        };
+        const isSet = () => subject.get().isSome();
+        const get = () => subject.get();
+        const set = (s) => {
+            revoke();
+            subject.set(Optional.some(s));
+        };
+        return {
+            clear,
+            isSet,
+            get,
+            set
+        };
+    };
+    const value = () => {
+        const subject = singleton(noop);
+        const on = (f) => subject.get().each(f);
+        return {
+            ...subject,
+            on
+        };
+    };
+
+    const removeFromStart = (str, numChars) => {
+        return str.substring(numChars);
+    };
+
+    const checkRange = (str, substr, start) => substr === '' || str.length >= substr.length && str.substr(start, start + substr.length) === substr;
+    const removeLeading = (str, prefix) => {
+        return startsWith(str, prefix) ? removeFromStart(str, prefix.length) : str;
+    };
+    const contains$1 = (str, substr, start = 0, end) => {
+        const idx = str.indexOf(substr, start);
+        if (idx !== -1) {
+            return isUndefined(end) ? true : idx + substr.length <= end;
+        }
+        else {
+            return false;
+        }
+    };
+    /** Does 'str' start with 'prefix'?
+     *  Note: all strings start with the empty string.
+     *        More formally, for all strings x, startsWith(x, "").
+     *        This is so that for all strings x and y, startsWith(y + x, y)
+     */
+    const startsWith = (str, prefix) => {
+        return checkRange(str, prefix, 0);
+    };
+    /** Does 'str' end with 'suffix'?
+     *  Note: all strings end with the empty string.
+     *        More formally, for all strings x, endsWith(x, "").
+     *        This is so that for all strings x and y, endsWith(x + y, y)
+     */
+    const endsWith = (str, suffix) => {
+        return checkRange(str, suffix, str.length - suffix.length);
+    };
+    const blank = (r) => (s) => s.replace(r, '');
+    /** removes all leading and trailing spaces */
+    const trim = blank(/^\s+|\s+$/g);
+    const isNotEmpty = (s) => s.length > 0;
+    const toFloat = (value) => {
+        const num = parseFloat(value);
+        return isNaN(num) ? Optional.none() : Optional.some(num);
+    };
+
+    // Run a function fn after rate ms. If another invocation occurs
+    // during the time it is waiting, reschedule the function again
+    // with the new arguments.
+    const last$1 = (fn, rate) => {
+        let timer = null;
+        const cancel = () => {
+            if (!isNull(timer)) {
+                clearTimeout(timer);
+                timer = null;
+            }
+        };
+        const throttle = (...args) => {
+            cancel();
+            timer = setTimeout(() => {
+                timer = null;
+                fn.apply(null, args);
+            }, rate);
+        };
+        return {
+            cancel,
+            throttle
+        };
+    };
+
+    const cached = (f) => {
+        let called = false;
+        let r;
+        return (...args) => {
+            if (!called) {
+                called = true;
+                r = f.apply(null, args);
+            }
+            return r;
+        };
+    };
+
+    const nbsp = '\u00A0';
+
+    const validSectionList = ['tfoot', 'thead', 'tbody', 'colgroup'];
+    const isValidSection = (parentName) => contains$2(validSectionList, parentName);
+    const grid = (rows, columns) => ({
+        rows,
+        columns
+    });
+    const address = (row, column) => ({
+        row,
+        column
+    });
+    const detail = (element, rowspan, colspan) => ({
+        element,
+        rowspan,
+        colspan
+    });
+    const detailnew = (element, rowspan, colspan, isNew) => ({
+        element,
+        rowspan,
+        colspan,
+        isNew
+    });
+    const extended = (element, rowspan, colspan, row, column, isLocked) => ({
+        element,
+        rowspan,
+        colspan,
+        row,
+        column,
+        isLocked
+    });
+    const rowdetail = (element, cells, section) => ({
+        element,
+        cells,
+        section
+    });
+    const rowdetailnew = (element, cells, section, isNew) => ({
+        element,
+        cells,
+        section,
+        isNew
+    });
+    const elementnew = (element, isNew, isLocked) => ({
+        element,
+        isNew,
+        isLocked
+    });
+    const rowcells = (element, cells, section, isNew) => ({
+        element,
+        cells,
+        section,
+        isNew
+    });
+    const bounds = (startRow, startCol, finishRow, finishCol) => ({
+        startRow,
+        startCol,
+        finishRow,
+        finishCol
+    });
+    const columnext = (element, colspan, column) => ({
+        element,
+        colspan,
+        column
+    });
+    const colgroup = (element, columns) => ({
+        element,
+        columns
+    });
+
+    const addCells = (gridRow, index, cells) => {
+        const existingCells = gridRow.cells;
+        const before = existingCells.slice(0, index);
+        const after = existingCells.slice(index);
+        const newCells = before.concat(cells).concat(after);
+        return setCells(gridRow, newCells);
+    };
+    const addCell = (gridRow, index, cell) => addCells(gridRow, index, [cell]);
+    const mutateCell = (gridRow, index, cell) => {
+        const cells = gridRow.cells;
+        cells[index] = cell;
+    };
+    const setCells = (gridRow, cells) => rowcells(gridRow.element, cells, gridRow.section, gridRow.isNew);
+    const mapCells = (gridRow, f) => {
+        const cells = gridRow.cells;
+        const r = map$1(cells, f);
+        return rowcells(gridRow.element, r, gridRow.section, gridRow.isNew);
+    };
+    const getCell = (gridRow, index) => gridRow.cells[index];
+    const getCellElement = (gridRow, index) => getCell(gridRow, index).element;
+    const cellLength = (gridRow) => gridRow.cells.length;
+    const extractGridDetails = (grid) => {
+        const result = partition(grid, (row) => row.section === 'colgroup');
+        return {
+            rows: result.fail,
+            cols: result.pass
+        };
+    };
+    const clone$2 = (gridRow, cloneRow, cloneCell) => {
+        const newCells = map$1(gridRow.cells, cloneCell);
+        return rowcells(cloneRow(gridRow.element), newCells, gridRow.section, true);
+    };
+
+    const fromHtml$1 = (html, scope) => {
+        const doc = scope || document;
+        const div = doc.createElement('div');
+        div.innerHTML = html;
+        if (!div.hasChildNodes() || div.childNodes.length > 1) {
+            const message = 'HTML does not have a single root node';
+            // eslint-disable-next-line no-console
+            console.error(message, html);
+            throw new Error(message);
+        }
+        return fromDom$1(div.childNodes[0]);
+    };
+    const fromTag = (tag, scope) => {
+        const doc = scope || document;
+        const node = doc.createElement(tag);
+        return fromDom$1(node);
+    };
+    const fromText = (text, scope) => {
+        const doc = scope || document;
+        const node = doc.createTextNode(text);
+        return fromDom$1(node);
+    };
+    const fromDom$1 = (node) => {
+        // TODO: Consider removing this check, but left atm for safety
+        if (node === null || node === undefined) {
+            throw new Error('Node cannot be null or undefined');
+        }
+        return {
+            dom: node
+        };
+    };
+    const fromPoint$1 = (docElm, x, y) => Optional.from(docElm.dom.elementFromPoint(x, y)).map(fromDom$1);
+    // tslint:disable-next-line:variable-name
+    const SugarElement = {
+        fromHtml: fromHtml$1,
+        fromTag,
+        fromText,
+        fromDom: fromDom$1,
+        fromPoint: fromPoint$1
+    };
+
+    const selectNode = (win, element) => {
+        const rng = win.document.createRange();
+        rng.selectNode(element.dom);
+        return rng;
+    };
+    const selectNodeContents = (win, element) => {
+        const rng = win.document.createRange();
+        selectNodeContentsUsing(rng, element);
+        return rng;
+    };
+    const selectNodeContentsUsing = (rng, element) => rng.selectNodeContents(element.dom);
+    // NOTE: Mutates the range.
+    const setStart = (rng, situ) => {
+        situ.fold((e) => {
+            rng.setStartBefore(e.dom);
+        }, (e, o) => {
+            rng.setStart(e.dom, o);
+        }, (e) => {
+            rng.setStartAfter(e.dom);
+        });
+    };
+    const setFinish = (rng, situ) => {
+        situ.fold((e) => {
+            rng.setEndBefore(e.dom);
+        }, (e, o) => {
+            rng.setEnd(e.dom, o);
+        }, (e) => {
+            rng.setEndAfter(e.dom);
+        });
+    };
+    const relativeToNative = (win, startSitu, finishSitu) => {
+        const range = win.document.createRange();
+        setStart(range, startSitu);
+        setFinish(range, finishSitu);
+        return range;
+    };
+    const exactToNative = (win, start, soffset, finish, foffset) => {
+        const rng = win.document.createRange();
+        rng.setStart(start.dom, soffset);
+        rng.setEnd(finish.dom, foffset);
+        return rng;
+    };
+    const toRect = (rect) => ({
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height
+    });
+    const getFirstRect$1 = (rng) => {
+        const rects = rng.getClientRects();
+        // ASSUMPTION: The first rectangle is the start of the selection
+        const rect = rects.length > 0 ? rects[0] : rng.getBoundingClientRect();
+        return rect.width > 0 || rect.height > 0 ? Optional.some(rect).map(toRect) : Optional.none();
+    };
+
+    const adt$6 = Adt.generate([
+        { ltr: ['start', 'soffset', 'finish', 'foffset'] },
+        { rtl: ['start', 'soffset', 'finish', 'foffset'] }
+    ]);
+    const fromRange = (win, type, range) => type(SugarElement.fromDom(range.startContainer), range.startOffset, SugarElement.fromDom(range.endContainer), range.endOffset);
+    const getRanges = (win, selection) => selection.match({
+        domRange: (rng) => {
+            return {
+                ltr: constant(rng),
+                rtl: Optional.none
+            };
+        },
+        relative: (startSitu, finishSitu) => {
+            return {
+                ltr: cached(() => relativeToNative(win, startSitu, finishSitu)),
+                rtl: cached(() => Optional.some(relativeToNative(win, finishSitu, startSitu)))
+            };
+        },
+        exact: (start, soffset, finish, foffset) => {
+            return {
+                ltr: cached(() => exactToNative(win, start, soffset, finish, foffset)),
+                rtl: cached(() => Optional.some(exactToNative(win, finish, foffset, start, soffset)))
+            };
+        }
+    });
+    const doDiagnose = (win, ranges) => {
+        // If we cannot create a ranged selection from start > finish, it could be RTL
+        const rng = ranges.ltr();
+        if (rng.collapsed) {
+            // Let's check if it's RTL ... if it is, then reversing the direction will not be collapsed
+            const reversed = ranges.rtl().filter((rev) => rev.collapsed === false);
+            return reversed.map((rev) => 
+            // We need to use "reversed" here, because the original only has one point (collapsed)
+            adt$6.rtl(SugarElement.fromDom(rev.endContainer), rev.endOffset, SugarElement.fromDom(rev.startContainer), rev.startOffset)).getOrThunk(() => fromRange(win, adt$6.ltr, rng));
+        }
+        else {
+            return fromRange(win, adt$6.ltr, rng);
+        }
+    };
+    const diagnose = (win, selection) => {
+        const ranges = getRanges(win, selection);
+        return doDiagnose(win, ranges);
+    };
+    const asLtrRange = (win, selection) => {
+        const diagnosis = diagnose(win, selection);
+        return diagnosis.match({
+            ltr: (start, soffset, finish, foffset) => {
+                const rng = win.document.createRange();
+                rng.setStart(start.dom, soffset);
+                rng.setEnd(finish.dom, foffset);
+                return rng;
+            },
+            rtl: (start, soffset, finish, foffset) => {
+                // NOTE: Reversing start and finish
+                const rng = win.document.createRange();
+                rng.setStart(finish.dom, foffset);
+                rng.setEnd(start.dom, soffset);
+                return rng;
+            }
+        });
+    };
+    adt$6.ltr;
+    adt$6.rtl;
+
+    const COMMENT = 8;
+    const DOCUMENT = 9;
+    const DOCUMENT_FRAGMENT = 11;
+    const ELEMENT = 1;
+    const TEXT = 3;
+
+    const is$1 = (element, selector) => {
+        const dom = element.dom;
+        if (dom.nodeType !== ELEMENT) {
+            return false;
+        }
+        else {
+            const elem = dom;
+            if (elem.matches !== undefined) {
+                return elem.matches(selector);
+            }
+            else if (elem.msMatchesSelector !== undefined) {
+                return elem.msMatchesSelector(selector);
+            }
+            else if (elem.webkitMatchesSelector !== undefined) {
+                return elem.webkitMatchesSelector(selector);
+            }
+            else if (elem.mozMatchesSelector !== undefined) {
+                // cast to any as mozMatchesSelector doesn't exist in TS DOM lib
+                return elem.mozMatchesSelector(selector);
+            }
+            else {
+                throw new Error('Browser lacks native selectors');
+            } // unfortunately we can't throw this on startup :(
+        }
+    };
+    const bypassSelector = (dom) => 
+    // Only elements, documents and shadow roots support querySelector
+    // shadow root element type is DOCUMENT_FRAGMENT
+    dom.nodeType !== ELEMENT && dom.nodeType !== DOCUMENT && dom.nodeType !== DOCUMENT_FRAGMENT ||
+        // IE fix for complex queries on empty nodes: http://jsfiddle.net/spyder/fv9ptr5L/
+        dom.childElementCount === 0;
+    const all$1 = (selector, scope) => {
+        const base = scope === undefined ? document : scope.dom;
+        return bypassSelector(base) ? [] : map$1(base.querySelectorAll(selector), SugarElement.fromDom);
+    };
+    const one = (selector, scope) => {
+        const base = scope === undefined ? document : scope.dom;
+        return bypassSelector(base) ? Optional.none() : Optional.from(base.querySelector(selector)).map(SugarElement.fromDom);
+    };
+
+    const eq$1 = (e1, e2) => e1.dom === e2.dom;
+    // Returns: true if node e1 contains e2, otherwise false.
+    // (returns false if e1===e2: A node does not contain itself).
+    const contains = (e1, e2) => {
+        const d1 = e1.dom;
+        const d2 = e2.dom;
+        return d1 === d2 ? false : d1.contains(d2);
+    };
+    const is = is$1;
+
+    const DeviceType = (os, browser, userAgent, mediaMatch) => {
+        const isiPad = os.isiOS() && /ipad/i.test(userAgent) === true;
+        const isiPhone = os.isiOS() && !isiPad;
+        const isMobile = os.isiOS() || os.isAndroid();
+        const isTouch = isMobile || mediaMatch('(pointer:coarse)');
+        const isTablet = isiPad || !isiPhone && isMobile && mediaMatch('(min-device-width:768px)');
+        const isPhone = isiPhone || isMobile && !isTablet;
+        const iOSwebview = browser.isSafari() && os.isiOS() && /safari/i.test(userAgent) === false;
+        const isDesktop = !isPhone && !isTablet && !iOSwebview;
+        return {
+            isiPad: constant(isiPad),
+            isiPhone: constant(isiPhone),
+            isTablet: constant(isTablet),
+            isPhone: constant(isPhone),
+            isTouch: constant(isTouch),
+            isAndroid: os.isAndroid,
+            isiOS: os.isiOS,
+            isWebView: constant(iOSwebview),
+            isDesktop: constant(isDesktop)
+        };
+    };
+
+    const firstMatch = (regexes, s) => {
+        for (let i = 0; i < regexes.length; i++) {
+            const x = regexes[i];
+            if (x.test(s)) {
+                return x;
+            }
+        }
+        return undefined;
+    };
+    const find = (regexes, agent) => {
+        const r = firstMatch(regexes, agent);
+        if (!r) {
+            return { major: 0, minor: 0 };
+        }
+        const group = (i) => {
+            return Number(agent.replace(r, '$' + i));
+        };
+        return nu$2(group(1), group(2));
+    };
+    const detect$5 = (versionRegexes, agent) => {
+        const cleanedAgent = String(agent).toLowerCase();
+        if (versionRegexes.length === 0) {
+            return unknown$2();
+        }
+        return find(versionRegexes, cleanedAgent);
+    };
+    const unknown$2 = () => {
+        return nu$2(0, 0);
+    };
+    const nu$2 = (major, minor) => {
+        return { major, minor };
+    };
+    const Version = {
+        nu: nu$2,
+        detect: detect$5,
+        unknown: unknown$2
+    };
+
+    const detectBrowser$1 = (browsers, userAgentData) => {
+        return findMap(userAgentData.brands, (uaBrand) => {
+            const lcBrand = uaBrand.brand.toLowerCase();
+            return find$1(browsers, (browser) => lcBrand === browser.brand?.toLowerCase())
+                .map((info) => ({
+                current: info.name,
+                version: Version.nu(parseInt(uaBrand.version, 10), 0)
+            }));
+        });
+    };
+
+    const detect$4 = (candidates, userAgent) => {
+        const agent = String(userAgent).toLowerCase();
+        return find$1(candidates, (candidate) => {
+            return candidate.search(agent);
+        });
+    };
+    // They (browser and os) are the same at the moment, but they might
+    // not stay that way.
+    const detectBrowser = (browsers, userAgent) => {
+        return detect$4(browsers, userAgent).map((browser) => {
+            const version = Version.detect(browser.versionRegexes, userAgent);
+            return {
+                current: browser.name,
+                version
+            };
+        });
+    };
+    const detectOs = (oses, userAgent) => {
+        return detect$4(oses, userAgent).map((os) => {
+            const version = Version.detect(os.versionRegexes, userAgent);
+            return {
+                current: os.name,
+                version
+            };
+        });
+    };
+
+    const normalVersionRegex = /.*?version\/\ ?([0-9]+)\.([0-9]+).*/;
+    const checkContains = (target) => {
+        return (uastring) => {
+            return contains$1(uastring, target);
+        };
+    };
+    const browsers = [
+        // This is legacy Edge
+        {
+            name: 'Edge',
+            versionRegexes: [/.*?edge\/ ?([0-9]+)\.([0-9]+)$/],
+            search: (uastring) => {
+                return contains$1(uastring, 'edge/') && contains$1(uastring, 'chrome') && contains$1(uastring, 'safari') && contains$1(uastring, 'applewebkit');
+            }
+        },
+        // This is Google Chrome and Chromium Edge
+        {
+            name: 'Chromium',
+            brand: 'Chromium',
+            versionRegexes: [/.*?chrome\/([0-9]+)\.([0-9]+).*/, normalVersionRegex],
+            search: (uastring) => {
+                return contains$1(uastring, 'chrome') && !contains$1(uastring, 'chromeframe');
+            }
+        },
+        {
+            name: 'IE',
+            versionRegexes: [/.*?msie\ ?([0-9]+)\.([0-9]+).*/, /.*?rv:([0-9]+)\.([0-9]+).*/],
+            search: (uastring) => {
+                return contains$1(uastring, 'msie') || contains$1(uastring, 'trident');
+            }
+        },
+        // INVESTIGATE: Is this still the Opera user agent?
+        {
+            name: 'Opera',
+            versionRegexes: [normalVersionRegex, /.*?opera\/([0-9]+)\.([0-9]+).*/],
+            search: checkContains('opera')
+        },
+        {
+            name: 'Firefox',
+            versionRegexes: [/.*?firefox\/\ ?([0-9]+)\.([0-9]+).*/],
+            search: checkContains('firefox')
+        },
+        {
+            name: 'Safari',
+            versionRegexes: [normalVersionRegex, /.*?cpu os ([0-9]+)_([0-9]+).*/],
+            search: (uastring) => {
+                return (contains$1(uastring, 'safari') || contains$1(uastring, 'mobile/')) && contains$1(uastring, 'applewebkit');
+            }
+        }
+    ];
+    const oses = [
+        {
+            name: 'Windows',
+            search: checkContains('win'),
+            versionRegexes: [/.*?windows\ nt\ ?([0-9]+)\.([0-9]+).*/]
+        },
+        {
+            name: 'iOS',
+            search: (uastring) => {
+                return contains$1(uastring, 'iphone') || contains$1(uastring, 'ipad');
+            },
+            versionRegexes: [/.*?version\/\ ?([0-9]+)\.([0-9]+).*/, /.*cpu os ([0-9]+)_([0-9]+).*/, /.*cpu iphone os ([0-9]+)_([0-9]+).*/]
+        },
+        {
+            name: 'Android',
+            search: checkContains('android'),
+            versionRegexes: [/.*?android\ ?([0-9]+)\.([0-9]+).*/]
+        },
+        {
+            name: 'macOS',
+            search: checkContains('mac os x'),
+            versionRegexes: [/.*?mac\ os\ x\ ?([0-9]+)_([0-9]+).*/]
+        },
+        {
+            name: 'Linux',
+            search: checkContains('linux'),
+            versionRegexes: []
+        },
+        { name: 'Solaris',
+            search: checkContains('sunos'),
+            versionRegexes: []
+        },
+        {
+            name: 'FreeBSD',
+            search: checkContains('freebsd'),
+            versionRegexes: []
+        },
+        {
+            name: 'ChromeOS',
+            search: checkContains('cros'),
+            versionRegexes: [/.*?chrome\/([0-9]+)\.([0-9]+).*/]
+        }
+    ];
+    const PlatformInfo = {
+        browsers: constant(browsers),
+        oses: constant(oses)
+    };
+
+    const edge = 'Edge';
+    const chromium = 'Chromium';
+    const ie = 'IE';
+    const opera = 'Opera';
+    const firefox = 'Firefox';
+    const safari = 'Safari';
+    const unknown$1 = () => {
+        return nu$1({
+            current: undefined,
+            version: Version.unknown()
+        });
+    };
+    const nu$1 = (info) => {
+        const current = info.current;
+        const version = info.version;
+        const isBrowser = (name) => () => current === name;
+        return {
+            current,
+            version,
+            isEdge: isBrowser(edge),
+            isChromium: isBrowser(chromium),
+            // NOTE: isIe just looks too weird
+            isIE: isBrowser(ie),
+            isOpera: isBrowser(opera),
+            isFirefox: isBrowser(firefox),
+            isSafari: isBrowser(safari)
+        };
+    };
+    const Browser = {
+        unknown: unknown$1,
+        nu: nu$1,
+        edge: constant(edge),
+        chromium: constant(chromium),
+        ie: constant(ie),
+        opera: constant(opera),
+        firefox: constant(firefox),
+        safari: constant(safari)
+    };
+
+    const windows = 'Windows';
+    const ios = 'iOS';
+    const android = 'Android';
+    const linux = 'Linux';
+    const macos = 'macOS';
+    const solaris = 'Solaris';
+    const freebsd = 'FreeBSD';
+    const chromeos = 'ChromeOS';
+    // Though there is a bit of dupe with this and Browser, trying to
+    // reuse code makes it much harder to follow and change.
+    const unknown = () => {
+        return nu({
+            current: undefined,
+            version: Version.unknown()
+        });
+    };
+    const nu = (info) => {
+        const current = info.current;
+        const version = info.version;
+        const isOS = (name) => () => current === name;
+        return {
+            current,
+            version,
+            isWindows: isOS(windows),
+            // TODO: Fix capitalisation
+            isiOS: isOS(ios),
+            isAndroid: isOS(android),
+            isMacOS: isOS(macos),
+            isLinux: isOS(linux),
+            isSolaris: isOS(solaris),
+            isFreeBSD: isOS(freebsd),
+            isChromeOS: isOS(chromeos)
+        };
+    };
+    const OperatingSystem = {
+        unknown,
+        nu,
+        windows: constant(windows),
+        ios: constant(ios),
+        android: constant(android),
+        linux: constant(linux),
+        macos: constant(macos),
+        solaris: constant(solaris),
+        freebsd: constant(freebsd),
+        chromeos: constant(chromeos)
+    };
+
+    const detect$3 = (userAgent, userAgentDataOpt, mediaMatch) => {
+        const browsers = PlatformInfo.browsers();
+        const oses = PlatformInfo.oses();
+        const browser = userAgentDataOpt.bind((userAgentData) => detectBrowser$1(browsers, userAgentData))
+            .orThunk(() => detectBrowser(browsers, userAgent))
+            .fold(Browser.unknown, Browser.nu);
+        const os = detectOs(oses, userAgent).fold(OperatingSystem.unknown, OperatingSystem.nu);
+        const deviceType = DeviceType(os, browser, userAgent, mediaMatch);
+        return {
+            browser,
+            os,
+            deviceType
+        };
+    };
+    const PlatformDetection = {
+        detect: detect$3
+    };
+
+    const mediaMatch = (query) => window.matchMedia(query).matches;
+    // IMPORTANT: Must be in a thunk, otherwise rollup thinks calling this immediately
+    // causes side effects and won't tree shake this away
+    // Note: navigator.userAgentData is not part of the native typescript types yet
+    let platform = cached(() => PlatformDetection.detect(window.navigator.userAgent, Optional.from((window.navigator.userAgentData)), mediaMatch));
+    const detect$2 = () => platform();
+
+    const unsafe = (name, scope) => {
+        return resolve$2(name, scope);
+    };
+    const getOrDie = (name, scope) => {
+        const actual = unsafe(name, scope);
+        if (actual === undefined || actual === null) {
+            throw new Error(name + ' not available on this browser');
+        }
+        return actual;
+    };
+
+    const getPrototypeOf = Object.getPrototypeOf;
+    /*
+     * IE9 and above
+     *
+     * MDN no use on this one, but here's the link anyway:
+     * https://developer.mozilla.org/en/docs/Web/API/HTMLElement
+     */
+    const sandHTMLElement = (scope) => {
+        return getOrDie('HTMLElement', scope);
+    };
+    const isPrototypeOf = (x) => {
+        // use Resolve to get the window object for x and just return undefined if it can't find it.
+        // undefined scope later triggers using the global window.
+        const scope = resolve$2('ownerDocument.defaultView', x);
+        // TINY-7374: We can't rely on looking at the owner window HTMLElement as the element may have
+        // been constructed in a different window and then appended to the current window document.
+        return isObject(x) && (sandHTMLElement(scope).prototype.isPrototypeOf(x) || /^HTML\w*Element$/.test(getPrototypeOf(x).constructor.name));
+    };
+
+    const name = (element) => {
+        const r = element.dom.nodeName;
+        return r.toLowerCase();
+    };
+    const type = (element) => element.dom.nodeType;
+    const isType = (t) => (element) => type(element) === t;
+    const isComment = (element) => type(element) === COMMENT || name(element) === '#comment';
+    const isHTMLElement = (element) => isElement(element) && isPrototypeOf(element.dom);
+    const isElement = isType(ELEMENT);
+    const isText = isType(TEXT);
+    const isDocument = isType(DOCUMENT);
+    const isDocumentFragment = isType(DOCUMENT_FRAGMENT);
+    const isTag = (tag) => (e) => isElement(e) && name(e) === tag;
+
+    /**
+     * The document associated with the current element
+     * NOTE: this will throw if the owner is null.
+     */
+    const owner = (element) => SugarElement.fromDom(element.dom.ownerDocument);
+    /**
+     * If the element is a document, return it. Otherwise, return its ownerDocument.
+     * @param dos
+     */
+    const documentOrOwner = (dos) => isDocument(dos) ? dos : owner(dos);
+    const documentElement = (element) => SugarElement.fromDom(documentOrOwner(element).dom.documentElement);
+    /**
+     * The window element associated with the element
+     * NOTE: this will throw if the defaultView is null.
+     */
+    const defaultView = (element) => SugarElement.fromDom(documentOrOwner(element).dom.defaultView);
+    const parent = (element) => Optional.from(element.dom.parentNode).map(SugarElement.fromDom);
+    const parentElement = (element) => Optional.from(element.dom.parentElement).map(SugarElement.fromDom);
+    const parents = (element, isRoot) => {
+        const stop = isFunction(isRoot) ? isRoot : never;
+        // This is used a *lot* so it needs to be performant, not recursive
+        let dom = element.dom;
+        const ret = [];
+        while (dom.parentNode !== null && dom.parentNode !== undefined) {
+            const rawParent = dom.parentNode;
+            const p = SugarElement.fromDom(rawParent);
+            ret.push(p);
+            if (stop(p) === true) {
+                break;
+            }
+            else {
+                dom = rawParent;
+            }
+        }
+        return ret;
+    };
+    const prevSibling = (element) => Optional.from(element.dom.previousSibling).map(SugarElement.fromDom);
+    const nextSibling = (element) => Optional.from(element.dom.nextSibling).map(SugarElement.fromDom);
+    const children$2 = (element) => map$1(element.dom.childNodes, SugarElement.fromDom);
+    const child$2 = (element, index) => {
+        const cs = element.dom.childNodes;
+        return Optional.from(cs[index]).map(SugarElement.fromDom);
+    };
+    const firstChild = (element) => child$2(element, 0);
+
+    const makeRange = (start, soffset, finish, foffset) => {
+        const doc = owner(start);
+        // TODO: We need to think about a better place to put native range creation code. Does it even belong in sugar?
+        // Could the `Compare` checks (node.compareDocumentPosition) handle these situations better?
+        const rng = doc.dom.createRange();
+        rng.setStart(start.dom, soffset);
+        rng.setEnd(finish.dom, foffset);
+        return rng;
+    };
+    const after$5 = (start, soffset, finish, foffset) => {
+        const r = makeRange(start, soffset, finish, foffset);
+        const same = eq$1(start, finish) && soffset === foffset;
+        return r.collapsed && !same;
+    };
+
+    /**
+     * Is the element a ShadowRoot?
+     *
+     * Note: this is insufficient to test if any element is a shadow root, but it is sufficient to differentiate between
+     * a Document and a ShadowRoot.
+     */
+    const isShadowRoot = (dos) => isDocumentFragment(dos) && isNonNullable(dos.dom.host);
+    const getRootNode = (e) => SugarElement.fromDom(e.dom.getRootNode());
+    /** Where content needs to go. ShadowRoot or document body */
+    const getContentContainer = (dos) => 
+    // Can't use SugarBody.body without causing a circular module reference (since SugarBody.inBody uses SugarShadowDom)
+    isShadowRoot(dos) ? dos : SugarElement.fromDom(documentOrOwner(dos).dom.body);
+    /** If this element is in a ShadowRoot, return it. */
+    const getShadowRoot = (e) => {
+        const r = getRootNode(e);
+        return isShadowRoot(r) ? Optional.some(r) : Optional.none();
+    };
+    /** Return the host of a ShadowRoot.
+     *
+     * This function will throw if Shadow DOM is unsupported in the browser, or if the host is null.
+     * If you actually have a ShadowRoot, this shouldn't happen.
+     */
+    const getShadowHost = (e) => SugarElement.fromDom(e.dom.host);
+    /**
+     * When Events bubble up through a ShadowRoot, the browser changes the target to be the shadow host.
+     * This function gets the "original" event target if possible.
+     * This only works if the shadow tree is open - if the shadow tree is closed, event.target is returned.
+     * See: https://developers.google.com/web/fundamentals/web-components/shadowdom#events
+     */
+    const getOriginalEventTarget = (event) => {
+        if (isNonNullable(event.target)) {
+            const el = SugarElement.fromDom(event.target);
+            if (isElement(el) && isOpenShadowHost(el)) {
+                // When target element is inside Shadow DOM we need to take first element from composedPath
+                // otherwise we'll get Shadow Root parent, not actual target element.
+                if (event.composed && event.composedPath) {
+                    const composedPath = event.composedPath();
+                    if (composedPath) {
+                        return head(composedPath);
+                    }
+                }
+            }
+        }
+        return Optional.from(event.target);
+    };
+    /** Return true if the element is a host of an open shadow root.
+     *  Return false if the element is a host of a closed shadow root, or if the element is not a host.
+     */
+    const isOpenShadowHost = (element) => isNonNullable(element.dom.shadowRoot);
+
+    const mkEvent = (target, x, y, stop, prevent, kill, raw) => ({
+        target,
+        x,
+        y,
+        stop,
+        prevent,
+        kill,
+        raw
+    });
+    /** Wraps an Event in an EventArgs structure.
+     * The returned EventArgs structure has its target set to the "original" target if possible.
+     * See SugarShadowDom.getOriginalEventTarget
+     */
+    const fromRawEvent$1 = (rawEvent) => {
+        const target = SugarElement.fromDom(getOriginalEventTarget(rawEvent).getOr(rawEvent.target));
+        const stop = () => rawEvent.stopPropagation();
+        const prevent = () => rawEvent.preventDefault();
+        const kill = compose(prevent, stop); // more of a sequence than a compose, but same effect
+        // FIX: Don't just expose the raw event. Need to identify what needs standardisation.
+        return mkEvent(target, rawEvent.clientX, rawEvent.clientY, stop, prevent, kill, rawEvent);
+    };
+    const handle$1 = (filter, handler) => (rawEvent) => {
+        if (filter(rawEvent)) {
+            handler(fromRawEvent$1(rawEvent));
+        }
+    };
+    const binder = (element, event, filter, handler, useCapture) => {
+        const wrapped = handle$1(filter, handler);
+        // IE9 minimum
+        element.dom.addEventListener(event, wrapped, useCapture);
+        return {
+            unbind: curry(unbind, element, event, wrapped, useCapture)
+        };
+    };
+    const bind$1 = (element, event, filter, handler) => binder(element, event, filter, handler, false);
+    const unbind = (element, event, handler, useCapture) => {
+        // IE9 minimum
+        element.dom.removeEventListener(event, handler, useCapture);
+    };
+
+    const filter = always; // no filter on plain DomEvents
+    const bind = (element, event, handler) => bind$1(element, event, filter, handler);
+    const fromRawEvent = fromRawEvent$1;
+
+    const before$3 = (marker, element) => {
+        const parent$1 = parent(marker);
+        parent$1.each((v) => {
+            v.dom.insertBefore(element.dom, marker.dom);
+        });
+    };
+    const after$4 = (marker, element) => {
+        const sibling = nextSibling(marker);
+        sibling.fold(() => {
+            const parent$1 = parent(marker);
+            parent$1.each((v) => {
+                append$1(v, element);
+            });
+        }, (v) => {
+            before$3(v, element);
+        });
+    };
+    const prepend = (parent, element) => {
+        const firstChild$1 = firstChild(parent);
+        firstChild$1.fold(() => {
+            append$1(parent, element);
+        }, (v) => {
+            parent.dom.insertBefore(element.dom, v.dom);
+        });
+    };
+    const append$1 = (parent, element) => {
+        parent.dom.appendChild(element.dom);
+    };
+    const appendAt = (parent, element, index) => {
+        child$2(parent, index).fold(() => {
+            append$1(parent, element);
+        }, (v) => {
+            before$3(v, element);
+        });
+    };
+    const wrap = (element, wrapper) => {
+        before$3(element, wrapper);
+        append$1(wrapper, element);
+    };
+
+    const after$3 = (marker, elements) => {
+        each$2(elements, (x, i) => {
+            const e = i === 0 ? marker : elements[i - 1];
+            after$4(e, x);
+        });
+    };
+    const append = (parent, elements) => {
+        each$2(elements, (x) => {
+            append$1(parent, x);
+        });
+    };
+
+    const rawSet = (dom, key, value) => {
+        /*
+         * JQuery coerced everything to a string, and silently did nothing on text node/null/undefined.
+         *
+         * We fail on those invalid cases, only allowing numbers and booleans.
+         */
+        if (isString(value) || isBoolean(value) || isNumber(value)) {
+            dom.setAttribute(key, value + '');
+        }
+        else {
+            // eslint-disable-next-line no-console
+            console.error('Invalid call to Attribute.set. Key ', key, ':: Value ', value, ':: Element ', dom);
+            throw new Error('Attribute value was not simple');
+        }
+    };
+    const set$2 = (element, key, value) => {
+        rawSet(element.dom, key, value);
+    };
+    const setAll$1 = (element, attrs) => {
+        const dom = element.dom;
+        each$1(attrs, (v, k) => {
+            rawSet(dom, k, v);
+        });
+    };
+    const setOptions = (element, attrs) => {
+        each$1(attrs, (v, k) => {
+            v.fold(() => {
+                remove$6(element, k);
+            }, (value) => {
+                rawSet(element.dom, k, value);
+            });
+        });
+    };
+    const get$b = (element, key) => {
+        const v = element.dom.getAttribute(key);
+        // undefined is the more appropriate value for JS, and this matches JQuery
+        return v === null ? undefined : v;
+    };
+    const getOpt = (element, key) => Optional.from(get$b(element, key));
+    const remove$6 = (element, key) => {
+        element.dom.removeAttribute(key);
+    };
+    const clone$1 = (element) => foldl(element.dom.attributes, (acc, attr) => {
+        acc[attr.name] = attr.value;
+        return acc;
+    }, {});
+
+    const empty = (element) => {
+        // shortcut "empty node" trick. Requires IE 9.
+        element.dom.textContent = '';
+        // If the contents was a single empty text node, the above doesn't remove it. But, it's still faster in general
+        // than removing every child node manually.
+        // The following is (probably) safe for performance as 99.9% of the time the trick works and
+        // Traverse.children will return an empty array.
+        each$2(children$2(element), (rogue) => {
+            remove$5(rogue);
+        });
+    };
+    const remove$5 = (element) => {
+        const dom = element.dom;
+        if (dom.parentNode !== null) {
+            dom.parentNode.removeChild(dom);
+        }
+    };
+    const unwrap = (wrapper) => {
+        const children = children$2(wrapper);
+        if (children.length > 0) {
+            after$3(wrapper, children);
+        }
+        remove$5(wrapper);
+    };
+
+    const clone = (original, isDeep) => SugarElement.fromDom(original.dom.cloneNode(isDeep));
+    /** Shallow clone - just the tag, no children */
+    const shallow = (original) => clone(original, false);
+    /** Deep clone - everything copied including children */
+    const deep = (original) => clone(original, true);
+    /** Shallow clone, with a new tag */
+    const shallowAs = (original, tag) => {
+        const nu = SugarElement.fromTag(tag);
+        const attributes = clone$1(original);
+        setAll$1(nu, attributes);
+        return nu;
+    };
+    /** Deep clone, with a new tag */
+    const copy$2 = (original, tag) => {
+        const nu = shallowAs(original, tag);
+        // NOTE
+        // previously this used serialisation:
+        // nu.dom.innerHTML = original.dom.innerHTML;
+        //
+        // Clone should be equivalent (and faster), but if TD <-> TH toggle breaks, put it back.
+        const cloneChildren = children$2(deep(original));
+        append(nu, cloneChildren);
+        return nu;
+    };
+    /** Change the tag name, but keep all children */
+    const mutate$1 = (original, tag) => {
+        const nu = shallowAs(original, tag);
+        after$4(original, nu);
+        const children = children$2(original);
+        append(nu, children);
+        remove$5(original);
+        return nu;
+    };
+
+    const fromHtml = (html, scope) => {
+        const doc = scope || document;
+        const div = doc.createElement('div');
+        div.innerHTML = html;
+        return children$2(SugarElement.fromDom(div));
+    };
+    const fromDom = (nodes) => map$1(nodes, SugarElement.fromDom);
+
+    const get$a = (element) => element.dom.innerHTML;
+    const getOuter$2 = (element) => {
+        const container = SugarElement.fromTag('div');
+        const clone = SugarElement.fromDom(element.dom.cloneNode(true));
+        append$1(container, clone);
+        return get$a(container);
+    };
+
+    // some elements, such as mathml, don't have style attributes
+    // others, such as angular elements, have style attributes that aren't a CSSStyleDeclaration
+    const isSupported = (dom) => dom.style !== undefined && isFunction(dom.style.getPropertyValue);
+
+    // Node.contains() is very, very, very good performance
+    // http://jsperf.com/closest-vs-contains/5
+    const inBody = (element) => {
+        // Technically this is only required on IE, where contains() returns false for text nodes.
+        // But it's cheap enough to run everywhere and Sugar doesn't have platform detection (yet).
+        const dom = isText(element) ? element.dom.parentNode : element.dom;
+        // use ownerDocument.body to ensure this works inside iframes.
+        // Normally contains is bad because an element "contains" itself, but here we want that.
+        if (dom === undefined || dom === null || dom.ownerDocument === null) {
+            return false;
+        }
+        const doc = dom.ownerDocument;
+        return getShadowRoot(SugarElement.fromDom(dom)).fold(() => doc.body.contains(dom), compose1(inBody, getShadowHost));
+    };
+    const getBody$1 = (doc) => {
+        const b = doc.dom.body;
+        if (b === null || b === undefined) {
+            throw new Error('Body is not available yet');
+        }
+        return SugarElement.fromDom(b);
+    };
+
+    const internalSet = (dom, property, value) => {
+        // This is going to hurt. Apologies.
+        // JQuery coerces numbers to pixels for certain property names, and other times lets numbers through.
+        // we're going to be explicit; strings only.
+        if (!isString(value)) {
+            // eslint-disable-next-line no-console
+            console.error('Invalid call to CSS.set. Property ', property, ':: Value ', value, ':: Element ', dom);
+            throw new Error('CSS value must be a string: ' + value);
+        }
+        // removed: support for dom().style[property] where prop is camel case instead of normal property name
+        if (isSupported(dom)) {
+            dom.style.setProperty(property, value);
+        }
+    };
+    const internalRemove = (dom, property) => {
+        /*
+         * IE9 and above - MDN doesn't have details, but here's a couple of random internet claims
+         *
+         * http://help.dottoro.com/ljopsjck.php
+         * http://stackoverflow.com/a/7901886/7546
+         */
+        if (isSupported(dom)) {
+            dom.style.removeProperty(property);
+        }
+    };
+    const set$1 = (element, property, value) => {
+        const dom = element.dom;
+        internalSet(dom, property, value);
+    };
+    const setAll = (element, css) => {
+        const dom = element.dom;
+        each$1(css, (v, k) => {
+            internalSet(dom, k, v);
+        });
+    };
+    /*
+     * NOTE: For certain properties, this returns the "used value" which is subtly different to the "computed value" (despite calling getComputedStyle).
+     * Blame CSS 2.0.
+     *
+     * https://developer.mozilla.org/en-US/docs/Web/CSS/used_value
+     */
+    const get$9 = (element, property) => {
+        const dom = element.dom;
+        /*
+         * IE9 and above per
+         * https://developer.mozilla.org/en/docs/Web/API/window.getComputedStyle
+         *
+         * Not in numerosity, because it doesn't memoize and looking this up dynamically in performance critical code would be horrendous.
+         *
+         * JQuery has some magic here for IE popups, but we don't really need that.
+         * It also uses element.ownerDocument.defaultView to handle iframes but that hasn't been required since FF 3.6.
+         */
+        const styles = window.getComputedStyle(dom);
+        const r = styles.getPropertyValue(property);
+        // jquery-ism: If r is an empty string, check that the element is not in a document. If it isn't, return the raw value.
+        // Turns out we do this a lot.
+        return (r === '' && !inBody(element)) ? getUnsafeProperty(dom, property) : r;
+    };
+    // removed: support for dom().style[property] where prop is camel case instead of normal property name
+    // empty string is what the browsers (IE11 and Chrome) return when the propertyValue doesn't exists.
+    const getUnsafeProperty = (dom, property) => isSupported(dom) ? dom.style.getPropertyValue(property) : '';
+    /*
+     * Gets the raw value from the style attribute. Useful for retrieving "used values" from the DOM:
+     * https://developer.mozilla.org/en-US/docs/Web/CSS/used_value
+     *
+     * Returns NONE if the property isn't set, or the value is an empty string.
+     */
+    const getRaw$2 = (element, property) => {
+        const dom = element.dom;
+        const raw = getUnsafeProperty(dom, property);
+        return Optional.from(raw).filter((r) => r.length > 0);
+    };
+    const remove$4 = (element, property) => {
+        const dom = element.dom;
+        internalRemove(dom, property);
+        if (is$2(getOpt(element, 'style').map(trim), '')) {
+            // No more styles left, remove the style attribute as well
+            remove$6(element, 'style');
+        }
+    };
+    const copy$1 = (source, target) => {
+        const sourceDom = source.dom;
+        const targetDom = target.dom;
+        if (isSupported(sourceDom) && isSupported(targetDom)) {
+            targetDom.style.cssText = sourceDom.style.cssText;
+        }
+    };
+
+    const Dimension = (name, getOffset) => {
+        const set = (element, h) => {
+            if (!isNumber(h) && !h.match(/^[0-9]+$/)) {
+                throw new Error(name + '.set accepts only positive integer values. Value was ' + h);
+            }
+            const dom = element.dom;
+            if (isSupported(dom)) {
+                dom.style[name] = h + 'px';
+            }
+        };
+        /*
+         * jQuery supports querying width and height on the document and window objects.
+         *
+         * TBIO doesn't do this, so the code is removed to save space, but left here just in case.
+         */
+        /*
+        var getDocumentWidth = (element) => {
+          var dom = element.dom;
+          if (Node.isDocument(element)) {
+            var body = dom.body;
+            var doc = dom.documentElement;
+            return Math.max(
+              body.scrollHeight,
+              doc.scrollHeight,
+              body.offsetHeight,
+              doc.offsetHeight,
+              doc.clientHeight
+            );
+          }
+        };
+      
+        var getWindowWidth = (element) => {
+          var dom = element.dom;
+          if (dom.window === dom) {
+            // There is no offsetHeight on a window, so use the clientHeight of the document
+            return dom.document.documentElement.clientHeight;
+          }
+        };
+      */
+        const get = (element) => {
+            const r = getOffset(element);
+            // zero or null means non-standard or disconnected, fall back to CSS
+            if (r <= 0 || r === null) {
+                const css = get$9(element, name);
+                // ugh this feels dirty, but it saves cycles
+                return parseFloat(css) || 0;
+            }
+            return r;
+        };
+        // in jQuery, getOuter replicates (or uses) box-sizing: border-box calculations
+        // although these calculations only seem relevant for quirks mode, and edge cases TBIO doesn't rely on
+        const getOuter = get;
+        const aggregate = (element, properties) => foldl(properties, (acc, property) => {
+            const val = get$9(element, property);
+            const value = val === undefined ? 0 : parseInt(val, 10);
+            return isNaN(value) ? acc : acc + value;
+        }, 0);
+        const max = (element, value, properties) => {
+            const cumulativeInclusions = aggregate(element, properties);
+            // if max-height is 100px and your cumulativeInclusions is 150px, there is no way max-height can be 100px, so we return 0.
+            const absoluteMax = value > cumulativeInclusions ? value - cumulativeInclusions : 0;
+            return absoluteMax;
+        };
+        return {
+            set,
+            get,
+            getOuter,
+            aggregate,
+            max
+        };
+    };
+
+    const toNumber = (px, fallback) => toFloat(px).getOr(fallback);
+    const getProp = (element, name, fallback) => toNumber(get$9(element, name), fallback);
+    const calcContentBoxSize = (element, size, upper, lower) => {
+        const paddingUpper = getProp(element, `padding-${upper}`, 0);
+        const paddingLower = getProp(element, `padding-${lower}`, 0);
+        const borderUpper = getProp(element, `border-${upper}-width`, 0);
+        const borderLower = getProp(element, `border-${lower}-width`, 0);
+        return size - paddingUpper - paddingLower - borderUpper - borderLower;
+    };
+    const getCalculatedWidth = (element, boxSizing) => {
+        const dom = element.dom;
+        const width = dom.getBoundingClientRect().width || dom.offsetWidth;
+        return boxSizing === 'border-box' ? width : calcContentBoxSize(element, width, 'left', 'right');
+    };
+    const getHeight$1 = (element) => getProp(element, 'height', element.dom.offsetHeight);
+    const getWidth = (element) => getProp(element, 'width', element.dom.offsetWidth);
+    const getInnerWidth = (element) => getCalculatedWidth(element, 'content-box');
+
+    const api$2 = Dimension('height', (element) => {
+        // getBoundingClientRect gives better results than offsetHeight for tables with captions on Firefox
+        const dom = element.dom;
+        return inBody(element) ? dom.getBoundingClientRect().height : dom.offsetHeight;
+    });
+    const get$8 = (element) => api$2.get(element);
+    const getOuter$1 = (element) => api$2.getOuter(element);
+    const getRuntime$1 = getHeight$1;
+
+    const api$1 = Dimension('width', (element) => {
+        const dom = element.dom;
+        return inBody(element) ? dom.getBoundingClientRect().width : dom.offsetWidth;
+    });
+    const get$7 = (element) => api$1.get(element);
+    const getOuter = (element) => api$1.getOuter(element);
+    const getInner = getInnerWidth;
+    const getRuntime = getWidth;
+
+    const r = (left, top) => {
+        const translate = (x, y) => r(left + x, top + y);
+        return {
+            left,
+            top,
+            translate
+        };
+    };
+    // tslint:disable-next-line:variable-name
+    const SugarPosition = r;
+
+    const boxPosition = (dom) => {
+        const box = dom.getBoundingClientRect();
+        return SugarPosition(box.left, box.top);
+    };
+    // Avoids falsy false fallthrough
+    const firstDefinedOrZero = (a, b) => {
+        if (a !== undefined) {
+            return a;
+        }
+        else {
+            return b !== undefined ? b : 0;
+        }
+    };
+    const absolute = (element) => {
+        const doc = element.dom.ownerDocument;
+        const body = doc.body;
+        const win = doc.defaultView;
+        const html = doc.documentElement;
+        if (body === element.dom) {
+            return SugarPosition(body.offsetLeft, body.offsetTop);
+        }
+        const scrollTop = firstDefinedOrZero(win?.pageYOffset, html.scrollTop);
+        const scrollLeft = firstDefinedOrZero(win?.pageXOffset, html.scrollLeft);
+        const clientTop = firstDefinedOrZero(html.clientTop, body.clientTop);
+        const clientLeft = firstDefinedOrZero(html.clientLeft, body.clientLeft);
+        return viewport(element).translate(scrollLeft - clientLeft, scrollTop - clientTop);
+    };
+    const viewport = (element) => {
+        const dom = element.dom;
+        const doc = dom.ownerDocument;
+        const body = doc.body;
+        if (body === dom) {
+            return SugarPosition(body.offsetLeft, body.offsetTop);
+        }
+        if (!inBody(element)) {
+            return SugarPosition(0, 0);
+        }
+        return boxPosition(dom);
+    };
+
+    // get scroll position (x,y) relative to document _doc (or global if not supplied)
+    const get$6 = (_DOC) => {
+        const doc = _DOC !== undefined ? _DOC.dom : document;
+        // ASSUMPTION: This is for cross-browser support, body works for Safari & EDGE, and when we have an iframe body scroller
+        const x = doc.body.scrollLeft || doc.documentElement.scrollLeft;
+        const y = doc.body.scrollTop || doc.documentElement.scrollTop;
+        return SugarPosition(x, y);
+    };
+    // Scroll content by (x,y) relative to document _doc (or global if not supplied)
+    const by = (x, y, _DOC) => {
+        const doc = _DOC !== undefined ? _DOC.dom : document;
+        const win = doc.defaultView;
+        if (win) {
+            win.scrollBy(x, y);
+        }
+    };
+
+    const NodeValue = (is, name) => {
+        const get = (element) => {
+            if (!is(element)) {
+                throw new Error('Can only get ' + name + ' value of a ' + name + ' node');
+            }
+            return getOption(element).getOr('');
+        };
+        const getOption = (element) => is(element) ? Optional.from(element.dom.nodeValue) : Optional.none();
+        const set = (element, value) => {
+            if (!is(element)) {
+                throw new Error('Can only set raw ' + name + ' value of a ' + name + ' node');
+            }
+            element.dom.nodeValue = value;
+        };
+        return {
+            get,
+            getOption,
+            set
+        };
+    };
+
+    const api = NodeValue(isText, 'text');
+    const get$5 = (element) => api.get(element);
+    const getOption = (element) => api.getOption(element);
+    const set = (element, value) => api.set(element, value);
+
+    const onDirection = (isLtr, isRtl) => (element) => getDirection(element) === 'rtl' ? isRtl : isLtr;
+    const getDirection = (element) => get$9(element, 'direction') === 'rtl' ? 'rtl' : 'ltr';
+
+    // Methods for handling attributes that contain a list of values <div foo="alpha beta theta">
+    const read = (element, attr) => {
+        const value = get$b(element, attr);
+        return value === undefined || value === '' ? [] : value.split(' ');
+    };
+    const add$3 = (element, attr, id) => {
+        const old = read(element, attr);
+        const nu = old.concat([id]);
+        set$2(element, attr, nu.join(' '));
+        return true;
+    };
+    const remove$3 = (element, attr, id) => {
+        const nu = filter$2(read(element, attr), (v) => v !== id);
+        if (nu.length > 0) {
+            set$2(element, attr, nu.join(' '));
+        }
+        else {
+            remove$6(element, attr);
+        }
+        return false;
+    };
+
+    var ClosestOrAncestor = (is, ancestor, scope, a, isRoot) => {
+        if (is(scope, a)) {
+            return Optional.some(scope);
+        }
+        else if (isFunction(isRoot) && isRoot(scope)) {
+            return Optional.none();
+        }
+        else {
+            return ancestor(scope, a, isRoot);
+        }
+    };
+
+    const ancestor$2 = (scope, predicate, isRoot) => {
+        let element = scope.dom;
+        const stop = isFunction(isRoot) ? isRoot : never;
+        while (element.parentNode) {
+            element = element.parentNode;
+            const el = SugarElement.fromDom(element);
+            if (predicate(el)) {
+                return Optional.some(el);
+            }
+            else if (stop(el)) {
+                break;
+            }
+        }
+        return Optional.none();
+    };
+    const closest$2 = (scope, predicate, isRoot) => {
+        // This is required to avoid ClosestOrAncestor passing the predicate to itself
+        const is = (s, test) => test(s);
+        return ClosestOrAncestor(is, ancestor$2, scope, predicate, isRoot);
+    };
+    const child$1 = (scope, predicate) => {
+        const pred = (node) => predicate(SugarElement.fromDom(node));
+        const result = find$1(scope.dom.childNodes, pred);
+        return result.map(SugarElement.fromDom);
+    };
+    const descendant$1 = (scope, predicate) => {
+        const descend = (node) => {
+            // tslint:disable-next-line:prefer-for-of
+            for (let i = 0; i < node.childNodes.length; i++) {
+                const child = SugarElement.fromDom(node.childNodes[i]);
+                if (predicate(child)) {
+                    return Optional.some(child);
+                }
+                const res = descend(node.childNodes[i]);
+                if (res.isSome()) {
+                    return res;
+                }
+            }
+            return Optional.none();
+        };
+        return descend(scope.dom);
+    };
+
+    const ancestor$1 = (scope, selector, isRoot) => ancestor$2(scope, (e) => is$1(e, selector), isRoot);
+    const child = (scope, selector) => child$1(scope, (e) => is$1(e, selector));
+    const descendant = (scope, selector) => one(selector, scope);
+    // Returns Some(closest ancestor element (sugared)) matching 'selector' up to isRoot, or None() otherwise
+    const closest$1 = (scope, selector, isRoot) => {
+        const is = (element, selector) => is$1(element, selector);
+        return ClosestOrAncestor(is, ancestor$1, scope, selector, isRoot);
+    };
+
+    // IE11 Can return undefined for a classList on elements such as math, so we make sure it's not undefined before attempting to use it.
+    const supports = (element) => element.dom.classList !== undefined;
+    const get$4 = (element) => read(element, 'class');
+    const add$2 = (element, clazz) => add$3(element, 'class', clazz);
+    const remove$2 = (element, clazz) => remove$3(element, 'class', clazz);
+
+    /*
+     * ClassList is IE10 minimum:
+     * https://developer.mozilla.org/en-US/docs/Web/API/Element.classList
+     *
+     * Note that IE doesn't support the second argument to toggle (at all).
+     * If it did, the toggler could be better.
+     */
+    const add$1 = (element, clazz) => {
+        if (supports(element)) {
+            element.dom.classList.add(clazz);
+        }
+        else {
+            add$2(element, clazz);
+        }
+    };
+    const cleanClass = (element) => {
+        const classList = supports(element) ? element.dom.classList : get$4(element);
+        // classList is a "live list", so this is up to date already
+        if (classList.length === 0) {
+            // No more classes left, remove the class attribute as well
+            remove$6(element, 'class');
+        }
+    };
+    const remove$1 = (element, clazz) => {
+        if (supports(element)) {
+            const classList = element.dom.classList;
+            classList.remove(clazz);
+        }
+        else {
+            remove$2(element, clazz);
+        }
+        cleanClass(element);
+    };
+    const has = (element, clazz) => supports(element) && element.dom.classList.contains(clazz);
+
+    const remove = (element, classes) => {
+        each$2(classes, (x) => {
+            remove$1(element, x);
+        });
+    };
+
+    const closest = (target) => closest$1(target, '[contenteditable]');
+    const isEditable$1 = (element, assumeEditable = false) => {
+        if (inBody(element)) {
+            return element.dom.isContentEditable;
+        }
+        else {
+            // Find the closest contenteditable element and check if it's editable
+            return closest(element).fold(constant(assumeEditable), (editable) => getRaw$1(editable) === 'true');
+        }
+    };
+    const getRaw$1 = (element) => element.dom.contentEditable;
+
+    const addClass = (clazz) => (element) => {
+        add$1(element, clazz);
+    };
+    const removeClasses = (classes) => (element) => {
+        remove(element, classes);
+    };
+
+    const ancestors$4 = (scope, predicate, isRoot) => filter$2(parents(scope, isRoot), predicate);
+    const children$1 = (scope, predicate) => filter$2(children$2(scope), predicate);
+    const descendants$1 = (scope, predicate) => {
+        let result = [];
+        // Recurse.toArray() might help here
+        each$2(children$2(scope), (x) => {
+            if (predicate(x)) {
+                result = result.concat([x]);
+            }
+            result = result.concat(descendants$1(x, predicate));
+        });
+        return result;
+    };
+
+    // For all of the following:
+    //
+    // jQuery does siblings of firstChild. IE9+ supports scope.dom.children (similar to Traverse.children but elements only).
+    // Traverse should also do this (but probably not by default).
+    //
+    const ancestors$3 = (scope, selector, isRoot) => 
+    // It may surprise you to learn this is exactly what JQuery does
+    // TODO: Avoid all this wrapping and unwrapping
+    ancestors$4(scope, (e) => is$1(e, selector), isRoot);
+    const children = (scope, selector) => 
+    // It may surprise you to learn this is exactly what JQuery does
+    // TODO: Avoid all the wrapping and unwrapping
+    children$1(scope, (e) => is$1(e, selector));
+    const descendants = (scope, selector) => all$1(selector, scope);
+
+    const inParent = (parent, children, element, index) => ({
+        parent,
+        children,
+        element,
+        index
+    });
+    const indexInParent = (element) => parent(element).bind((parent) => {
+        const children = children$2(parent);
+        return indexOf(children, element).map((index) => inParent(parent, children, element, index));
+    });
+    const indexOf = (elements, element) => findIndex(elements, curry(eq$1, element));
+
+    const ancestor = (scope, predicate, isRoot) => ancestor$2(scope, predicate, isRoot).isSome();
+
+    const getEnd = (element) => name(element) === 'img' ? 1 : getOption(element).fold(() => children$2(element).length, (v) => v.length);
+    const isTextNodeWithCursorPosition = (el) => getOption(el).filter((text) => 
+    // For the purposes of finding cursor positions only allow text nodes with content,
+    // but trim removes &nbsp; and that's allowed
+    text.trim().length !== 0 || text.indexOf(nbsp) > -1).isSome();
+    const isContentEditableFalse = (elem) => isHTMLElement(elem) && (get$b(elem, 'contenteditable') === 'false');
+    const elementsWithCursorPosition = ['img', 'br'];
+    const isCursorPosition = (elem) => {
+        const hasCursorPosition = isTextNodeWithCursorPosition(elem);
+        return hasCursorPosition || contains$2(elementsWithCursorPosition, name(elem)) || isContentEditableFalse(elem);
+    };
+
+    const first = (element) => descendant$1(element, isCursorPosition);
+    const last = (element) => descendantRtl(element, isCursorPosition);
+    // Note, sugar probably needs some RTL traversals.
+    const descendantRtl = (scope, predicate) => {
+        const descend = (element) => {
+            const children = children$2(element);
+            for (let i = children.length - 1; i >= 0; i--) {
+                const child = children[i];
+                if (predicate(child)) {
+                    return Optional.some(child);
+                }
+                const res = descend(child);
+                if (res.isSome()) {
+                    return res;
+                }
+            }
+            return Optional.none();
+        };
+        return descend(scope);
+    };
+
+    const create$4 = (start, soffset, finish, foffset) => ({
+        start,
+        soffset,
+        finish,
+        foffset
+    });
+    // tslint:disable-next-line:variable-name
+    const SimRange = {
+        create: create$4
+    };
+
+    const adt$5 = Adt.generate([
+        { before: ['element'] },
+        { on: ['element', 'offset'] },
+        { after: ['element'] }
+    ]);
+    // Probably don't need this given that we now have "match"
+    const cata$1 = (subject, onBefore, onOn, onAfter) => subject.fold(onBefore, onOn, onAfter);
+    const getStart$1 = (situ) => situ.fold(identity, identity, identity);
+    const before$2 = adt$5.before;
+    const on = adt$5.on;
+    const after$2 = adt$5.after;
+    // tslint:disable-next-line:variable-name
+    const Situ = {
+        before: before$2,
+        on,
+        after: after$2,
+        cata: cata$1,
+        getStart: getStart$1
+    };
+
+    // Consider adding a type for "element"
+    const adt$4 = Adt.generate([
+        { domRange: ['rng'] },
+        { relative: ['startSitu', 'finishSitu'] },
+        { exact: ['start', 'soffset', 'finish', 'foffset'] }
+    ]);
+    const exactFromRange = (simRange) => adt$4.exact(simRange.start, simRange.soffset, simRange.finish, simRange.foffset);
+    const getStart = (selection) => selection.match({
+        domRange: (rng) => SugarElement.fromDom(rng.startContainer),
+        relative: (startSitu, _finishSitu) => Situ.getStart(startSitu),
+        exact: (start, _soffset, _finish, _foffset) => start
+    });
+    const domRange = adt$4.domRange;
+    const relative = adt$4.relative;
+    const exact = adt$4.exact;
+    const getWin = (selection) => {
+        const start = getStart(selection);
+        return defaultView(start);
+    };
+    // This is out of place but it's API so I can't remove it
+    const range = SimRange.create;
+    // tslint:disable-next-line:variable-name
+    const SimSelection = {
+        domRange,
+        relative,
+        exact,
+        exactFromRange,
+        getWin,
+        range
+    };
+
+    const caretPositionFromPoint = (doc, x, y) => Optional.from(doc.caretPositionFromPoint?.(x, y))
+        .bind((pos) => {
+        // It turns out that Firefox can return null for pos.offsetNode
+        if (pos.offsetNode === null) {
+            return Optional.none();
+        }
+        const r = doc.createRange();
+        r.setStart(pos.offsetNode, pos.offset);
+        r.collapse();
+        return Optional.some(r);
+    });
+    const caretRangeFromPoint = (doc, x, y) => Optional.from(doc.caretRangeFromPoint?.(x, y));
+    const availableSearch = (doc, x, y) => {
+        if (doc.caretPositionFromPoint) {
+            return caretPositionFromPoint(doc, x, y); // defined standard, firefox only
+        }
+        else if (doc.caretRangeFromPoint) {
+            return caretRangeFromPoint(doc, x, y); // webkit/blink implementation
+        }
+        else {
+            return Optional.none(); // unsupported browser
+        }
+    };
+    const fromPoint = (win, x, y) => {
+        const doc = win.document;
+        return availableSearch(doc, x, y).map((rng) => SimRange.create(SugarElement.fromDom(rng.startContainer), rng.startOffset, SugarElement.fromDom(rng.endContainer), rng.endOffset));
+    };
+
+    const beforeSpecial = (element, offset) => {
+        // From memory, we don't want to use <br> directly on Firefox because it locks the keyboard input.
+        // It turns out that <img> directly on IE locks the keyboard as well.
+        // If the offset is 0, use before. If the offset is 1, use after.
+        // TBIO-3889: Firefox Situ.on <input> results in a child of the <input>; Situ.before <input> results in platform inconsistencies
+        const name$1 = name(element);
+        if ('input' === name$1) {
+            return Situ.after(element);
+        }
+        else if (!contains$2(['br', 'img'], name$1)) {
+            return Situ.on(element, offset);
+        }
+        else {
+            return offset === 0 ? Situ.before(element) : Situ.after(element);
+        }
+    };
+    const preprocessRelative = (startSitu, finishSitu) => {
+        const start = startSitu.fold(Situ.before, beforeSpecial, Situ.after);
+        const finish = finishSitu.fold(Situ.before, beforeSpecial, Situ.after);
+        return SimSelection.relative(start, finish);
+    };
+    const preprocessExact = (start, soffset, finish, foffset) => {
+        const startSitu = beforeSpecial(start, soffset);
+        const finishSitu = beforeSpecial(finish, foffset);
+        return SimSelection.relative(startSitu, finishSitu);
+    };
+
+    const getNativeSelection = (win) => Optional.from(win.getSelection());
+    const doSetNativeRange = (win, rng) => {
+        getNativeSelection(win).each((selection) => {
+            selection.removeAllRanges();
+            selection.addRange(rng);
+        });
+    };
+    const doSetRange = (win, start, soffset, finish, foffset) => {
+        const rng = exactToNative(win, start, soffset, finish, foffset);
+        doSetNativeRange(win, rng);
+    };
+    const setLegacyRtlRange = (win, selection, start, soffset, finish, foffset) => {
+        selection.collapse(start.dom, soffset);
+        selection.extend(finish.dom, foffset);
+    };
+    const setRangeFromRelative = (win, relative) => diagnose(win, relative).match({
+        ltr: (start, soffset, finish, foffset) => {
+            doSetRange(win, start, soffset, finish, foffset);
+        },
+        rtl: (start, soffset, finish, foffset) => {
+            getNativeSelection(win).each((selection) => {
+                // If this selection is backwards, then we need to use extend.
+                if (selection.setBaseAndExtent) {
+                    selection.setBaseAndExtent(start.dom, soffset, finish.dom, foffset);
+                }
+                else if (selection.extend) {
+                    // This try catch is for older browsers (Firefox 52) as they're sometimes unable to handle setting backwards selections using selection.extend and error out.
+                    try {
+                        setLegacyRtlRange(win, selection, start, soffset, finish, foffset);
+                    }
+                    catch {
+                        // If it does fail, try again with ltr.
+                        doSetRange(win, finish, foffset, start, soffset);
+                    }
+                }
+                else {
+                    doSetRange(win, finish, foffset, start, soffset);
+                }
+            });
+        }
+    });
+    const setExact = (win, start, soffset, finish, foffset) => {
+        const relative = preprocessExact(start, soffset, finish, foffset);
+        setRangeFromRelative(win, relative);
+    };
+    const setRelative = (win, startSitu, finishSitu) => {
+        const relative = preprocessRelative(startSitu, finishSitu);
+        setRangeFromRelative(win, relative);
+    };
+    // NOTE: We are still reading the range because it gives subtly different behaviour
+    // than using the anchorNode and focusNode. I'm not sure if this behaviour is any
+    // better or worse; it's just different.
+    const readRange = (selection) => {
+        if (selection.rangeCount > 0) {
+            const firstRng = selection.getRangeAt(0);
+            const lastRng = selection.getRangeAt(selection.rangeCount - 1);
+            return Optional.some(SimRange.create(SugarElement.fromDom(firstRng.startContainer), firstRng.startOffset, SugarElement.fromDom(lastRng.endContainer), lastRng.endOffset));
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const doGetExact = (selection) => {
+        if (selection.anchorNode === null || selection.focusNode === null) {
+            return readRange(selection);
+        }
+        else {
+            const anchor = SugarElement.fromDom(selection.anchorNode);
+            const focus = SugarElement.fromDom(selection.focusNode);
+            // if this returns true anchor is _after_ focus, so we need a custom selection object to maintain the RTL selection
+            return after$5(anchor, selection.anchorOffset, focus, selection.focusOffset) ? Optional.some(SimRange.create(anchor, selection.anchorOffset, focus, selection.focusOffset)) : readRange(selection);
+        }
+    };
+    const setToElement = (win, element, selectNodeContents$1 = true) => {
+        const rngGetter = selectNodeContents$1 ? selectNodeContents : selectNode;
+        const rng = rngGetter(win, element);
+        doSetNativeRange(win, rng);
+    };
+    const getExact = (win) => 
+    // We want to retrieve the selection as it is.
+    getNativeSelection(win)
+        .filter((sel) => sel.rangeCount > 0)
+        .bind(doGetExact);
+    // TODO: Test this.
+    const get$3 = (win) => getExact(win).map((range) => SimSelection.exact(range.start, range.soffset, range.finish, range.foffset));
+    const getFirstRect = (win, selection) => {
+        const rng = asLtrRange(win, selection);
+        return getFirstRect$1(rng);
+    };
+    const getAtPoint = (win, x, y) => fromPoint(win, x, y);
+    const clear = (win) => {
+        getNativeSelection(win).each((selection) => selection.removeAllRanges());
+    };
+
+    const units = {
+        // we don't really support all of these different ways to express a length
+        unsupportedLength: [
+            'em',
+            'ex',
+            'cap',
+            'ch',
+            'ic',
+            'rem',
+            'lh',
+            'rlh',
+            'vw',
+            'vh',
+            'vi',
+            'vb',
+            'vmin',
+            'vmax',
+            'cm',
+            'mm',
+            'Q',
+            'in',
+            'pc',
+            'pt',
+            'px'
+        ],
+        // these are the length values we do support
+        fixed: ['px', 'pt'],
+        relative: ['%'],
+        empty: ['']
+    };
+    // Built from https://tc39.es/ecma262/#prod-StrDecimalLiteral
+    // Matches a float followed by a trailing set of characters
+    const pattern = (() => {
+        const decimalDigits = '[0-9]+';
+        const signedInteger = '[+-]?' + decimalDigits;
+        const exponentPart = '[eE]' + signedInteger;
+        const dot = '\\.';
+        const opt = (input) => `(?:${input})?`;
+        const unsignedDecimalLiteral = [
+            'Infinity',
+            decimalDigits + dot + opt(decimalDigits) + opt(exponentPart),
+            dot + decimalDigits + opt(exponentPart),
+            decimalDigits + opt(exponentPart)
+        ].join('|');
+        const float = `[+-]?(?:${unsignedDecimalLiteral})`;
+        return new RegExp(`^(${float})(.*)$`);
+    })();
+    const isUnit = (unit, accepted) => exists(accepted, (acc) => exists(units[acc], (check) => unit === check));
+    const parse = (input, accepted) => {
+        const match = Optional.from(pattern.exec(input));
+        return match.bind((array) => {
+            const value = Number(array[1]);
+            const unitRaw = array[2];
+            if (isUnit(unitRaw, accepted)) {
+                return Optional.some({
+                    value,
+                    unit: unitRaw
+                });
+            }
+            else {
+                return Optional.none();
+            }
+        });
+    };
+
+    const zero = (array) => map$1(array, constant(0));
+    const surround = (sizes, startIndex, endIndex, results, f) => f(sizes.slice(0, startIndex)).concat(results).concat(f(sizes.slice(endIndex)));
+    // Clamp positive or negative delta so that a column/row cannot be reduced past its min size
+    const clampDeltaHelper = (predicate) => (sizes, index, delta, minCellSize) => {
+        if (!predicate(delta)) {
+            return delta;
+        }
+        else {
+            const newSize = Math.max(minCellSize, sizes[index] - Math.abs(delta));
+            const diff = Math.abs(newSize - sizes[index]);
+            return delta >= 0 ? diff : -diff;
+        }
+    };
+    const clampNegativeDelta = clampDeltaHelper((delta) => delta < 0);
+    const clampDelta = clampDeltaHelper(always);
+    // Preserve the size of the columns/rows and adjust the table size
+    const resizeTable = () => {
+        const calcFixedDeltas = (sizes, index, next, delta, minCellSize) => {
+            const clampedDelta = clampNegativeDelta(sizes, index, delta, minCellSize);
+            return surround(sizes, index, next + 1, [clampedDelta, 0], zero);
+        };
+        // Calculate delta for adjusted column
+        // Also need to calculate deltas for all other columns/rows to ensure they stay at the same visual width/height
+        // when the table width/height is adjusted
+        const calcRelativeDeltas = (sizes, index, delta, minCellSize) => {
+            // ASSUMPTION: The delta will be a percentage. This may not be correct if other relative sizing is added, so we probably
+            // need a better way to calc the ratio.
+            const ratio = (100 + delta) / 100;
+            const newThis = Math.max(minCellSize, (sizes[index] + delta) / ratio);
+            return map$1(sizes, (size, idx) => {
+                const newSize = idx === index ? newThis : size / ratio;
+                return newSize - size;
+            });
+        };
+        // Calculations for the inner columns/rows
+        const calcLeftEdgeDeltas = (sizes, index, next, delta, minCellSize, isRelative) => {
+            if (isRelative) {
+                return calcRelativeDeltas(sizes, index, delta, minCellSize);
+            }
+            else {
+                return calcFixedDeltas(sizes, index, next, delta, minCellSize);
+            }
+        };
+        const calcMiddleDeltas = (sizes, _prev, index, next, delta, minCellSize, isRelative) => calcLeftEdgeDeltas(sizes, index, next, delta, minCellSize, isRelative);
+        const resizeTable = (resizer, delta) => resizer(delta);
+        // Calculations for the last column/row resizer
+        const calcRightEdgeDeltas = (sizes, _prev, index, delta, minCellSize, isRelative) => {
+            if (isRelative) {
+                return calcRelativeDeltas(sizes, index, delta, minCellSize);
+            }
+            else {
+                const clampedDelta = clampNegativeDelta(sizes, index, delta, minCellSize);
+                return zero(sizes.slice(0, index)).concat([clampedDelta]);
+            }
+        };
+        const calcRedestributedWidths = (sizes, totalWidth, pixelDelta, isRelative) => {
+            if (isRelative) {
+                const tableWidth = totalWidth + pixelDelta;
+                const ratio = tableWidth / totalWidth;
+                const newSizes = map$1(sizes, (size) => size / ratio);
+                return {
+                    delta: (ratio * 100) - 100,
+                    newSizes,
+                };
+            }
+            else {
+                return {
+                    delta: pixelDelta,
+                    newSizes: sizes,
+                };
+            }
+        };
+        return {
+            resizeTable,
+            clampTableDelta: clampNegativeDelta,
+            calcLeftEdgeDeltas,
+            calcMiddleDeltas,
+            calcRightEdgeDeltas,
+            calcRedestributedWidths,
+        };
+    };
+    // Distribute the column/rows and try to preserve the table size
+    const preserveTable = () => {
+        // Calculations for the inner columns/rows
+        const calcLeftEdgeDeltas = (sizes, index, next, delta, minCellSize) => {
+            const idx = delta >= 0 ? next : index;
+            const clampedDelta = clampDelta(sizes, idx, delta, minCellSize);
+            // negative delta -> deltas becomes [ neg, pos ], positive delta -> deltas becomes [ pos, neg ]
+            return surround(sizes, index, next + 1, [clampedDelta, -clampedDelta], zero);
+        };
+        const calcMiddleDeltas = (sizes, _prev, index, next, delta, minCellSize) => calcLeftEdgeDeltas(sizes, index, next, delta, minCellSize);
+        const resizeTable = (resizer, delta, isLastColumn) => {
+            if (isLastColumn) {
+                resizer(delta);
+            }
+        };
+        // Calculations for the last column/row resizer
+        const calcRightEdgeDeltas = (sizes, _prev, _index, delta, _minCellSize, isRelative) => {
+            if (isRelative) {
+                return zero(sizes);
+            }
+            else {
+                // Distribute the delta amongst all of the columns/rows
+                const diff = delta / sizes.length;
+                return map$1(sizes, constant(diff));
+            }
+        };
+        const clampTableDelta = (sizes, index, delta, minCellSize, isLastColumn) => {
+            // Don't clamp the last resizer using normal methods
+            // Need to allow table width to be reduced past the last column position to allow for distributive resizing
+            if (isLastColumn) {
+                if (delta >= 0) {
+                    return delta;
+                }
+                else {
+                    // Clamp delta so that none of the columns/rows can reduce below their min size
+                    const maxDelta = foldl(sizes, (a, b) => a + b - minCellSize, 0);
+                    return Math.max(-maxDelta, delta);
+                }
+            }
+            else {
+                return clampNegativeDelta(sizes, index, delta, minCellSize);
+            }
+        };
+        const calcRedestributedWidths = (sizes, _totalWidth, _pixelDelta, _isRelative) => ({
+            delta: 0,
+            newSizes: sizes,
+        });
+        return {
+            resizeTable,
+            clampTableDelta,
+            calcLeftEdgeDeltas,
+            calcMiddleDeltas,
+            calcRightEdgeDeltas,
+            calcRedestributedWidths
+        };
+    };
+
+    const getAttrValue = (cell, name, fallback = 0) => getOpt(cell, name).map((value) => parseInt(value, 10)).getOr(fallback);
+    const getSpan = (cell, type) => getAttrValue(cell, type, 1);
+    const hasColspan = (cellOrCol) => {
+        if (isTag('col')(cellOrCol)) {
+            return getAttrValue(cellOrCol, 'span', 1) > 1;
+        }
+        else {
+            return getSpan(cellOrCol, 'colspan') > 1;
+        }
+    };
+    const hasRowspan = (cell) => getSpan(cell, 'rowspan') > 1;
+    const getCssValue = (element, property) => parseInt(get$9(element, property), 10);
+    const minWidth = constant(10);
+    const minHeight = constant(10);
+
+    const firstLayer = (scope, selector) => {
+        return filterFirstLayer(scope, selector, always);
+    };
+    const filterFirstLayer = (scope, selector, predicate) => {
+        return bind$2(children$2(scope), (x) => {
+            if (is$1(x, selector)) {
+                return predicate(x) ? [x] : [];
+            }
+            else {
+                return filterFirstLayer(x, selector, predicate);
+            }
+        });
+    };
+
+    // lookup inside this table
+    const lookup = (tags, element, isRoot = never) => {
+        // If the element we're inspecting is the root, we definitely don't want it.
+        if (isRoot(element)) {
+            return Optional.none();
+        }
+        // This looks a lot like SelectorFind.closest, with one big exception - the isRoot check.
+        // The code here will look for parents if passed a table, SelectorFind.closest with that specific isRoot check won't.
+        if (contains$2(tags, name(element))) {
+            return Optional.some(element);
+        }
+        const isRootOrUpperTable = (elm) => is$1(elm, 'table') || isRoot(elm);
+        return ancestor$1(element, tags.join(','), isRootOrUpperTable);
+    };
+    /*
+     * Identify the optional cell that element represents.
+     */
+    const cell = (element, isRoot) => lookup(['td', 'th'], element, isRoot);
+    const cells$1 = (ancestor) => firstLayer(ancestor, 'th,td');
+    const columns$1 = (ancestor) => {
+        if (is$1(ancestor, 'colgroup')) {
+            return children(ancestor, 'col');
+        }
+        else {
+            return bind$2(columnGroups(ancestor), (columnGroup) => children(columnGroup, 'col'));
+        }
+    };
+    const table = (element, isRoot) => closest$1(element, 'table', isRoot);
+    const rows$1 = (ancestor) => firstLayer(ancestor, 'tr');
+    const columnGroups = (ancestor) => table(ancestor).fold(constant([]), (table) => children(table, 'colgroup'));
+
+    const isHeaderCell = isTag('th');
+    const isHeaderCells = (cells) => forall(cells, (cell) => isHeaderCell(cell.element));
+    const getRowHeaderType = (isHeaderRow, isHeaderCells) => {
+        if (isHeaderRow && isHeaderCells) {
+            return 'sectionCells';
+        }
+        else if (isHeaderRow) {
+            return 'section';
+        }
+        else {
+            return 'cells';
+        }
+    };
+    const getRowType = (row) => {
+        // Header rows can use a combination of theads and ths - want to detect the different combinations
+        const isHeaderRow = row.section === 'thead';
+        const isHeaderCells = is$2(findCommonCellType(row.cells), 'th');
+        if (row.section === 'tfoot') {
+            return { type: 'footer' };
+        }
+        else if (isHeaderRow || isHeaderCells) {
+            return { type: 'header', subType: getRowHeaderType(isHeaderRow, isHeaderCells) };
+        }
+        else {
+            return { type: 'body' };
+        }
+    };
+    const findCommonCellType = (cells) => {
+        const headerCells = filter$2(cells, (cell) => isHeaderCell(cell.element));
+        if (headerCells.length === 0) {
+            return Optional.some('td');
+        }
+        else if (headerCells.length === cells.length) {
+            return Optional.some('th');
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const findCommonRowType = (rows) => {
+        const rowTypes = map$1(rows, (row) => getRowType(row).type);
+        const hasHeader = contains$2(rowTypes, 'header');
+        const hasFooter = contains$2(rowTypes, 'footer');
+        if (!hasHeader && !hasFooter) {
+            return Optional.some('body');
+        }
+        else {
+            const hasBody = contains$2(rowTypes, 'body');
+            if (hasHeader && !hasBody && !hasFooter) {
+                return Optional.some('header');
+            }
+            else if (!hasHeader && !hasBody && hasFooter) {
+                return Optional.some('footer');
+            }
+            else {
+                return Optional.none();
+            }
+        }
+    };
+    const findTableRowHeaderType = (warehouse) => findMap(warehouse.all, (row) => {
+        const rowType = getRowType(row);
+        return rowType.type === 'header' ? Optional.from(rowType.subType) : Optional.none();
+    });
+
+    const fromRowsOrColGroups = (elems, getSection) => map$1(elems, (row) => {
+        if (name(row) === 'colgroup') {
+            const cells = map$1(columns$1(row), (column) => {
+                const colspan = getAttrValue(column, 'span', 1);
+                return detail(column, 1, colspan);
+            });
+            return rowdetail(row, cells, 'colgroup');
+        }
+        else {
+            const cells = map$1(cells$1(row), (cell) => {
+                const rowspan = getAttrValue(cell, 'rowspan', 1);
+                const colspan = getAttrValue(cell, 'colspan', 1);
+                return detail(cell, rowspan, colspan);
+            });
+            return rowdetail(row, cells, getSection(row));
+        }
+    });
+    const getParentSection = (group) => parent(group).map((parent) => {
+        const parentName = name(parent);
+        return isValidSection(parentName) ? parentName : 'tbody';
+    }).getOr('tbody');
+    /*
+     * Takes a DOM table and returns a list of list of:
+       element: row element
+       cells: (id, rowspan, colspan) structs
+     */
+    const fromTable$1 = (table) => {
+        const rows = rows$1(table);
+        const columnGroups$1 = columnGroups(table);
+        const elems = [...columnGroups$1, ...rows];
+        return fromRowsOrColGroups(elems, getParentSection);
+    };
+    const fromPastedRows = (elems, section) => fromRowsOrColGroups(elems, () => section);
+
+    const LOCKED_COL_ATTR = 'data-snooker-locked-cols';
+    const getLockedColumnsFromTable = (table) => getOpt(table, LOCKED_COL_ATTR)
+        .bind((lockedColStr) => Optional.from(lockedColStr.match(/\d+/g)))
+        .map((lockedCols) => mapToObject(lockedCols, always));
+    // Need to check all of the cells to determine which columns are locked - reasoning is because rowspan and colspan cells where the same cell is used by multiple columns
+    const getLockedColumnsFromGrid = (grid) => {
+        const locked = foldl(extractGridDetails(grid).rows, (acc, row) => {
+            each$2(row.cells, (cell, idx) => {
+                if (cell.isLocked) {
+                    acc[idx] = true;
+                }
+            });
+            return acc;
+        }, {});
+        const lockedArr = mapToArray(locked, (_val, key) => parseInt(key, 10));
+        return sort$1(lockedArr);
+    };
+
+    const key = (row, column) => {
+        return row + ',' + column;
+    };
+    const getAt = (warehouse, row, column) => Optional.from(warehouse.access[key(row, column)]);
+    const findItem = (warehouse, item, comparator) => {
+        const filtered = filterItems(warehouse, (detail) => {
+            return comparator(item, detail.element);
+        });
+        return filtered.length > 0 ? Optional.some(filtered[0]) : Optional.none();
+    };
+    const filterItems = (warehouse, predicate) => {
+        const all = bind$2(warehouse.all, (r) => {
+            return r.cells;
+        });
+        return filter$2(all, predicate);
+    };
+    const generateColumns = (rowData) => {
+        const columnsGroup = {};
+        let index = 0;
+        each$2(rowData.cells, (column) => {
+            const colspan = column.colspan;
+            range$1(colspan, (columnIndex) => {
+                const colIndex = index + columnIndex;
+                columnsGroup[colIndex] = columnext(column.element, colspan, colIndex);
+            });
+            index += colspan;
+        });
+        return columnsGroup;
+    };
+    /*
+     * From a list of list of Detail, generate three pieces of information:
+     *  1. the grid size
+     *  2. a data structure which can efficiently identify which cell is in which row,column position
+     *  3. a list of all cells in order left-to-right, top-to-bottom
+     */
+    const generate = (list) => {
+        // list is an array of objects, made by cells and elements
+        // elements: is the TR
+        // cells: is an array of objects representing the cells in the row.
+        //        It is made of:
+        //          colspan (merge cell)
+        //          element
+        //          rowspan (merge cols)
+        const access = {};
+        const cells = [];
+        const tableOpt = head(list).map((rowData) => rowData.element).bind(table);
+        const lockedColumns = tableOpt.bind(getLockedColumnsFromTable).getOr({});
+        let maxRows = 0;
+        let maxColumns = 0;
+        let rowCount = 0;
+        const { pass: colgroupRows, fail: rows } = partition(list, (rowData) => rowData.section === 'colgroup');
+        // Handle rows first
+        each$2(rows, (rowData) => {
+            const currentRow = [];
+            each$2(rowData.cells, (rowCell) => {
+                let start = 0;
+                // If this spot has been taken by a previous rowspan, skip it.
+                while (access[key(rowCount, start)] !== undefined) {
+                    start++;
+                }
+                const isLocked = hasNonNullableKey(lockedColumns, start.toString());
+                const current = extended(rowCell.element, rowCell.rowspan, rowCell.colspan, rowCount, start, isLocked);
+                // Occupy all the (row, column) positions that this cell spans for.
+                for (let occupiedColumnPosition = 0; occupiedColumnPosition < rowCell.colspan; occupiedColumnPosition++) {
+                    for (let occupiedRowPosition = 0; occupiedRowPosition < rowCell.rowspan; occupiedRowPosition++) {
+                        const rowPosition = rowCount + occupiedRowPosition;
+                        const columnPosition = start + occupiedColumnPosition;
+                        const newpos = key(rowPosition, columnPosition);
+                        access[newpos] = current;
+                        maxColumns = Math.max(maxColumns, columnPosition + 1);
+                    }
+                }
+                currentRow.push(current);
+            });
+            maxRows++;
+            cells.push(rowdetail(rowData.element, currentRow, rowData.section));
+            rowCount++;
+        });
+        // Handle colgroups
+        // Note: Currently only a single colgroup is supported so just use the last one
+        const { columns, colgroups } = last$2(colgroupRows).map((rowData) => {
+            const columns = generateColumns(rowData);
+            const colgroup$1 = colgroup(rowData.element, values(columns));
+            return {
+                colgroups: [colgroup$1],
+                columns
+            };
+        }).getOrThunk(() => ({
+            colgroups: [],
+            columns: {}
+        }));
+        const grid$1 = grid(maxRows, maxColumns);
+        return {
+            grid: grid$1,
+            access,
+            all: cells,
+            columns,
+            colgroups
+        };
+    };
+    const fromTable = (table) => {
+        const list = fromTable$1(table);
+        return generate(list);
+    };
+    const justCells = (warehouse) => bind$2(warehouse.all, (w) => w.cells);
+    const justColumns = (warehouse) => values(warehouse.columns);
+    const hasColumns = (warehouse) => keys(warehouse.columns).length > 0;
+    const getColumnAt = (warehouse, columnIndex) => Optional.from(warehouse.columns[columnIndex]);
+    const Warehouse = {
+        fromTable,
+        generate,
+        getAt,
+        findItem,
+        filterItems,
+        justCells,
+        justColumns,
+        hasColumns,
+        getColumnAt
+    };
+
+    const transformCell = (cell, comparator, substitution) => elementnew(substitution(cell.element, comparator), true, cell.isLocked);
+    const transformRow = (row, section) => row.section !== section ? rowcells(row.element, row.cells, section, row.isNew) : row;
+    const section = () => ({
+        transformRow,
+        transformCell: (cell, comparator, substitution) => {
+            const newCell = substitution(cell.element, comparator);
+            // Convert the cell to a td element as "section" should always use td element
+            const fixedCell = name(newCell) !== 'td' ? mutate$1(newCell, 'td') : newCell;
+            return elementnew(fixedCell, cell.isNew, cell.isLocked);
+        }
+    });
+    const sectionCells = () => ({
+        transformRow,
+        transformCell
+    });
+    const cells = () => ({
+        transformRow: (row, section) => {
+            // Ensure that cells are always within the tbody for headers
+            const newSection = section === 'thead' ? 'tbody' : section;
+            return transformRow(row, newSection);
+        },
+        transformCell
+    });
+    // A fallback legacy type that won't adjust the row/section type
+    // and instead will only modify cells
+    const fallback = () => ({
+        transformRow: identity,
+        transformCell
+    });
+    const getTableSectionType = (table, fallback) => {
+        const warehouse = Warehouse.fromTable(table);
+        const type = findTableRowHeaderType(warehouse).getOr(fallback);
+        switch (type) {
+            case 'section':
+                return section();
+            case 'sectionCells':
+                return sectionCells();
+            case 'cells':
+                return cells();
+        }
+    };
+    const TableSection = {
+        getTableSectionType,
+        section,
+        sectionCells,
+        cells,
+        fallback
+    };
+
+    /*
+     * Identify for each column, a cell that has colspan 1. Note, this
+     * may actually fail, and future work will be to calculate column
+     * sizes that are only available through the difference of two
+     * spanning columns.
+     */
+    const columns = (warehouse, isValidCell = always) => {
+        const grid = warehouse.grid;
+        const cols = range$1(grid.columns, identity);
+        const rowsArr = range$1(grid.rows, identity);
+        return map$1(cols, (col) => {
+            const getBlock = () => bind$2(rowsArr, (r) => Warehouse.getAt(warehouse, r, col)
+                .filter((detail) => detail.column === col)
+                .toArray());
+            const isValid = (detail) => detail.colspan === 1 && isValidCell(detail.element);
+            const getFallback = () => Warehouse.getAt(warehouse, 0, col);
+            return decide(getBlock, isValid, getFallback);
+        });
+    };
+    const decide = (getBlock, isValid, getFallback) => {
+        const inBlock = getBlock();
+        const validInBlock = find$1(inBlock, isValid);
+        const detailOption = validInBlock.orThunk(() => Optional.from(inBlock[0]).orThunk(getFallback));
+        return detailOption.map((detail) => detail.element);
+    };
+    const rows = (warehouse) => {
+        const grid = warehouse.grid;
+        const rowsArr = range$1(grid.rows, identity);
+        const cols = range$1(grid.columns, identity);
+        return map$1(rowsArr, (row) => {
+            const getBlock = () => bind$2(cols, (c) => Warehouse.getAt(warehouse, row, c)
+                .filter((detail) => detail.row === row)
+                .fold(constant([]), (detail) => [detail]));
+            const isSingle = (detail) => detail.rowspan === 1;
+            const getFallback = () => Warehouse.getAt(warehouse, row, 0);
+            return decide(getBlock, isSingle, getFallback);
+        });
+    };
+
+    const deduce = (xs, index) => {
+        if (index < 0 || index >= xs.length - 1) {
+            return Optional.none();
+        }
+        const current = xs[index].fold(() => {
+            const rest = reverse(xs.slice(0, index));
+            return findMap(rest, (a, i) => a.map((aa) => ({ value: aa, delta: i + 1 })));
+        }, (c) => Optional.some({ value: c, delta: 0 }));
+        const next = xs[index + 1].fold(() => {
+            const rest = xs.slice(index + 1);
+            return findMap(rest, (a, i) => a.map((aa) => ({ value: aa, delta: i + 1 })));
+        }, (n) => Optional.some({ value: n, delta: 1 }));
+        return current.bind((c) => next.map((n) => {
+            const extras = n.delta + c.delta;
+            return Math.abs(n.value - c.value) / extras;
+        }));
+    };
+
+    const rowInfo = (row, y) => ({
+        row,
+        y
+    });
+    const colInfo = (col, x) => ({
+        col,
+        x
+    });
+    const rtlEdge = (cell) => {
+        const pos = absolute(cell);
+        return pos.left + getOuter(cell);
+    };
+    const ltrEdge = (cell) => {
+        return absolute(cell).left;
+    };
+    const getLeftEdge = (index, cell) => {
+        return colInfo(index, ltrEdge(cell));
+    };
+    const getRightEdge = (index, cell) => {
+        return colInfo(index, rtlEdge(cell));
+    };
+    const getTop$1 = (cell) => {
+        return absolute(cell).top;
+    };
+    const getTopEdge = (index, cell) => {
+        return rowInfo(index, getTop$1(cell));
+    };
+    const getBottomEdge = (index, cell) => {
+        return rowInfo(index, getTop$1(cell) + getOuter$1(cell));
+    };
+    const findPositions = (getInnerEdge, getOuterEdge, array) => {
+        if (array.length === 0) {
+            return [];
+        }
+        const lines = map$1(array.slice(1), (cellOption, index) => {
+            return cellOption.map((cell) => {
+                return getInnerEdge(index, cell);
+            });
+        });
+        const lastLine = array[array.length - 1].map((cell) => {
+            return getOuterEdge(array.length - 1, cell);
+        });
+        return lines.concat([lastLine]);
+    };
+    const negate = (step) => {
+        return -step;
+    };
+    const height = {
+        delta: identity,
+        positions: (optElements) => findPositions(getTopEdge, getBottomEdge, optElements),
+        edge: getTop$1
+    };
+    const ltr$1 = {
+        delta: identity,
+        edge: ltrEdge,
+        positions: (optElements) => findPositions(getLeftEdge, getRightEdge, optElements)
+    };
+    const rtl$1 = {
+        delta: negate,
+        edge: rtlEdge,
+        positions: (optElements) => findPositions(getRightEdge, getLeftEdge, optElements)
+    };
+    const detect$1 = onDirection(ltr$1, rtl$1);
+    const width = {
+        delta: (amount, table) => detect$1(table).delta(amount, table),
+        positions: (cols, table) => detect$1(table).positions(cols, table),
+        edge: (cell) => detect$1(cell).edge(cell)
+    };
+
+    const rPercentageBasedSizeRegex = /(\d+(\.\d+)?)%/;
+    const rPixelBasedSizeRegex = /(\d+(\.\d+)?)px|em/;
+    const isCol$2 = isTag('col');
+    const isRow$2 = isTag('tr');
+    const getPercentSize = (elm, outerGetter, innerGetter) => {
+        const relativeParent = parentElement(elm).getOrThunk(() => getBody$1(owner(elm)));
+        return outerGetter(elm) / innerGetter(relativeParent) * 100;
+    };
+    const setPixelWidth = (cell, amount) => {
+        set$1(cell, 'width', amount + 'px');
+    };
+    const setPercentageWidth = (cell, amount) => {
+        set$1(cell, 'width', amount + '%');
+    };
+    const setHeight = (cell, amount) => {
+        set$1(cell, 'height', amount + 'px');
+    };
+    const removeHeight = (cell) => {
+        remove$4(cell, 'height');
+    };
+    const getHeightValue = (cell) => getRuntime$1(cell) + 'px';
+    const convert = (cell, number, getter, setter) => {
+        const newSize = table(cell).map((table) => {
+            const total = getter(table);
+            return Math.floor((number / 100.0) * total);
+        }).getOr(number);
+        setter(cell, newSize);
+        return newSize;
+    };
+    const normalizePixelSize = (value, cell, getter, setter) => {
+        const number = parseFloat(value);
+        return endsWith(value, '%') && name(cell) !== 'table' ? convert(cell, number, getter, setter) : number;
+    };
+    const getTotalHeight = (cell) => {
+        const value = getHeightValue(cell);
+        if (!value) {
+            return get$8(cell);
+        }
+        return normalizePixelSize(value, cell, get$8, setHeight);
+    };
+    const get$2 = (cell, type, f) => {
+        const v = f(cell);
+        const span = getSpan(cell, type);
+        return v / span;
+    };
+    const getRaw = (element, prop) => {
+        // Try to use the style first, otherwise attempt to get the value from an attribute
+        return getRaw$2(element, prop).orThunk(() => {
+            return getOpt(element, prop).map((val) => val + 'px');
+        });
+    };
+    const getRawWidth$1 = (element) => getRaw(element, 'width');
+    const getRawHeight$1 = (element) => getRaw(element, 'height');
+    // Get a percentage size for a percentage parent table
+    const getPercentageWidth = (cell) => getPercentSize(cell, get$7, getInner);
+    const getPixelWidth$1 = (cell) => 
+    // For col elements use the computed width as col elements aren't affected by borders, padding, etc...
+    isCol$2(cell) ? Math.round(get$7(cell)) : getRuntime(cell);
+    const getHeight = (cell) => {
+        return isRow$2(cell) ? get$8(cell) : get$2(cell, 'rowspan', getTotalHeight);
+    };
+    const getGenericWidth = (cell) => {
+        const width = getRawWidth$1(cell);
+        return width.bind((w) => parse(w, ['fixed', 'relative', 'empty']));
+    };
+    const setGenericWidth = (cell, amount, unit) => {
+        set$1(cell, 'width', amount + unit);
+    };
+    const getPixelTableWidth = (table) => get$7(table) + 'px';
+    const getPixelTableHeight = (table) => get$8(table) + 'px';
+    const getPercentTableWidth = (table) => getPercentSize(table, get$7, getInner) + '%';
+    const isPercentSizing$1 = (table) => getRawWidth$1(table).exists((size) => rPercentageBasedSizeRegex.test(size));
+    const isPixelSizing$1 = (table) => getRawWidth$1(table).exists((size) => rPixelBasedSizeRegex.test(size));
+    const isNoneSizing$1 = (table) => getRawWidth$1(table).isNone();
+    const percentageBasedSizeRegex = constant(rPercentageBasedSizeRegex);
+
+    const isCol$1 = isTag('col');
+    const getRawW = (cell) => {
+        return getRawWidth$1(cell).getOrThunk(() => getPixelWidth$1(cell) + 'px');
+    };
+    const getRawH = (cell) => {
+        return getRawHeight$1(cell).getOrThunk(() => getHeight(cell) + 'px');
+    };
+    const justCols = (warehouse) => map$1(Warehouse.justColumns(warehouse), (column) => Optional.from(column.element));
+    // Col elements don't have valid computed widths/positions in all browsers, so treat them as invalid in that case
+    const isValidColumn = (cell) => {
+        const browser = detect$2().browser;
+        const supportsColWidths = browser.isChromium() || browser.isFirefox();
+        return isCol$1(cell) ? supportsColWidths : true;
+    };
+    const getDimension = (cellOpt, index, backups, filter, getter, fallback) => cellOpt.filter(filter).fold(
+    // Can't just read the width of a cell, so calculate.
+    () => fallback(deduce(backups, index)), (cell) => getter(cell));
+    const getWidthFrom = (warehouse, table, getWidth, fallback) => {
+        // Only treat a cell as being valid for a column representation if it has a raw width, otherwise we won't be able to calculate the expected width.
+        // This is needed as one cell may have a width but others may not, so we need to try and use one with a specified width first.
+        const columnCells = columns(warehouse);
+        const columns$1 = Warehouse.hasColumns(warehouse) ? justCols(warehouse) : columnCells;
+        const backups = [Optional.some(width.edge(table))].concat(map$1(width.positions(columnCells, table), (pos) => pos.map((p) => p.x)));
+        // Only use the width of cells that have no column span (or colspan 1)
+        const colFilter = not(hasColspan);
+        return map$1(columns$1, (cellOption, c) => {
+            return getDimension(cellOption, c, backups, colFilter, (column) => {
+                if (isValidColumn(column)) {
+                    return getWidth(column);
+                }
+                else {
+                    // Invalid column so fallback to trying to get the computed width from the cell
+                    const cell = bindFrom(columnCells[c], identity);
+                    return getDimension(cell, c, backups, colFilter, (cell) => fallback(Optional.some(Math.round(get$7(cell)))), fallback);
+                }
+            }, fallback);
+        });
+    };
+    const getDeduced = (deduced) => {
+        return deduced.map((d) => {
+            return d + 'px';
+        }).getOr('');
+    };
+    const getRawWidths = (warehouse, table) => {
+        return getWidthFrom(warehouse, table, getRawW, getDeduced);
+    };
+    const getPercentageWidths = (warehouse, table, tableSize) => {
+        return getWidthFrom(warehouse, table, getPercentageWidth, (deduced) => {
+            return deduced.fold(() => {
+                return tableSize.minCellWidth();
+            }, (cellWidth) => {
+                return cellWidth / tableSize.pixelWidth() * 100;
+            });
+        });
+    };
+    const getPixelWidths = (warehouse, table, tableSize) => {
+        return getWidthFrom(warehouse, table, getPixelWidth$1, (deduced) => {
+            // Minimum cell width when all else fails.
+            return deduced.getOrThunk(tableSize.minCellWidth);
+        });
+    };
+    const getHeightFrom = (warehouse, table, getHeight, fallback) => {
+        const rowCells = rows(warehouse);
+        const rows$1 = map$1(warehouse.all, (r) => Optional.some(r.element));
+        const backups = [Optional.some(height.edge(table))].concat(map$1(height.positions(rowCells, table), (pos) => pos.map((p) => p.y)));
+        return map$1(rows$1, (row, i) => getDimension(row, i, backups, always, getHeight, fallback));
+    };
+    const getPixelHeights = (warehouse, table) => {
+        return getHeightFrom(warehouse, table, getHeight, (deduced) => {
+            return deduced.getOrThunk(minHeight);
+        });
+    };
+    const getRawHeights = (warehouse, table) => {
+        return getHeightFrom(warehouse, table, getRawH, getDeduced);
+    };
+
+    const widthLookup = (table, getter) => () => {
+        // Use the actual width if attached, otherwise fallback to the raw width
+        if (inBody(table)) {
+            return getter(table);
+        }
+        else {
+            return parseFloat(getRaw$2(table, 'width').getOr('0'));
+        }
+    };
+    const noneSize = (table) => {
+        const getWidth = widthLookup(table, get$7);
+        const zero = constant(0);
+        const getWidths = (warehouse, tableSize) => getPixelWidths(warehouse, table, tableSize);
+        // Note: The 3 delta functions below return 0 to signify a change shouldn't be made
+        // however this is currently not used, so may need changing if ever used
+        return {
+            width: getWidth,
+            pixelWidth: getWidth,
+            getWidths,
+            getCellDelta: zero,
+            singleColumnWidth: constant([0]),
+            minCellWidth: zero,
+            setElementWidth: noop,
+            adjustTableWidth: noop,
+            isRelative: true,
+            label: 'none'
+        };
+    };
+    const percentageSize = (table) => {
+        const getFloatWidth = widthLookup(table, (elem) => parseFloat(getPercentTableWidth(elem)));
+        const getWidth = widthLookup(table, get$7);
+        const getCellDelta = (delta) => delta / getWidth() * 100;
+        // If we have one column in a percent based table, that column should be 100% of the width of the table.
+        const singleColumnWidth = (w, _delta) => [100 - w];
+        // Get the width of a 10 pixel wide cell over the width of the table as a percentage
+        const minCellWidth = () => minWidth() / getWidth() * 100;
+        const adjustTableWidth = (delta) => {
+            const currentWidth = getFloatWidth();
+            const change = delta / 100 * currentWidth;
+            const newWidth = currentWidth + change;
+            setPercentageWidth(table, newWidth);
+        };
+        const getWidths = (warehouse, tableSize) => getPercentageWidths(warehouse, table, tableSize);
+        return {
+            width: getFloatWidth,
+            pixelWidth: getWidth,
+            getWidths,
+            getCellDelta,
+            singleColumnWidth,
+            minCellWidth,
+            setElementWidth: setPercentageWidth,
+            adjustTableWidth,
+            isRelative: true,
+            label: 'percent'
+        };
+    };
+    const pixelSize = (table) => {
+        const getWidth = widthLookup(table, get$7);
+        const getCellDelta = identity;
+        const singleColumnWidth = (w, delta) => {
+            const newNext = Math.max(minWidth(), w + delta);
+            return [newNext - w];
+        };
+        const adjustTableWidth = (delta) => {
+            const newWidth = getWidth() + delta;
+            setPixelWidth(table, newWidth);
+        };
+        const getWidths = (warehouse, tableSize) => getPixelWidths(warehouse, table, tableSize);
+        return {
+            width: getWidth,
+            pixelWidth: getWidth,
+            getWidths,
+            getCellDelta,
+            singleColumnWidth,
+            minCellWidth: minWidth,
+            setElementWidth: setPixelWidth,
+            adjustTableWidth,
+            isRelative: false,
+            label: 'pixel'
+        };
+    };
+    const chooseSize = (element, width) => {
+        const percentMatch = percentageBasedSizeRegex().exec(width);
+        if (percentMatch !== null) {
+            return percentageSize(element);
+        }
+        else {
+            return pixelSize(element);
+        }
+    };
+    const getTableSize = (table) => {
+        const width = getRawWidth$1(table);
+        return width.fold(() => noneSize(table), (w) => chooseSize(table, w));
+    };
+    const TableSize = {
+        getTableSize,
+        pixelSize,
+        percentageSize,
+        noneSize
+    };
+
+    const setIfNot = (element, property, value, ignore) => {
+        if (value === ignore) {
+            remove$6(element, property);
+        }
+        else {
+            set$2(element, property, value);
+        }
+    };
+    const insert$1 = (table, selector, element) => {
+        last$2(children(table, selector)).fold(() => prepend(table, element), (child) => after$4(child, element));
+    };
+    const generateSection = (table, sectionName) => {
+        const section = child(table, sectionName).getOrThunk(() => {
+            const newSection = SugarElement.fromTag(sectionName, owner(table).dom);
+            if (sectionName === 'thead') {
+                insert$1(table, 'caption,colgroup', newSection);
+            }
+            else if (sectionName === 'colgroup') {
+                insert$1(table, 'caption', newSection);
+            }
+            else {
+                append$1(table, newSection);
+            }
+            return newSection;
+        });
+        empty(section);
+        return section;
+    };
+    const render$1 = (table, grid) => {
+        const newRows = [];
+        const newCells = [];
+        const syncRows = (gridSection) => map$1(gridSection, (row) => {
+            if (row.isNew) {
+                newRows.push(row.element);
+            }
+            const tr = row.element;
+            empty(tr);
+            each$2(row.cells, (cell) => {
+                if (cell.isNew) {
+                    newCells.push(cell.element);
+                }
+                setIfNot(cell.element, 'colspan', cell.colspan, 1);
+                setIfNot(cell.element, 'rowspan', cell.rowspan, 1);
+                append$1(tr, cell.element);
+            });
+            return tr;
+        });
+        // Assumption we should only ever have 1 colgroup. The spec allows for multiple, however it's currently unsupported
+        const syncColGroup = (gridSection) => bind$2(gridSection, (colGroup) => map$1(colGroup.cells, (col) => {
+            setIfNot(col.element, 'span', col.colspan, 1);
+            return col.element;
+        }));
+        const renderSection = (gridSection, sectionName) => {
+            const section = generateSection(table, sectionName);
+            const sync = sectionName === 'colgroup' ? syncColGroup : syncRows;
+            const sectionElems = sync(gridSection);
+            append(section, sectionElems);
+        };
+        const removeSection = (sectionName) => {
+            child(table, sectionName).each(remove$5);
+        };
+        const renderOrRemoveSection = (gridSection, sectionName) => {
+            if (gridSection.length > 0) {
+                renderSection(gridSection, sectionName);
+            }
+            else {
+                removeSection(sectionName);
+            }
+        };
+        const headSection = [];
+        const bodySection = [];
+        const footSection = [];
+        const columnGroupsSection = [];
+        each$2(grid, (row) => {
+            switch (row.section) {
+                case 'thead':
+                    headSection.push(row);
+                    break;
+                case 'tbody':
+                    bodySection.push(row);
+                    break;
+                case 'tfoot':
+                    footSection.push(row);
+                    break;
+                case 'colgroup':
+                    columnGroupsSection.push(row);
+                    break;
+            }
+        });
+        renderOrRemoveSection(columnGroupsSection, 'colgroup');
+        renderOrRemoveSection(headSection, 'thead');
+        renderOrRemoveSection(bodySection, 'tbody');
+        renderOrRemoveSection(footSection, 'tfoot');
+        return {
+            newRows,
+            newCells
+        };
+    };
+    const copy = (grid) => map$1(grid, (row) => {
+        // Shallow copy the row element
+        const tr = shallow(row.element);
+        each$2(row.cells, (cell) => {
+            const clonedCell = deep(cell.element);
+            setIfNot(clonedCell, 'colspan', cell.colspan, 1);
+            setIfNot(clonedCell, 'rowspan', cell.rowspan, 1);
+            append$1(tr, clonedCell);
+        });
+        return tr;
+    });
+
+    const getColumn = (grid, index) => {
+        return map$1(grid, (row) => {
+            return getCell(row, index);
+        });
+    };
+    const getRow = (grid, index) => {
+        return grid[index];
+    };
+    const findDiff = (xs, comp) => {
+        if (xs.length === 0) {
+            return 0;
+        }
+        const first = xs[0];
+        const index = findIndex(xs, (x) => {
+            return !comp(first.element, x.element);
+        });
+        return index.getOr(xs.length);
+    };
+    /*
+     * grid is the grid
+     * row is the row index into the grid
+     * column in the column index into the grid
+     *
+     * Return
+     *   colspan: column span of the cell at (row, column)
+     *   rowspan: row span of the cell at (row, column)
+     */
+    const subgrid = (grid, row, column, comparator) => {
+        const gridRow = getRow(grid, row);
+        const isColRow = gridRow.section === 'colgroup';
+        const colspan = findDiff(gridRow.cells.slice(column), comparator);
+        const rowspan = isColRow ? 1 : findDiff(getColumn(grid.slice(row), column), comparator);
+        return {
+            colspan,
+            rowspan
+        };
+    };
+
+    const toDetails = (grid, comparator) => {
+        const seen = map$1(grid, (row) => map$1(row.cells, never));
+        const updateSeen = (rowIndex, columnIndex, rowspan, colspan) => {
+            for (let row = rowIndex; row < rowIndex + rowspan; row++) {
+                for (let column = columnIndex; column < columnIndex + colspan; column++) {
+                    seen[row][column] = true;
+                }
+            }
+        };
+        return map$1(grid, (row, rowIndex) => {
+            const details = bind$2(row.cells, (cell, columnIndex) => {
+                // if we have seen this one, then skip it.
+                if (seen[rowIndex][columnIndex] === false) {
+                    const result = subgrid(grid, rowIndex, columnIndex, comparator);
+                    updateSeen(rowIndex, columnIndex, result.rowspan, result.colspan);
+                    return [detailnew(cell.element, result.rowspan, result.colspan, cell.isNew)];
+                }
+                else {
+                    return [];
+                }
+            });
+            return rowdetailnew(row.element, details, row.section, row.isNew);
+        });
+    };
+    const toGrid = (warehouse, generators, isNew) => {
+        const grid = [];
+        each$2(warehouse.colgroups, (colgroup) => {
+            const colgroupCols = [];
+            // This will add missing cols as well as clamp the number of cols to the max number of actual columns
+            // Note: Spans on cols are unsupported so clamping cols may result in a span on a col element being incorrect
+            for (let columnIndex = 0; columnIndex < warehouse.grid.columns; columnIndex++) {
+                const element = Warehouse.getColumnAt(warehouse, columnIndex)
+                    .map((column) => elementnew(column.element, isNew, false))
+                    .getOrThunk(() => elementnew(generators.colGap(), true, false));
+                colgroupCols.push(element);
+            }
+            grid.push(rowcells(colgroup.element, colgroupCols, 'colgroup', isNew));
+        });
+        for (let rowIndex = 0; rowIndex < warehouse.grid.rows; rowIndex++) {
+            const rowCells = [];
+            for (let columnIndex = 0; columnIndex < warehouse.grid.columns; columnIndex++) {
+                // The element is going to be the element at that position, or a newly generated gap.
+                const element = Warehouse.getAt(warehouse, rowIndex, columnIndex).map((item) => elementnew(item.element, isNew, item.isLocked)).getOrThunk(() => elementnew(generators.gap(), true, false));
+                rowCells.push(element);
+            }
+            const rowDetail = warehouse.all[rowIndex];
+            const row = rowcells(rowDetail.element, rowCells, rowDetail.section, isNew);
+            grid.push(row);
+        }
+        return grid;
+    };
+
+    const fromWarehouse = (warehouse, generators) => toGrid(warehouse, generators, false);
+    const toDetailList = (grid) => toDetails(grid, eq$1);
+    const findInWarehouse = (warehouse, element) => findMap(warehouse.all, (r) => find$1(r.cells, (e) => eq$1(element, e.element)));
+    const extractCells = (warehouse, target, predicate) => {
+        const details = map$1(target.selection, (cell$1) => {
+            return cell(cell$1)
+                .bind((lc) => findInWarehouse(warehouse, lc))
+                .filter(predicate);
+        });
+        const cells = cat(details);
+        return someIf(cells.length > 0, cells);
+    };
+    const run = (operation, extract, adjustment, postAction, genWrappers, table, target, generators, behaviours) => {
+        const warehouse = Warehouse.fromTable(table);
+        const tableSection = Optional.from(behaviours?.section).getOrThunk(TableSection.fallback);
+        const output = extract(warehouse, target).map((info) => {
+            const model = fromWarehouse(warehouse, generators);
+            const result = operation(model, info, eq$1, genWrappers(generators), tableSection);
+            const lockedColumns = getLockedColumnsFromGrid(result.grid);
+            const grid = toDetailList(result.grid);
+            return {
+                info,
+                grid,
+                cursor: result.cursor,
+                lockedColumns
+            };
+        });
+        return output.bind((out) => {
+            const newElements = render$1(table, out.grid);
+            const tableSizing = Optional.from(behaviours?.sizing).getOrThunk(() => TableSize.getTableSize(table));
+            const resizing = Optional.from(behaviours?.resize).getOrThunk(preserveTable);
+            adjustment(table, out.grid, out.info, { sizing: tableSizing, resize: resizing, section: tableSection });
+            postAction(table);
+            // Update locked cols attribute
+            remove$6(table, LOCKED_COL_ATTR);
+            if (out.lockedColumns.length > 0) {
+                set$2(table, LOCKED_COL_ATTR, out.lockedColumns.join(','));
+            }
+            return Optional.some({
+                cursor: out.cursor,
+                newRows: newElements.newRows,
+                newCells: newElements.newCells
+            });
+        });
+    };
+    const onPaste = (warehouse, target) => cell(target.element).bind((cell) => findInWarehouse(warehouse, cell).map((details) => {
+        const value = {
+            ...details,
+            generators: target.generators,
+            clipboard: target.clipboard
+        };
+        return value;
+    }));
+    const onPasteByEditor = (warehouse, target) => extractCells(warehouse, target, always).map((cells) => ({
+        cells,
+        generators: target.generators,
+        clipboard: target.clipboard
+    }));
+    const onMergable = (_warehouse, target) => target.mergable;
+    const onUnmergable = (_warehouse, target) => target.unmergable;
+    const onCells = (warehouse, target) => extractCells(warehouse, target, always);
+    const onUnlockedCells = (warehouse, target) => extractCells(warehouse, target, (detail) => !detail.isLocked);
+    const isUnlockedTableCell = (warehouse, cell) => findInWarehouse(warehouse, cell).exists((detail) => !detail.isLocked);
+    const allUnlocked = (warehouse, cells) => forall(cells, (cell) => isUnlockedTableCell(warehouse, cell));
+    // If any locked columns are present in the selection, then don't want to be able to merge
+    const onUnlockedMergable = (warehouse, target) => onMergable(warehouse, target).filter((mergeable) => allUnlocked(warehouse, mergeable.cells));
+    // If any locked columns are present in the selection, then don't want to be able to unmerge
+    const onUnlockedUnmergable = (warehouse, target) => onUnmergable(warehouse, target).filter((cells) => allUnlocked(warehouse, cells));
+
+    const adt$3 = Adt.generate([
+        { none: [] },
+        { only: ['index'] },
+        { left: ['index', 'next'] },
+        { middle: ['prev', 'index', 'next'] },
+        { right: ['prev', 'index'] }
+    ]);
+    const ColumnContext = {
+        ...adt$3
+    };
+
+    /*
+     * Based on the column index, identify the context
+     */
+    const neighbours = (input, index) => {
+        if (input.length === 0) {
+            return ColumnContext.none();
+        }
+        if (input.length === 1) {
+            return ColumnContext.only(0);
+        }
+        if (index === 0) {
+            return ColumnContext.left(0, 1);
+        }
+        if (index === input.length - 1) {
+            return ColumnContext.right(index - 1, index);
+        }
+        if (index > 0 && index < input.length - 1) {
+            return ColumnContext.middle(index - 1, index, index + 1);
+        }
+        return ColumnContext.none();
+    };
+    /*
+     * Calculate the offsets to apply to each column width (not the absolute widths themselves)
+     * based on a resize at column: column of step: step
+     */
+    const determine = (input, column, step, tableSize, resize) => {
+        const result = input.slice(0);
+        const context = neighbours(input, column);
+        const onNone = constant(map$1(result, constant(0)));
+        const onOnly = (index) => tableSize.singleColumnWidth(result[index], step);
+        const onLeft = (index, next) => resize.calcLeftEdgeDeltas(result, index, next, step, tableSize.minCellWidth(), tableSize.isRelative);
+        const onMiddle = (prev, index, next) => resize.calcMiddleDeltas(result, prev, index, next, step, tableSize.minCellWidth(), tableSize.isRelative);
+        // Applies to the last column bar
+        const onRight = (prev, index) => resize.calcRightEdgeDeltas(result, prev, index, step, tableSize.minCellWidth(), tableSize.isRelative);
+        return context.fold(onNone, onOnly, onLeft, onMiddle, onRight);
+    };
+
+    // Returns the sum of elements of measures in the half-open range [start, end)
+    // Measures is in pixels, treated as an array of integers or integers in string format.
+    // NOTE: beware of accumulated rounding errors over multiple columns - could result in noticeable table width changes
+    const total = (start, end, measures) => {
+        let r = 0;
+        for (let i = start; i < end; i++) {
+            r += measures[i] !== undefined ? measures[i] : 0;
+        }
+        return r;
+    };
+    // Returns an array of all cells in warehouse with updated cell-widths, using
+    // the array 'widths' of the representative widths of each column of the table 'warehouse'
+    const recalculateWidthForCells = (warehouse, widths) => {
+        const all = Warehouse.justCells(warehouse);
+        return map$1(all, (cell) => {
+            // width of a spanning cell is sum of widths of representative columns it spans
+            const width = total(cell.column, cell.column + cell.colspan, widths);
+            return {
+                element: cell.element,
+                width,
+                colspan: cell.colspan
+            };
+        });
+    };
+    const recalculateWidthForColumns = (warehouse, widths) => {
+        const groups = Warehouse.justColumns(warehouse);
+        return map$1(groups, (column, index) => ({
+            element: column.element,
+            width: widths[index],
+            colspan: column.colspan
+        }));
+    };
+    const matchRowHeight = (warehouse, heights) => {
+        return map$1(warehouse.all, (row, i) => {
+            return {
+                element: row.element,
+                height: heights[i]
+            };
+        });
+    };
+
+    const sumUp = (newSize) => foldr(newSize, (b, a) => b + a, 0);
+    const recalculate = (warehouse, widths) => {
+        if (Warehouse.hasColumns(warehouse)) {
+            return recalculateWidthForColumns(warehouse, widths);
+        }
+        else {
+            return recalculateWidthForCells(warehouse, widths);
+        }
+    };
+    const recalculateAndApply = (warehouse, widths, tableSize) => {
+        // Set the width of each cell based on the column widths
+        const newSizes = recalculate(warehouse, widths);
+        each$2(newSizes, (cell) => {
+            tableSize.setElementWidth(cell.element, cell.width);
+        });
+    };
+    const adjustWidth = (table, delta, index, resizing, tableSize) => {
+        const warehouse = Warehouse.fromTable(table);
+        const step = tableSize.getCellDelta(delta);
+        const widths = tableSize.getWidths(warehouse, tableSize);
+        const isLastColumn = index === warehouse.grid.columns - 1;
+        const clampedStep = resizing.clampTableDelta(widths, index, step, tableSize.minCellWidth(), isLastColumn);
+        // Calculate all of the new widths for columns
+        const deltas = determine(widths, index, clampedStep, tableSize, resizing);
+        const newWidths = map$1(deltas, (dx, i) => dx + widths[i]);
+        recalculateAndApply(warehouse, newWidths, tableSize);
+        resizing.resizeTable(tableSize.adjustTableWidth, clampedStep, isLastColumn);
+    };
+    const adjustHeight = (table, delta, index) => {
+        const warehouse = Warehouse.fromTable(table);
+        const heights = getPixelHeights(warehouse, table);
+        const newHeights = map$1(heights, (dy, i) => index === i ? Math.max(delta + dy, minHeight()) : dy);
+        const newRowSizes = matchRowHeight(warehouse, newHeights);
+        each$2(newRowSizes, (row) => {
+            setHeight(row.element, row.height);
+        });
+        each$2(Warehouse.justCells(warehouse), (cell) => {
+            removeHeight(cell.element);
+        });
+        const total = sumUp(newHeights);
+        setHeight(table, total);
+    };
+    // Using the width of the added/removed columns gathered on extraction (pixelDelta), get and apply the new column sizes and overall table width delta
+    const adjustAndRedistributeWidths$1 = (_table, list, details, tableSize, resizeBehaviour) => {
+        const warehouse = Warehouse.generate(list);
+        const sizes = tableSize.getWidths(warehouse, tableSize);
+        const tablePixelWidth = tableSize.pixelWidth();
+        const { newSizes, delta } = resizeBehaviour.calcRedestributedWidths(sizes, tablePixelWidth, details.pixelDelta, tableSize.isRelative);
+        recalculateAndApply(warehouse, newSizes, tableSize);
+        tableSize.adjustTableWidth(delta);
+    };
+    // Ensure that the width of table cells match the passed in table information.
+    const adjustWidthTo = (_table, list, _info, tableSize) => {
+        const warehouse = Warehouse.generate(list);
+        const widths = tableSize.getWidths(warehouse, tableSize);
+        recalculateAndApply(warehouse, widths, tableSize);
+    };
+
+    const halve = (main, other) => {
+        // Only set width on the new cell if we have a colspan of 1 (or no colspan) as we can only safely do that for cells
+        // that are a single column, since we don't know the individual column widths for a cell with a colspan.
+        // Instead, we'll rely on the adjustments/postAction logic to set the widths based on other cells in the column
+        if (!hasColspan(main)) {
+            const width = getGenericWidth(main);
+            width.each((w) => {
+                const newWidth = w.value / 2;
+                setGenericWidth(main, newWidth, w.unit);
+                setGenericWidth(other, newWidth, w.unit);
+            });
+        }
+    };
+
+    const constrainSpan = (element, property, value) => {
+        const currentColspan = getAttrValue(element, property, 1);
+        if (value === 1 || currentColspan <= 1) {
+            remove$6(element, property);
+        }
+        else {
+            set$2(element, property, Math.min(value, currentColspan));
+        }
+    };
+    const isColInRange = (minColRange, maxColRange) => (cell) => {
+        const endCol = cell.column + cell.colspan - 1;
+        const startCol = cell.column;
+        return endCol >= minColRange && startCol < maxColRange;
+    };
+    const generateColGroup = (house, minColRange, maxColRange) => {
+        if (Warehouse.hasColumns(house)) {
+            const colsToCopy = filter$2(Warehouse.justColumns(house), isColInRange(minColRange, maxColRange));
+            const copiedCols = map$1(colsToCopy, (c) => {
+                const clonedCol = deep(c.element);
+                constrainSpan(clonedCol, 'span', maxColRange - minColRange);
+                return clonedCol;
+            });
+            const fakeColgroup = SugarElement.fromTag('colgroup');
+            append(fakeColgroup, copiedCols);
+            return [fakeColgroup];
+        }
+        else {
+            return [];
+        }
+    };
+    const generateRows = (house, minColRange, maxColRange) => map$1(house.all, (row) => {
+        const cellsToCopy = filter$2(row.cells, isColInRange(minColRange, maxColRange));
+        const copiedCells = map$1(cellsToCopy, (cell) => {
+            const clonedCell = deep(cell.element);
+            constrainSpan(clonedCell, 'colspan', maxColRange - minColRange);
+            return clonedCell;
+        });
+        const fakeTR = SugarElement.fromTag('tr');
+        append(fakeTR, copiedCells);
+        return fakeTR;
+    });
+    const copyCols = (table, target) => {
+        const house = Warehouse.fromTable(table);
+        const details = onUnlockedCells(house, target);
+        return details.map((selectedCells) => {
+            const lastSelectedCell = selectedCells[selectedCells.length - 1];
+            const minColRange = selectedCells[0].column;
+            const maxColRange = lastSelectedCell.column + lastSelectedCell.colspan;
+            const fakeColGroups = generateColGroup(house, minColRange, maxColRange);
+            const fakeRows = generateRows(house, minColRange, maxColRange);
+            return [...fakeColGroups, ...fakeRows];
+        });
+    };
+
+    const copyRows = (table, target, generators) => {
+        const warehouse = Warehouse.fromTable(table);
+        // Cannot use onUnlockedCells like extractor here as if only cells in a locked column are selected, then this will be Optional.none and
+        // there is now no way of knowing which rows are selected
+        const details = onCells(warehouse, target);
+        return details.bind((selectedCells) => {
+            const grid = toGrid(warehouse, generators, false);
+            const rows = extractGridDetails(grid).rows;
+            const slicedGrid = rows.slice(selectedCells[0].row, selectedCells[selectedCells.length - 1].row + selectedCells[selectedCells.length - 1].rowspan);
+            // Remove any locked cells from the copied grid rows
+            const filteredGrid = bind$2(slicedGrid, (row) => {
+                const newCells = filter$2(row.cells, (cell) => !cell.isLocked);
+                return newCells.length > 0 ? [{ ...row, cells: newCells }] : [];
+            });
+            const slicedDetails = toDetailList(filteredGrid);
+            return someIf(slicedDetails.length > 0, slicedDetails);
+        }).map((slicedDetails) => copy(slicedDetails));
+    };
+
+    const statsStruct = (minRow, minCol, maxRow, maxCol, allCells, selectedCells) => ({
+        minRow,
+        minCol,
+        maxRow,
+        maxCol,
+        allCells,
+        selectedCells,
+    });
+    const findSelectedStats = (house, isSelected) => {
+        const totalColumns = house.grid.columns;
+        const totalRows = house.grid.rows;
+        /* Refactor into a method returning a struct to hide the mutation */
+        let minRow = totalRows;
+        let minCol = totalColumns;
+        let maxRow = 0;
+        let maxCol = 0;
+        const allCells = [];
+        const selectedCells = [];
+        each$1(house.access, (detail) => {
+            allCells.push(detail);
+            if (isSelected(detail)) {
+                selectedCells.push(detail);
+                const startRow = detail.row;
+                const endRow = startRow + detail.rowspan - 1;
+                const startCol = detail.column;
+                const endCol = startCol + detail.colspan - 1;
+                if (startRow < minRow) {
+                    minRow = startRow;
+                }
+                else if (endRow > maxRow) {
+                    maxRow = endRow;
+                }
+                if (startCol < minCol) {
+                    minCol = startCol;
+                }
+                else if (endCol > maxCol) {
+                    maxCol = endCol;
+                }
+            }
+        });
+        return statsStruct(minRow, minCol, maxRow, maxCol, allCells, selectedCells);
+    };
+    const makeCell = (list, seenSelected, rowIndex) => {
+        // no need to check bounds, as anything outside this index is removed in the nested for loop
+        const row = list[rowIndex].element;
+        const td = SugarElement.fromTag('td');
+        append$1(td, SugarElement.fromTag('br'));
+        const f = seenSelected ? append$1 : prepend;
+        f(row, td);
+    };
+    const fillInGaps = (list, house, stats, isSelected) => {
+        const rows = filter$2(list, (row) => row.section !== 'colgroup');
+        const totalColumns = house.grid.columns;
+        const totalRows = house.grid.rows;
+        // unselected cells have been deleted, now fill in the gaps in the model
+        for (let i = 0; i < totalRows; i++) {
+            let seenSelected = false;
+            for (let j = 0; j < totalColumns; j++) {
+                if (!(i < stats.minRow || i > stats.maxRow || j < stats.minCol || j > stats.maxCol)) {
+                    // if there is a hole in the table itself, or it's an unselected position, we need a cell
+                    const needCell = Warehouse.getAt(house, i, j).filter(isSelected).isNone();
+                    if (needCell) {
+                        makeCell(rows, seenSelected, i);
+                    }
+                    else {
+                        seenSelected = true;
+                    }
+                }
+            }
+        }
+    };
+    const clean = (replica, stats, house, widthDelta) => {
+        // remove columns that are not in the new table
+        each$1(house.columns, (col) => {
+            if (col.column < stats.minCol || col.column > stats.maxCol) {
+                remove$5(col.element);
+            }
+        });
+        // can't use :empty selector as that will not include TRs made up of whitespace
+        const emptyRows = filter$2(firstLayer(replica, 'tr'), (row) => 
+        // there is no sugar method for this, and Traverse.children() does too much processing
+        row.dom.childElementCount === 0);
+        each$2(emptyRows, remove$5);
+        // If there is only one column, or only one row, delete all the colspan/rowspan
+        if (stats.minCol === stats.maxCol || stats.minRow === stats.maxRow) {
+            each$2(firstLayer(replica, 'th,td'), (cell) => {
+                remove$6(cell, 'rowspan');
+                remove$6(cell, 'colspan');
+            });
+        }
+        // Remove any attributes that should not be in the replicated table
+        remove$6(replica, LOCKED_COL_ATTR);
+        // TODO: TINY-6944 - need to figure out a better way of handling this
+        remove$6(replica, 'data-snooker-col-series'); // For advtable series column feature
+        const tableSize = TableSize.getTableSize(replica);
+        tableSize.adjustTableWidth(widthDelta);
+        // TODO TINY-6863: If using relative widths, ensure cell and column widths are redistributed
+    };
+    const getTableWidthDelta = (table, warehouse, tableSize, stats) => {
+        // short circuit entire table selected
+        if (stats.minCol === 0 && warehouse.grid.columns === stats.maxCol + 1) {
+            return 0;
+        }
+        const colWidths = getPixelWidths(warehouse, table, tableSize);
+        const allColsWidth = foldl(colWidths, (acc, width) => acc + width, 0);
+        const selectedColsWidth = foldl(colWidths.slice(stats.minCol, stats.maxCol + 1), (acc, width) => acc + width, 0);
+        const newWidth = (selectedColsWidth / allColsWidth) * tableSize.pixelWidth();
+        const delta = newWidth - tableSize.pixelWidth();
+        return tableSize.getCellDelta(delta);
+    };
+    const extract$1 = (table, selectedSelector) => {
+        const isSelected = (detail) => is$1(detail.element, selectedSelector);
+        const replica = deep(table);
+        const list = fromTable$1(replica);
+        const tableSize = TableSize.getTableSize(table);
+        const replicaHouse = Warehouse.generate(list);
+        const replicaStats = findSelectedStats(replicaHouse, isSelected);
+        // remove unselected cells
+        const selector = 'th:not(' + selectedSelector + ')' + ',td:not(' + selectedSelector + ')';
+        const unselectedCells = filterFirstLayer(replica, 'th,td', (cell) => is$1(cell, selector));
+        each$2(unselectedCells, remove$5);
+        fillInGaps(list, replicaHouse, replicaStats, isSelected);
+        const house = Warehouse.fromTable(table);
+        const widthDelta = getTableWidthDelta(table, house, tableSize, replicaStats);
+        clean(replica, replicaStats, replicaHouse, widthDelta);
+        return replica;
+    };
+
+    const isCol = isTag('col');
+    const isColgroup = isTag('colgroup');
+    const isRow$1 = (element) => name(element) === 'tr' || isColgroup(element);
+    const elementToData = (element) => {
+        const colspan = getAttrValue(element, 'colspan', 1);
+        const rowspan = getAttrValue(element, 'rowspan', 1);
+        return {
+            element,
+            colspan,
+            rowspan
+        };
+    };
+    // note that `toData` seems to be only for testing
+    const modification = (generators, toData = elementToData) => {
+        const nuCell = (data) => isCol(data.element) ? generators.col(data) : generators.cell(data);
+        const nuRow = (data) => isColgroup(data.element) ? generators.colgroup(data) : generators.row(data);
+        const add = (element) => {
+            if (isRow$1(element)) {
+                return nuRow({ element });
+            }
+            else {
+                const cell = element;
+                const replacement = nuCell(toData(cell));
+                recent = Optional.some({ item: cell, replacement });
+                return replacement;
+            }
+        };
+        let recent = Optional.none();
+        const getOrInit = (element, comparator) => {
+            return recent.fold(() => {
+                return add(element);
+            }, (p) => {
+                return comparator(element, p.item) ? p.replacement : add(element);
+            });
+        };
+        return {
+            getOrInit
+        };
+    };
+    const transform$1 = (tag) => {
+        return (generators) => {
+            const list = [];
+            const find = (element, comparator) => {
+                return find$1(list, (x) => {
+                    return comparator(x.item, element);
+                });
+            };
+            const makeNew = (element) => {
+                // Ensure scope is never set on a td element as it's a deprecated attribute
+                const attrs = tag === 'td' ? { scope: null } : {};
+                const cell = generators.replace(element, tag, attrs);
+                list.push({
+                    item: element,
+                    sub: cell
+                });
+                return cell;
+            };
+            const replaceOrInit = (element, comparator) => {
+                if (isRow$1(element) || isCol(element)) {
+                    return element;
+                }
+                else {
+                    const cell = element;
+                    return find(cell, comparator).fold(() => {
+                        return makeNew(cell);
+                    }, (p) => {
+                        return comparator(element, p.item) ? p.sub : makeNew(cell);
+                    });
+                }
+            };
+            return {
+                replaceOrInit
+            };
+        };
+    };
+    const getScopeAttribute = (cell) => getOpt(cell, 'scope').map(
+    // Attribute can be col, colgroup, row, and rowgroup.
+    // As col and colgroup are to be treated as if they are the same, lob off everything after the first three characters and there is no difference.
+    (attribute) => attribute.substr(0, 3));
+    const merging = (generators) => {
+        const unmerge = (cell) => {
+            const scope = getScopeAttribute(cell);
+            scope.each((attribute) => set$2(cell, 'scope', attribute));
+            return () => {
+                const raw = generators.cell({
+                    element: cell,
+                    colspan: 1,
+                    rowspan: 1
+                });
+                // Remove any width calculations because they are no longer relevant.
+                remove$4(raw, 'width');
+                remove$4(cell, 'width');
+                scope.each((attribute) => set$2(raw, 'scope', attribute));
+                return raw;
+            };
+        };
+        const merge = (cells) => {
+            const getScopeProperty = () => {
+                const stringAttributes = cat(map$1(cells, getScopeAttribute));
+                if (stringAttributes.length === 0) {
+                    return Optional.none();
+                }
+                else {
+                    const baseScope = stringAttributes[0];
+                    const scopes = ['row', 'col'];
+                    const isMixed = exists(stringAttributes, (attribute) => {
+                        return attribute !== baseScope && contains$2(scopes, attribute);
+                    });
+                    return isMixed ? Optional.none() : Optional.from(baseScope);
+                }
+            };
+            remove$4(cells[0], 'width');
+            getScopeProperty().fold(() => remove$6(cells[0], 'scope'), (attribute) => set$2(cells[0], 'scope', attribute + 'group'));
+            return constant(cells[0]);
+        };
+        return {
+            unmerge,
+            merge
+        };
+    };
+    const Generators = {
+        modification,
+        transform: transform$1,
+        merging
+    };
+
+    const getUpOrLeftCells = (grid, selectedCells) => {
+        // Get rows up or at the row of the bottom right cell
+        const upGrid = grid.slice(0, selectedCells[selectedCells.length - 1].row + 1);
+        const upDetails = toDetailList(upGrid);
+        // Get an array of the cells up or to the left of the bottom right cell
+        return bind$2(upDetails, (detail) => {
+            const slicedCells = detail.cells.slice(0, selectedCells[selectedCells.length - 1].column + 1);
+            return map$1(slicedCells, (cell) => cell.element);
+        });
+    };
+    const getDownOrRightCells = (grid, selectedCells) => {
+        // Get rows down or at the row of the top left cell (including rowspans)
+        const downGrid = grid.slice(selectedCells[0].row + selectedCells[0].rowspan - 1, grid.length);
+        const downDetails = toDetailList(downGrid);
+        // Get an array of the cells down or to the right of the bottom right cell
+        return bind$2(downDetails, (detail) => {
+            const slicedCells = detail.cells.slice(selectedCells[0].column + selectedCells[0].colspan - 1, detail.cells.length);
+            return map$1(slicedCells, (cell) => cell.element);
+        });
+    };
+    const getOtherCells = (table, target, generators) => {
+        const warehouse = Warehouse.fromTable(table);
+        const details = onCells(warehouse, target);
+        return details.map((selectedCells) => {
+            const grid = toGrid(warehouse, generators, false);
+            const { rows } = extractGridDetails(grid);
+            const upOrLeftCells = getUpOrLeftCells(rows, selectedCells);
+            const downOrRightCells = getDownOrRightCells(rows, selectedCells);
+            return {
+                upOrLeftCells,
+                downOrRightCells
+            };
+        });
+    };
+
+    const only = (element, isResizable) => {
+        // If element is a 'document', use the document element ('HTML' tag) for appending.
+        const parent = isDocument(element) ? documentElement(element) : element;
+        return {
+            parent: constant(parent),
+            view: constant(element),
+            dragContainer: constant(parent),
+            origin: constant(SugarPosition(0, 0)),
+            isResizable
+        };
+    };
+    const detached = (editable, chrome, isResizable) => {
+        const origin = () => absolute(chrome);
+        return {
+            parent: constant(chrome),
+            view: constant(editable),
+            dragContainer: constant(chrome),
+            origin,
+            isResizable
+        };
+    };
+    const body = (editable, isResizable) => {
+        return {
+            parent: constant(editable),
+            view: constant(editable),
+            dragContainer: constant(editable),
+            origin: () => absolute(editable),
+            isResizable
+        };
+    };
+    const ResizeWire = {
+        only,
+        detached,
+        body
+    };
+
+    const adt$2 = Adt.generate([
+        { invalid: ['raw'] },
+        { pixels: ['value'] },
+        { percent: ['value'] }
+    ]);
+    const validateFor = (suffix, type, value) => {
+        const rawAmount = value.substring(0, value.length - suffix.length);
+        const amount = parseFloat(rawAmount);
+        return rawAmount === amount.toString() ? type(amount) : adt$2.invalid(value);
+    };
+    const from = (value) => {
+        if (endsWith(value, '%')) {
+            return validateFor('%', adt$2.percent, value);
+        }
+        if (endsWith(value, 'px')) {
+            return validateFor('px', adt$2.pixels, value);
+        }
+        return adt$2.invalid(value);
+    };
+    const Size = {
+        ...adt$2,
+        from
+    };
+
+    // Convert all column widths to percent.
+    const redistributeToPercent = (widths, totalWidth) => {
+        return map$1(widths, (w) => {
+            const colType = Size.from(w);
+            return colType.fold(() => {
+                return w;
+            }, (px) => {
+                const ratio = px / totalWidth * 100;
+                return ratio + '%';
+            }, (pc) => {
+                return pc + '%';
+            });
+        });
+    };
+    const redistributeToPx = (widths, totalWidth, newTotalWidth) => {
+        const scale = newTotalWidth / totalWidth;
+        return map$1(widths, (w) => {
+            const colType = Size.from(w);
+            return colType.fold(() => {
+                return w;
+            }, (px) => {
+                return (px * scale) + 'px';
+            }, (pc) => {
+                return (pc / 100 * newTotalWidth) + 'px';
+            });
+        });
+    };
+    const redistributeEmpty = (newWidthType, columns) => {
+        const f = newWidthType.fold(() => constant(''), (pixels) => {
+            const num = pixels / columns;
+            return constant(num + 'px');
+        }, () => {
+            const num = 100 / columns;
+            return constant(num + '%');
+        });
+        return range$1(columns, f);
+    };
+    const redistributeValues = (newWidthType, widths, totalWidth) => {
+        return newWidthType.fold(() => {
+            return widths;
+        }, (px) => {
+            return redistributeToPx(widths, totalWidth, px);
+        }, (_pc) => {
+            return redistributeToPercent(widths, totalWidth);
+        });
+    };
+    const redistribute$1 = (widths, totalWidth, newWidth) => {
+        const newType = Size.from(newWidth);
+        const floats = forall(widths, (s) => {
+            return s === '0px';
+        }) ? redistributeEmpty(newType, widths.length) : redistributeValues(newType, widths, totalWidth);
+        return normalize(floats);
+    };
+    const sum = (values, fallback) => {
+        if (values.length === 0) {
+            return fallback;
+        }
+        return foldr(values, (rest, v) => {
+            return Size.from(v).fold(constant(0), identity, identity) + rest;
+        }, 0);
+    };
+    const roundDown = (num, unit) => {
+        const floored = Math.floor(num);
+        return { value: floored + unit, remainder: num - floored };
+    };
+    const add = (value, amount) => {
+        return Size.from(value).fold(constant(value), (px) => {
+            return (px + amount) + 'px';
+        }, (pc) => {
+            return (pc + amount) + '%';
+        });
+    };
+    const normalize = (values) => {
+        if (values.length === 0) {
+            return values;
+        }
+        const scan = foldr(values, (rest, value) => {
+            const info = Size.from(value).fold(() => ({ value, remainder: 0 }), (num) => roundDown(num, 'px'), (num) => ({ value: num + '%', remainder: 0 }));
+            return {
+                output: [info.value].concat(rest.output),
+                remainder: rest.remainder + info.remainder
+            };
+        }, { output: [], remainder: 0 });
+        const r = scan.output;
+        return r.slice(0, r.length - 1).concat([add(r[r.length - 1], Math.round(scan.remainder))]);
+    };
+    const validate = Size.from;
+
+    const redistributeToW = (newWidths, cells, unit) => {
+        each$2(cells, (cell) => {
+            const widths = newWidths.slice(cell.column, cell.colspan + cell.column);
+            const w = sum(widths, minWidth());
+            set$1(cell.element, 'width', w + unit);
+        });
+    };
+    const redistributeToColumns = (newWidths, columns, unit) => {
+        each$2(columns, (column, index) => {
+            const width = sum([newWidths[index]], minWidth());
+            set$1(column.element, 'width', width + unit);
+        });
+    };
+    const redistributeToH = (newHeights, rows, cells) => {
+        each$2(cells, (cell) => {
+            remove$4(cell.element, 'height');
+        });
+        each$2(rows, (row, i) => {
+            set$1(row.element, 'height', newHeights[i]);
+        });
+    };
+    const getUnit = (newSize) => {
+        return validate(newSize).fold(constant('px'), constant('px'), constant('%'));
+    };
+    // Procedure to resize table dimensions to optWidth x optHeight and redistribute cell and row dimensions.
+    // Updates CSS of the table, rows, and cells.
+    const redistribute = (table, optWidth, optHeight) => {
+        const warehouse = Warehouse.fromTable(table);
+        const rows = warehouse.all;
+        const cells = Warehouse.justCells(warehouse);
+        const columns = Warehouse.justColumns(warehouse);
+        optWidth.each((newWidth) => {
+            const widthUnit = getUnit(newWidth);
+            const totalWidth = get$7(table);
+            const oldWidths = getRawWidths(warehouse, table);
+            const nuWidths = redistribute$1(oldWidths, totalWidth, newWidth);
+            if (Warehouse.hasColumns(warehouse)) {
+                redistributeToColumns(nuWidths, columns, widthUnit);
+            }
+            else {
+                redistributeToW(nuWidths, cells, widthUnit);
+            }
+            set$1(table, 'width', newWidth);
+        });
+        optHeight.each((newHeight) => {
+            const totalHeight = get$8(table);
+            const oldHeights = getRawHeights(warehouse, table);
+            const nuHeights = redistribute$1(oldHeights, totalHeight, newHeight);
+            redistributeToH(nuHeights, rows, cells);
+            set$1(table, 'height', newHeight);
+        });
+    };
+    const isPercentSizing = isPercentSizing$1;
+    const isPixelSizing = isPixelSizing$1;
+    const isNoneSizing = isNoneSizing$1;
+
+    var TagBoundaries = [
+        'body',
+        'p',
+        'div',
+        'article',
+        'aside',
+        'figcaption',
+        'figure',
+        'footer',
+        'header',
+        'nav',
+        'section',
+        'ol',
+        'ul',
+        'li',
+        'table',
+        'thead',
+        'tbody',
+        'tfoot',
+        'caption',
+        'tr',
+        'td',
+        'th',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'blockquote',
+        'pre',
+        'address'
+    ];
+
+    var DomUniverse = () => {
+        const clone = (element) => {
+            return SugarElement.fromDom(element.dom.cloneNode(false));
+        };
+        const document = (element) => documentOrOwner(element).dom;
+        const isBoundary = (element) => {
+            if (!isElement(element)) {
+                return false;
+            }
+            if (name(element) === 'body') {
+                return true;
+            }
+            return contains$2(TagBoundaries, name(element));
+        };
+        const isEmptyTag = (element) => {
+            if (!isElement(element)) {
+                return false;
+            }
+            return contains$2(['br', 'img', 'hr', 'input'], name(element));
+        };
+        const isNonEditable = (element) => isElement(element) && get$b(element, 'contenteditable') === 'false';
+        const comparePosition = (element, other) => {
+            return element.dom.compareDocumentPosition(other.dom);
+        };
+        const copyAttributesTo = (source, destination) => {
+            const as = clone$1(source);
+            setAll$1(destination, as);
+        };
+        const isSpecial = (element) => {
+            const tag = name(element);
+            return contains$2([
+                'script', 'noscript', 'iframe', 'noframes', 'noembed', 'title', 'style', 'textarea', 'xmp'
+            ], tag);
+        };
+        const getLanguage = (element) => isElement(element) ? getOpt(element, 'lang') : Optional.none();
+        return {
+            up: constant({
+                selector: ancestor$1,
+                closest: closest$1,
+                predicate: ancestor$2,
+                all: parents
+            }),
+            down: constant({
+                selector: descendants,
+                predicate: descendants$1
+            }),
+            styles: constant({
+                get: get$9,
+                getRaw: getRaw$2,
+                set: set$1,
+                remove: remove$4
+            }),
+            attrs: constant({
+                get: get$b,
+                set: set$2,
+                remove: remove$6,
+                copyTo: copyAttributesTo
+            }),
+            insert: constant({
+                before: before$3,
+                after: after$4,
+                afterAll: after$3,
+                append: append$1,
+                appendAll: append,
+                prepend: prepend,
+                wrap: wrap
+            }),
+            remove: constant({
+                unwrap: unwrap,
+                remove: remove$5
+            }),
+            create: constant({
+                nu: SugarElement.fromTag,
+                clone,
+                text: SugarElement.fromText
+            }),
+            query: constant({
+                comparePosition,
+                prevSibling: prevSibling,
+                nextSibling: nextSibling
+            }),
+            property: constant({
+                children: children$2,
+                name: name,
+                parent: parent,
+                document,
+                isText: isText,
+                isComment: isComment,
+                isElement: isElement,
+                isSpecial,
+                getLanguage,
+                getText: get$5,
+                setText: set,
+                isBoundary,
+                isEmptyTag,
+                isNonEditable
+            }),
+            eq: eq$1,
+            is: is
+        };
+    };
+
+    const traverse = (item, mode) => ({
+        item,
+        mode
+    });
+    const backtrack = (universe, item, _direction, transition = sidestep) => {
+        return universe.property().parent(item).map((p) => {
+            return traverse(p, transition);
+        });
+    };
+    const sidestep = (universe, item, direction, transition = advance) => {
+        return direction.sibling(universe, item).map((p) => {
+            return traverse(p, transition);
+        });
+    };
+    const advance = (universe, item, direction, transition = advance) => {
+        const children = universe.property().children(item);
+        const result = direction.first(children);
+        return result.map((r) => {
+            return traverse(r, transition);
+        });
+    };
+    /*
+     * Rule breakdown:
+     *
+     * current: the traversal that we are applying.
+     * next: the next traversal to apply if the current traversal succeeds (e.g. advance after sidestepping)
+     * fallback: the traversal to fallback to when the current traversal does not find a node
+     */
+    const successors = [
+        { current: backtrack, next: sidestep, fallback: Optional.none() },
+        { current: sidestep, next: advance, fallback: Optional.some(backtrack) },
+        { current: advance, next: advance, fallback: Optional.some(sidestep) }
+    ];
+    const go = (universe, item, mode, direction, rules = successors) => {
+        // INVESTIGATE: Find a way which doesn't require an array search first to identify the current mode.
+        const ruleOpt = find$1(rules, (succ) => {
+            return succ.current === mode;
+        });
+        return ruleOpt.bind((rule) => {
+            // Attempt the current mode. If not, use the fallback and try again.
+            return rule.current(universe, item, direction, rule.next).orThunk(() => {
+                return rule.fallback.bind((fb) => {
+                    return go(universe, item, fb, direction);
+                });
+            });
+        });
+    };
+
+    const left$1 = () => {
+        const sibling = (universe, item) => {
+            return universe.query().prevSibling(item);
+        };
+        const first = (children) => {
+            return children.length > 0 ? Optional.some(children[children.length - 1]) : Optional.none();
+        };
+        return {
+            sibling,
+            first
+        };
+    };
+    const right$1 = () => {
+        const sibling = (universe, item) => {
+            return universe.query().nextSibling(item);
+        };
+        const first = (children) => {
+            return children.length > 0 ? Optional.some(children[0]) : Optional.none();
+        };
+        return {
+            sibling,
+            first
+        };
+    };
+    const Walkers = {
+        left: left$1,
+        right: right$1
+    };
+
+    const hone = (universe, item, predicate, mode, direction, isRoot) => {
+        const next = go(universe, item, mode, direction);
+        return next.bind((n) => {
+            if (isRoot(n.item)) {
+                return Optional.none();
+            }
+            else {
+                return predicate(n.item) ? Optional.some(n.item) : hone(universe, n.item, predicate, n.mode, direction, isRoot);
+            }
+        });
+    };
+    const left = (universe, item, predicate, isRoot) => {
+        return hone(universe, item, predicate, sidestep, Walkers.left(), isRoot);
+    };
+    const right = (universe, item, predicate, isRoot) => {
+        return hone(universe, item, predicate, sidestep, Walkers.right(), isRoot);
+    };
+
+    const point = (element, offset) => ({
+        element,
+        offset
+    });
+
+    const scan$1 = (universe, element, direction) => {
+        // if a comment or zero-length text, scan the siblings
+        if ((universe.property().isText(element) && universe.property().getText(element).trim().length === 0)
+            || universe.property().isComment(element)) {
+            return direction(element).bind((elem) => {
+                return scan$1(universe, elem, direction).orThunk(() => {
+                    return Optional.some(elem);
+                });
+            });
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const toEnd = (universe, element) => {
+        if (universe.property().isText(element)) {
+            return universe.property().getText(element).length;
+        }
+        const children = universe.property().children(element);
+        return children.length;
+    };
+    const freefallRtl$2 = (universe, element) => {
+        const candidate = scan$1(universe, element, universe.query().prevSibling).getOr(element);
+        if (universe.property().isText(candidate)) {
+            return point(candidate, toEnd(universe, candidate));
+        }
+        const children = universe.property().children(candidate);
+        return children.length > 0 ? freefallRtl$2(universe, children[children.length - 1]) : point(candidate, toEnd(universe, candidate));
+    };
+
+    const freefallRtl$1 = freefallRtl$2;
+
+    const universe$3 = DomUniverse();
+    const freefallRtl = (element) => {
+        return freefallRtl$1(universe$3, element);
+    };
+
+    const isLeaf = (universe) => (element) => universe.property().children(element).length === 0;
+    const before$1 = (universe, item, isRoot) => {
+        return seekLeft$1(universe, item, isLeaf(universe), isRoot);
+    };
+    const after$1 = (universe, item, isRoot) => {
+        return seekRight$1(universe, item, isLeaf(universe), isRoot);
+    };
+    const seekLeft$1 = left;
+    const seekRight$1 = right;
+    go;
+
+    const universe$2 = DomUniverse();
+    const before = (element, isRoot) => {
+        return before$1(universe$2, element, isRoot);
+    };
+    const after = (element, isRoot) => {
+        return after$1(universe$2, element, isRoot);
+    };
+    const seekLeft = (element, predicate, isRoot) => {
+        return seekLeft$1(universe$2, element, predicate, isRoot);
+    };
+    const seekRight = (element, predicate, isRoot) => {
+        return seekRight$1(universe$2, element, predicate, isRoot);
+    };
+
+    const blockList = [
+        'body',
+        'p',
+        'div',
+        'article',
+        'aside',
+        'figcaption',
+        'figure',
+        'footer',
+        'header',
+        'nav',
+        'section',
+        'ol',
+        'ul',
+        // --- NOTE, TagBoundaries has li here. That means universe.isBoundary => true for li tags.
+        'table',
+        'thead',
+        'tfoot',
+        'tbody',
+        'caption',
+        'tr',
+        'td',
+        'th',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'blockquote',
+        'pre',
+        'address'
+    ];
+    const isList$1 = (universe, item) => {
+        const tagName = universe.property().name(item);
+        return contains$2(['ol', 'ul'], tagName);
+    };
+    const isBlock$1 = (universe, item) => {
+        const tagName = universe.property().name(item);
+        return contains$2(blockList, tagName);
+    };
+    const isEmptyTag$1 = (universe, item) => {
+        return contains$2(['br', 'img', 'hr', 'input'], universe.property().name(item));
+    };
+
+    const leftRight = (left, right) => ({
+        left,
+        right
+    });
+    const brokenPath = (first, second, splits) => ({
+        first,
+        second,
+        splits
+    });
+    const bisect = (universe, parent, child) => {
+        const children = universe.property().children(parent);
+        const index = findIndex(children, curry(universe.eq, child));
+        return index.map((ind) => {
+            return {
+                before: children.slice(0, ind),
+                after: children.slice(ind + 1)
+            };
+        });
+    };
+    /**
+     * Clone parent to the RIGHT and move everything after child in the parent element into
+     * a clone of the parent (placed after parent).
+     */
+    const breakToRight = (universe, parent, child) => {
+        return bisect(universe, parent, child).map((parts) => {
+            const second = universe.create().clone(parent);
+            universe.insert().appendAll(second, parts.after);
+            universe.insert().after(parent, second);
+            return leftRight(parent, second);
+        });
+    };
+    /**
+     * Clone parent to the LEFT and move everything before and including child into
+     * the a clone of the parent (placed before parent)
+     */
+    const breakToLeft = (universe, parent, child) => {
+        return bisect(universe, parent, child).map((parts) => {
+            const prior = universe.create().clone(parent);
+            universe.insert().appendAll(prior, parts.before.concat([child]));
+            universe.insert().appendAll(parent, parts.after);
+            universe.insert().before(parent, prior);
+            return leftRight(prior, parent);
+        });
+    };
+    /*
+     * Using the breaker, break from the child up to the top element defined by the predicate.
+     * It returns three values:
+     *   first: the top level element that completed the break
+     *   second: the optional element representing second part of the top-level split if the breaking completed successfully to the top
+     *   splits: a list of (Element, Element) pairs that represent the splits that have occurred on the way to the top.
+     */
+    const breakPath = (universe, item, isTop, breaker) => {
+        const next = (child, group, splits) => {
+            const fallback = brokenPath(child, Optional.none(), splits);
+            // Found the top, so stop.
+            if (isTop(child)) {
+                return brokenPath(child, group, splits);
+            }
+            else {
+                // Split the child at parent, and keep going
+                return universe.property().parent(child).bind((parent) => {
+                    return breaker(universe, parent, child).map((breakage) => {
+                        const extra = [{ first: breakage.left, second: breakage.right }];
+                        // Our isTop is based on the left-side parent, so keep it regardless of split.
+                        const nextChild = isTop(parent) ? parent : breakage.left;
+                        return next(nextChild, Optional.some(breakage.right), splits.concat(extra));
+                    });
+                }).getOr(fallback);
+            }
+        };
+        return next(item, Optional.none(), []);
+    };
+
+    const all = (universe, look, elements, f) => {
+        const head = elements[0];
+        const tail = elements.slice(1);
+        return f(universe, look, head, tail);
+    };
+    /**
+     * Check if look returns the same element for all elements, and return it if it exists.
+     */
+    const oneAll = (universe, look, elements) => {
+        return elements.length > 0 ?
+            all(universe, look, elements, unsafeOne) :
+            Optional.none();
+    };
+    const unsafeOne = (universe, look, head, tail) => {
+        const start = look(universe, head);
+        return foldr(tail, (b, a) => {
+            const current = look(universe, a);
+            return commonElement(universe, b, current);
+        }, start);
+    };
+    const commonElement = (universe, start, end) => {
+        return start.bind((s) => {
+            return end.filter(curry(universe.eq, s));
+        });
+    };
+
+    const eq = (universe, item) => {
+        return curry(universe.eq, item);
+    };
+    // Note: this can be exported if it is required in the future.
+    const ancestors$2 = (universe, start, end, isRoot = never) => {
+        // Inefficient if no isRoot is supplied.
+        // TODO: Andy knows there is a graph-based algorithm to find a common parent, but can't remember it
+        //        This also includes something to get the subset after finding the common parent
+        const ps1 = [start].concat(universe.up().all(start));
+        const ps2 = [end].concat(universe.up().all(end));
+        const prune = (path) => {
+            const index = findIndex(path, isRoot);
+            return index.fold(() => {
+                return path;
+            }, (ind) => {
+                return path.slice(0, ind + 1);
+            });
+        };
+        const pruned1 = prune(ps1);
+        const pruned2 = prune(ps2);
+        const shared = find$1(pruned1, (x) => {
+            return exists(pruned2, eq(universe, x));
+        });
+        return {
+            firstpath: pruned1,
+            secondpath: pruned2,
+            shared
+        };
+    };
+
+    const sharedOne$1 = oneAll;
+    const ancestors$1 = ancestors$2;
+    breakToLeft;
+    breakToRight;
+    breakPath;
+
+    const universe$1 = DomUniverse();
+    const sharedOne = (look, elements) => {
+        return sharedOne$1(universe$1, (_universe, element) => {
+            return look(element);
+        }, elements);
+    };
+    const ancestors = (start, finish, isRoot) => {
+        return ancestors$1(universe$1, start, finish, isRoot);
+    };
+
+    const universe = DomUniverse();
+    const isBlock = (element) => {
+        return isBlock$1(universe, element);
+    };
+    const isList = (element) => {
+        return isList$1(universe, element);
+    };
+    const isEmptyTag = (element) => {
+        return isEmptyTag$1(universe, element);
+    };
+
+    const merge$2 = (cells) => {
+        const isBr = isTag('br');
+        const advancedBr = (children) => {
+            return forall(children, (c) => {
+                return isBr(c) || (isText(c) && get$5(c).trim().length === 0);
+            });
+        };
+        const isListItem = (el) => {
+            return name(el) === 'li' || ancestor$2(el, isList).isSome();
+        };
+        const siblingIsBlock = (el) => {
+            return nextSibling(el).map((rightSibling) => {
+                if (isBlock(rightSibling)) {
+                    return true;
+                }
+                if (isEmptyTag(rightSibling)) {
+                    return name(rightSibling) === 'img' ? false : true;
+                }
+                return false;
+            }).getOr(false);
+        };
+        const markCell = (cell) => {
+            return last(cell).bind((rightEdge) => {
+                const rightSiblingIsBlock = siblingIsBlock(rightEdge);
+                return parent(rightEdge).map((parent) => {
+                    return rightSiblingIsBlock === true || isListItem(parent) || isBr(rightEdge) || (isBlock(parent) && !eq$1(cell, parent)) ? [] : [SugarElement.fromTag('br')];
+                });
+            }).getOr([]);
+        };
+        const markContent = () => {
+            const content = bind$2(cells, (cell) => {
+                const children = children$2(cell);
+                return advancedBr(children) ? [] : children.concat(markCell(cell));
+            });
+            return content.length === 0 ? [SugarElement.fromTag('br')] : content;
+        };
+        const contents = markContent();
+        empty(cells[0]);
+        append(cells[0], contents);
+    };
+
+    // Remove legacy sizing attributes such as "width"
+    const cleanupLegacyAttributes = (element) => {
+        remove$6(element, 'width');
+        remove$6(element, 'height');
+    };
+    const convertToPercentSizeWidth = (table) => {
+        const newWidth = getPercentTableWidth(table);
+        redistribute(table, Optional.some(newWidth), Optional.none());
+        cleanupLegacyAttributes(table);
+    };
+    const convertToPixelSizeWidth = (table) => {
+        const newWidth = getPixelTableWidth(table);
+        redistribute(table, Optional.some(newWidth), Optional.none());
+        cleanupLegacyAttributes(table);
+    };
+    const convertToPixelSizeHeight = (table) => {
+        const newHeight = getPixelTableHeight(table);
+        redistribute(table, Optional.none(), Optional.some(newHeight));
+        cleanupLegacyAttributes(table);
+    };
+    const convertToNoneSizeWidth = (table) => {
+        remove$4(table, 'width');
+        const columns = columns$1(table);
+        const rowElements = columns.length > 0 ? columns : cells$1(table);
+        each$2(rowElements, (cell) => {
+            remove$4(cell, 'width');
+            cleanupLegacyAttributes(cell);
+        });
+        cleanupLegacyAttributes(table);
+    };
+
+    const transferableAttributes = {
+        scope: [
+            'row',
+            'col'
+        ]
+    };
+    // NOTE: This may create a td instead of a th, but it is for irregular table handling.
+    const createCell = (doc) => () => {
+        const td = SugarElement.fromTag('td', doc.dom);
+        append$1(td, SugarElement.fromTag('br', doc.dom));
+        return td;
+    };
+    const createCol = (doc) => () => {
+        return SugarElement.fromTag('col', doc.dom);
+    };
+    const createColgroup = (doc) => () => {
+        return SugarElement.fromTag('colgroup', doc.dom);
+    };
+    const createRow$1 = (doc) => () => {
+        return SugarElement.fromTag('tr', doc.dom);
+    };
+    const replace$1 = (cell, tag, attrs) => {
+        const replica = copy$2(cell, tag);
+        // TODO: Snooker passes null to indicate 'remove attribute'
+        each$1(attrs, (v, k) => {
+            if (v === null) {
+                remove$6(replica, k);
+            }
+            else {
+                set$2(replica, k, v);
+            }
+        });
+        return replica;
+    };
+    // eslint-disable-next-line @tinymce/prefer-fun
+    const pasteReplace = (cell) => {
+        // TODO: check for empty content and don't return anything
+        return cell;
+    };
+    const cloneFormats = (oldCell, newCell, formats) => {
+        const first$1 = first(oldCell);
+        return first$1.map((firstText) => {
+            const formatSelector = formats.join(',');
+            // Find the ancestors of the first text node that match the given formats.
+            const parents = ancestors$3(firstText, formatSelector, (element) => {
+                return eq$1(element, oldCell);
+            });
+            // Add the matched ancestors to the new cell, then return the new cell.
+            return foldr(parents, (last, parent) => {
+                const clonedFormat = shallow(parent);
+                append$1(last, clonedFormat);
+                return clonedFormat;
+            }, newCell);
+        }).getOr(newCell);
+    };
+    const cloneAppropriateAttributes = (original, clone) => {
+        each$1(transferableAttributes, (validAttributes, attributeName) => getOpt(original, attributeName)
+            .filter((attribute) => contains$2(validAttributes, attribute))
+            .each((attribute) => set$2(clone, attributeName, attribute)));
+    };
+    const cellOperations = (mutate, doc, formatsToClone) => {
+        const cloneCss = (prev, clone) => {
+            // inherit the style and width, dont inherit the row height
+            copy$1(prev.element, clone);
+            remove$4(clone, 'height');
+            // dont inherit the width of spanning columns
+            if (prev.colspan !== 1) {
+                remove$4(clone, 'width');
+            }
+        };
+        const newCell = (prev) => {
+            const td = SugarElement.fromTag(name(prev.element), doc.dom);
+            const formats = formatsToClone.getOr(['strong', 'em', 'b', 'i', 'span', 'font', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div']);
+            // If we aren't cloning the child formatting, we can just give back the new td immediately.
+            const lastNode = formats.length > 0 ? cloneFormats(prev.element, td, formats) : td;
+            append$1(lastNode, SugarElement.fromTag('br'));
+            cloneCss(prev, td);
+            cloneAppropriateAttributes(prev.element, td);
+            mutate(prev.element, td);
+            return td;
+        };
+        const newCol = (prev) => {
+            const col = SugarElement.fromTag(name(prev.element), doc.dom);
+            cloneCss(prev, col);
+            mutate(prev.element, col);
+            return col;
+        };
+        return {
+            col: newCol,
+            colgroup: createColgroup(doc),
+            row: createRow$1(doc),
+            cell: newCell,
+            replace: replace$1,
+            colGap: createCol(doc),
+            gap: createCell(doc)
+        };
+    };
+    const paste$1 = (doc) => {
+        return {
+            col: createCol(doc),
+            colgroup: createColgroup(doc),
+            row: createRow$1(doc),
+            cell: createCell(doc),
+            replace: pasteReplace,
+            colGap: createCol(doc),
+            gap: createCell(doc)
+        };
+    };
+
+    const getGridSize = (table) => {
+        const warehouse = Warehouse.fromTable(table);
+        return warehouse.grid;
+    };
+
+    // substitution: () -> item
+    const merge$1 = (grid, bounds, comparator, substitution) => {
+        const rows = extractGridDetails(grid).rows;
+        // Mutating. Do we care about the efficiency gain?
+        if (rows.length === 0) {
+            return grid;
+        }
+        for (let i = bounds.startRow; i <= bounds.finishRow; i++) {
+            for (let j = bounds.startCol; j <= bounds.finishCol; j++) {
+                // We can probably simplify this again now that we aren't reusing merge.
+                const row = rows[i];
+                const isLocked = getCell(row, j).isLocked;
+                mutateCell(row, j, elementnew(substitution(), false, isLocked));
+            }
+        }
+        return grid;
+    };
+    // substitution: () -> item
+    const unmerge = (grid, target, comparator, substitution) => {
+        const rows = extractGridDetails(grid).rows;
+        // Mutating. Do we care about the efficiency gain?
+        let first = true;
+        // tslint:disable-next-line:prefer-for-of
+        for (let i = 0; i < rows.length; i++) {
+            for (let j = 0; j < cellLength(rows[0]); j++) {
+                const row = rows[i];
+                const currentCell = getCell(row, j);
+                const currentCellElm = currentCell.element;
+                const isToReplace = comparator(currentCellElm, target);
+                if (isToReplace && !first) {
+                    mutateCell(row, j, elementnew(substitution(), true, currentCell.isLocked));
+                }
+                else if (isToReplace) {
+                    first = false;
+                }
+            }
+        }
+        return grid;
+    };
+    const uniqueCells = (row, comparator) => {
+        return foldl(row, (rest, cell) => {
+            return exists(rest, (currentCell) => {
+                return comparator(currentCell.element, cell.element);
+            }) ? rest : rest.concat([cell]);
+        }, []);
+    };
+    const splitCols = (grid, index, comparator, substitution) => {
+        // We don't need to split rows if we're inserting at the first or last row of the old table
+        if (index > 0 && index < grid[0].cells.length) {
+            each$2(grid, (row) => {
+                const prevCell = row.cells[index - 1];
+                let offset = 0;
+                const substitute = substitution();
+                while (row.cells.length > index + offset && comparator(prevCell.element, row.cells[index + offset].element)) {
+                    mutateCell(row, index + offset, elementnew(substitute, true, row.cells[index + offset].isLocked));
+                    offset++;
+                }
+            });
+        }
+        return grid;
+    };
+    const splitRows = (grid, index, comparator, substitution) => {
+        // We don't need to split rows if we're inserting at the first or last row of the old table
+        const rows = extractGridDetails(grid).rows;
+        if (index > 0 && index < rows.length) {
+            const rowPrevCells = rows[index - 1].cells;
+            const cells = uniqueCells(rowPrevCells, comparator);
+            each$2(cells, (cell) => {
+                // only make a sub when we have to
+                let replacement = Optional.none();
+                for (let i = index; i < rows.length; i++) {
+                    for (let j = 0; j < cellLength(rows[0]); j++) {
+                        const row = rows[i];
+                        const current = getCell(row, j);
+                        const isToReplace = comparator(current.element, cell.element);
+                        if (isToReplace) {
+                            if (replacement.isNone()) {
+                                replacement = Optional.some(substitution());
+                            }
+                            replacement.each((sub) => {
+                                mutateCell(row, j, elementnew(sub, true, current.isLocked));
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        return grid;
+    };
+
+    /*
+      Fitment, is a module used to ensure that the Inserted table (gridB) can fit squareley within the Host table (gridA).
+        - measure returns a delta of rows and cols, eg:
+            - col: 3 means gridB can fit with 3 spaces to spare
+            - row: -5 means gridB can needs 5 more rows to completely fit into gridA
+            - col: 0, row: 0 depics perfect fitment
+
+        - tailor, requires a delta and returns grid that is built to match the delta, tailored to fit.
+          eg: 3x3 gridA, with a delta col: -3, row: 2 returns a new grid 3 rows x 6 cols
+
+        - assumptions: All grids used by this module should be rectangular
+    */
+    const measure = (startAddress, gridA, gridB) => {
+        if (startAddress.row >= gridA.length || startAddress.column > cellLength(gridA[0])) {
+            return Result.error('invalid start address out of table bounds, row: ' + startAddress.row + ', column: ' + startAddress.column);
+        }
+        const rowRemainder = gridA.slice(startAddress.row);
+        const colRemainder = rowRemainder[0].cells.slice(startAddress.column);
+        const colRequired = cellLength(gridB[0]);
+        const rowRequired = gridB.length;
+        return Result.value({
+            rowDelta: rowRemainder.length - rowRequired,
+            colDelta: colRemainder.length - colRequired
+        });
+    };
+    const measureWidth = (gridA, gridB) => {
+        const colLengthA = cellLength(gridA[0]);
+        const colLengthB = cellLength(gridB[0]);
+        return {
+            rowDelta: 0,
+            colDelta: colLengthA - colLengthB
+        };
+    };
+    const measureHeight = (gridA, gridB) => {
+        const rowLengthA = gridA.length;
+        const rowLengthB = gridB.length;
+        return {
+            rowDelta: rowLengthA - rowLengthB,
+            colDelta: 0
+        };
+    };
+    const generateElements = (amount, row, generators, isLocked) => {
+        const generator = row.section === 'colgroup' ? generators.col : generators.cell;
+        return range$1(amount, (idx) => elementnew(generator(), true, isLocked(idx)));
+    };
+    const rowFill = (grid, amount, generators, lockedColumns) => {
+        const exampleRow = grid[grid.length - 1];
+        return grid.concat(range$1(amount, () => {
+            const generator = exampleRow.section === 'colgroup' ? generators.colgroup : generators.row;
+            const row = clone$2(exampleRow, generator, identity);
+            const elements = generateElements(row.cells.length, row, generators, (idx) => has$1(lockedColumns, idx.toString()));
+            return setCells(row, elements);
+        }));
+    };
+    const colFill = (grid, amount, generators, startIndex) => map$1(grid, (row) => {
+        const newChildren = generateElements(amount, row, generators, never);
+        return addCells(row, startIndex, newChildren);
+    });
+    const lockedColFill = (grid, generators, lockedColumns) => map$1(grid, (row) => {
+        return foldl(lockedColumns, (acc, colNum) => {
+            const newChild = generateElements(1, row, generators, always)[0];
+            return addCell(acc, colNum, newChild);
+        }, row);
+    });
+    const tailor = (gridA, delta, generators) => {
+        const fillCols = delta.colDelta < 0 ? colFill : identity;
+        const fillRows = delta.rowDelta < 0 ? rowFill : identity;
+        const lockedColumns = getLockedColumnsFromGrid(gridA);
+        const gridWidth = cellLength(gridA[0]);
+        const isLastColLocked = exists(lockedColumns, (locked) => locked === gridWidth - 1);
+        const modifiedCols = fillCols(gridA, Math.abs(delta.colDelta), generators, isLastColLocked ? gridWidth - 1 : gridWidth);
+        // Need to recalculate locked column positions
+        const newLockedColumns = getLockedColumnsFromGrid(modifiedCols);
+        return fillRows(modifiedCols, Math.abs(delta.rowDelta), generators, mapToObject(newLockedColumns, always));
+    };
+
+    const isSpanning = (grid, row, col, comparator) => {
+        const candidate = getCell(grid[row], col);
+        const matching = curry(comparator, candidate.element);
+        const currentRow = grid[row];
+        // sanity check, 1x1 has no spans
+        return grid.length > 1 && cellLength(currentRow) > 1 &&
+            (
+            // search left, if we're not on the left edge
+            // search down, if we're not on the bottom edge
+            (col > 0 && matching(getCellElement(currentRow, col - 1))) ||
+                // search right, if we're not on the right edge
+                (col < currentRow.cells.length - 1 && matching(getCellElement(currentRow, col + 1))) ||
+                // search up, if we're not on the top edge
+                (row > 0 && matching(getCellElement(grid[row - 1], col))) ||
+                (row < grid.length - 1 && matching(getCellElement(grid[row + 1], col))));
+    };
+    const mergeTables = (startAddress, gridA, gridBRows, generator, comparator, lockedColumns) => {
+        // Assumes
+        //  - gridA is square and gridB is square
+        const startRow = startAddress.row;
+        const startCol = startAddress.column;
+        const mergeHeight = gridBRows.length;
+        const mergeWidth = cellLength(gridBRows[0]);
+        const endRow = startRow + mergeHeight;
+        const endCol = startCol + mergeWidth + lockedColumns.length;
+        const lockedColumnObj = mapToObject(lockedColumns, always);
+        // embrace the mutation - I think this is easier to follow? To discuss.
+        for (let r = startRow; r < endRow; r++) {
+            let skippedCol = 0;
+            for (let c = startCol; c < endCol; c++) {
+                if (lockedColumnObj[c]) {
+                    skippedCol++;
+                    continue;
+                }
+                if (isSpanning(gridA, r, c, comparator)) {
+                    // mutation within mutation, it's mutatception
+                    unmerge(gridA, getCellElement(gridA[r], c), comparator, generator.cell);
+                }
+                const gridBColIndex = c - startCol - skippedCol;
+                const newCell = getCell(gridBRows[r - startRow], gridBColIndex);
+                // This can't be a col element at this point so we can cast it to a cell
+                const newCellElm = newCell.element;
+                const replacement = generator.replace(newCellElm);
+                mutateCell(gridA[r], c, elementnew(replacement, true, newCell.isLocked));
+            }
+        }
+        return gridA;
+    };
+    const getValidStartAddress = (currentStartAddress, grid, lockedColumns) => {
+        const gridColLength = cellLength(grid[0]);
+        /*
+          When we paste from a table without colgroups to a table that has them, we need to ensure we are inserting them at
+          the correct row index (the `col`s are treated as cells in the Structs.RowCells array).
+      
+          To do this, we get the number of `col`s in the destination table and add that to the startAddress row.
+        */
+        const adjustedRowAddress = extractGridDetails(grid).cols.length + currentStartAddress.row;
+        const possibleColAddresses = range$1(gridColLength - currentStartAddress.column, (num) => num + currentStartAddress.column);
+        // Find a starting column address that isn't a locked column
+        const validColAddress = find$1(possibleColAddresses, (num) => forall(lockedColumns, (col) => col !== num)).getOr(gridColLength - 1);
+        return {
+            row: adjustedRowAddress,
+            column: validColAddress
+        };
+    };
+    const getLockedColumnsWithinBounds = (startAddress, rows, lockedColumns) => filter$2(lockedColumns, (colNum) => colNum >= startAddress.column && colNum <= cellLength(rows[0]) + startAddress.column);
+    const merge = (startAddress, gridA, gridB, generator, comparator) => {
+        const lockedColumns = getLockedColumnsFromGrid(gridA);
+        const validStartAddress = getValidStartAddress(startAddress, gridA, lockedColumns);
+        /*
+          We always remove the cols (extract the rows) from the table being pasted. This ensures that if we are pasting from a table with colgroups into a table
+          without them, we don't insert the `col` elements as if they were `td`s
+        */
+        const gridBRows = extractGridDetails(gridB).rows;
+        const lockedColumnsWithinBounds = getLockedColumnsWithinBounds(validStartAddress, gridBRows, lockedColumns);
+        const result = measure(validStartAddress, gridA, gridBRows);
+        /*
+          Need to subtract extra delta for locked columns between startAddress and the startAddress + gridB column count as
+          locked column cells cannot be merged into. Therefore, extra column cells need to be added to gridA to allow gridB cells to be merged
+        */
+        return result.map((diff) => {
+            const delta = {
+                ...diff,
+                colDelta: diff.colDelta - lockedColumnsWithinBounds.length
+            };
+            const fittedGrid = tailor(gridA, delta, generator);
+            // Need to recalculate lockedColumnsWithinBounds as tailoring may have inserted columns before last locked column which changes the locked index
+            const newLockedColumns = getLockedColumnsFromGrid(fittedGrid);
+            const newLockedColumnsWithinBounds = getLockedColumnsWithinBounds(validStartAddress, gridBRows, newLockedColumns);
+            return mergeTables(validStartAddress, fittedGrid, gridBRows, generator, comparator, newLockedColumnsWithinBounds);
+        });
+    };
+    const insertCols = (index, gridA, gridB, generator, comparator) => {
+        splitCols(gridA, index, comparator, generator.cell);
+        const delta = measureHeight(gridB, gridA);
+        const fittedNewGrid = tailor(gridB, delta, generator);
+        const secondDelta = measureHeight(gridA, fittedNewGrid);
+        const fittedOldGrid = tailor(gridA, secondDelta, generator);
+        return map$1(fittedOldGrid, (gridRow, i) => {
+            return addCells(gridRow, index, fittedNewGrid[i].cells);
+        });
+    };
+    /*
+      Inserting rows with locked columns
+      - Tailor gridA first (this needs to be done first as the position of the locked columns may change when tailoring gridA and the location of the locked columns needs to be stable before tailoring gridB)
+        - measure delta between gridA and gridB (pasted rows) - if negative colDelta, gridA needs extra columns added to match gridB
+        - need to calculate how many columns in gridB cannot be directly inserted into gridA - this is how many extra columns need to be added to gridA (this consideres the fact locked column cannot be inserted into)
+          - nonLockedGridA + lockedGridA - gridB = colDelta (By subtracting locked column count, can get required diff)
+        - tailor gridA by adding the required extra columns if necessary either at the end of gridA or before the last column depending on whether it is locked
+      - Recalculate where the locked columns are in gridA after tailoring
+      - Measure and determine if extra columns need to be added to gridB (locked columns should not count towards the delta as colFilling (adding extra columns) for locked columns is handled separately)
+      - Do a lockedColFill on gridB
+      - Tailor gridB by adding extra columns to end of gridB if required
+    */
+    const insertRows = (index, gridA, gridB, generator, comparator) => {
+        splitRows(gridA, index, comparator, generator.cell);
+        const locked = getLockedColumnsFromGrid(gridA);
+        const diff = measureWidth(gridA, gridB);
+        const delta = {
+            ...diff,
+            colDelta: diff.colDelta - locked.length
+        };
+        const fittedOldGrid = tailor(gridA, delta, generator);
+        const { cols: oldCols, rows: oldRows } = extractGridDetails(fittedOldGrid);
+        const newLocked = getLockedColumnsFromGrid(fittedOldGrid);
+        const secondDiff = measureWidth(gridB, gridA);
+        // Don't want the locked columns to count towards to the colDelta as column filling for locked columns is handled separately
+        const secondDelta = {
+            ...secondDiff,
+            colDelta: secondDiff.colDelta + newLocked.length
+        };
+        const fittedGridB = lockedColFill(gridB, generator, newLocked);
+        const fittedNewGrid = tailor(fittedGridB, secondDelta, generator);
+        return [
+            ...oldCols,
+            ...oldRows.slice(0, index),
+            ...fittedNewGrid,
+            ...oldRows.slice(index, oldRows.length)
+        ];
+    };
+
+    const cloneRow = (row, cloneCell, comparator, substitution) => clone$2(row, (elem) => substitution(elem, comparator), cloneCell);
+    // substitution :: (item, comparator) -> item
+    // example is the location of the cursor (the row index)
+    // index is the insert position (at - or after - example) (the row index)
+    const insertRowAt = (grid, index, example, comparator, substitution) => {
+        const { rows, cols } = extractGridDetails(grid);
+        const before = rows.slice(0, index);
+        const after = rows.slice(index);
+        const newRow = cloneRow(rows[example], (ex, c) => {
+            const withinSpan = index > 0 && index < rows.length && comparator(getCellElement(rows[index - 1], c), getCellElement(rows[index], c));
+            const ret = withinSpan ? getCell(rows[index], c) : elementnew(substitution(ex.element, comparator), true, ex.isLocked);
+            return ret;
+        }, comparator, substitution);
+        return [
+            ...cols,
+            ...before,
+            newRow,
+            ...after
+        ];
+    };
+    const getElementFor = (row, column, section, withinSpan, example, comparator, substitution) => {
+        if (section === 'colgroup' || !withinSpan) {
+            const cell = getCell(row, example);
+            // locked is explicitly set to false so the newly inserted column doesn't inherit example column locked state
+            return elementnew(substitution(cell.element, comparator), true, false);
+        }
+        else {
+            return getCell(row, column);
+        }
+    };
+    // substitution :: (item, comparator) -> item
+    // example is the location of the cursor (the column index)
+    // index is the insert position (at - or after - example) (the column index)
+    const insertColumnAt = (grid, index, example, comparator, substitution) => map$1(grid, (row) => {
+        const withinSpan = index > 0 && index < cellLength(row) && comparator(getCellElement(row, index - 1), getCellElement(row, index));
+        const sub = getElementFor(row, index, row.section, withinSpan, example, comparator, substitution);
+        return addCell(row, index, sub);
+    });
+    const deleteColumnsAt = (grid, columns) => bind$2(grid, (row) => {
+        const existingCells = row.cells;
+        const cells = foldr(columns, (acc, column) => column >= 0 && column < acc.length ? acc.slice(0, column).concat(acc.slice(column + 1)) : acc, existingCells);
+        return cells.length > 0 ? [rowcells(row.element, cells, row.section, row.isNew)] : [];
+    });
+    const deleteRowsAt = (grid, start, finish) => {
+        const { rows, cols } = extractGridDetails(grid);
+        return [
+            ...cols,
+            ...rows.slice(0, start),
+            ...rows.slice(finish + 1)
+        ];
+    };
+
+    const notInStartRow = (grid, rowIndex, colIndex, comparator) => getCellElement(grid[rowIndex], colIndex) !== undefined && (rowIndex > 0 && comparator(getCellElement(grid[rowIndex - 1], colIndex), getCellElement(grid[rowIndex], colIndex)));
+    const notInStartColumn = (row, index, comparator) => index > 0 && comparator(getCellElement(row, index - 1), getCellElement(row, index));
+    // This checks for cells that aren't in the "start" position as the model will create duplicate element references for
+    // each column/row that the cell spans. As an example, for a merged cell with rowspan="2", the cell in the second row is a duplicate
+    // of the cell in the first row.
+    const isDuplicatedCell = (grid, rowIndex, colIndex, comparator) => notInStartRow(grid, rowIndex, colIndex, comparator) || notInStartColumn(grid[rowIndex], colIndex, comparator);
+    const rowReplacerPredicate = (targetRow, columnHeaders) => {
+        const entireTableIsHeader = forall(columnHeaders, identity) && isHeaderCells(targetRow.cells);
+        return entireTableIsHeader ? always : (cell, _rowIndex, colIndex) => {
+            const type = name(cell.element);
+            return !(type === 'th' && columnHeaders[colIndex]);
+        };
+    };
+    const columnReplacePredicate = (targetColumn, rowHeaders) => {
+        const entireTableIsHeader = forall(rowHeaders, identity) && isHeaderCells(targetColumn);
+        return entireTableIsHeader ? always : (cell, rowIndex, _colIndex) => {
+            const type = name(cell.element);
+            return !(type === 'th' && rowHeaders[rowIndex]);
+        };
+    };
+    const determineScope = (applyScope, cell, newScope, isInHeader) => {
+        const hasSpan = (scope) => scope === 'row' ? hasRowspan(cell) : hasColspan(cell);
+        const getScope = (scope) => hasSpan(scope) ? `${scope}group` : scope;
+        if (applyScope) {
+            return isHeaderCell(cell) ? getScope(newScope) : null;
+        }
+        else if (isInHeader && isHeaderCell(cell)) {
+            // The cell is still in a header row/column so ensure the right scope is reverted to
+            const oppositeScope = newScope === 'row' ? 'col' : 'row';
+            return getScope(oppositeScope);
+        }
+        else {
+            // No longer a header so ensure the scope is removed
+            return null;
+        }
+    };
+    const rowScopeGenerator = (applyScope, columnHeaders) => (cell, rowIndex, columnIndex) => Optional.some(determineScope(applyScope, cell.element, 'col', columnHeaders[columnIndex]));
+    const columnScopeGenerator = (applyScope, rowHeaders) => (cell, rowIndex) => Optional.some(determineScope(applyScope, cell.element, 'row', rowHeaders[rowIndex]));
+    const replace = (cell, comparator, substitute) => elementnew(substitute(cell.element, comparator), true, cell.isLocked);
+    const replaceIn = (grid, targets, comparator, substitute, replacer, genScope, shouldReplace) => {
+        const isTarget = (cell) => {
+            return exists(targets, (target) => {
+                return comparator(cell.element, target.element);
+            });
+        };
+        return map$1(grid, (row, rowIndex) => {
+            return mapCells(row, (cell, colIndex) => {
+                if (isTarget(cell)) {
+                    const newCell = shouldReplace(cell, rowIndex, colIndex) ? replacer(cell, comparator, substitute) : cell;
+                    // Update the scope
+                    genScope(newCell, rowIndex, colIndex).each((scope) => {
+                        setOptions(newCell.element, { scope: Optional.from(scope) });
+                    });
+                    return newCell;
+                }
+                else {
+                    return cell;
+                }
+            });
+        });
+    };
+    const getColumnCells = (rows, columnIndex, comparator) => bind$2(rows, (row, i) => {
+        // check if already added.
+        return isDuplicatedCell(rows, i, columnIndex, comparator) ? [] : [getCell(row, columnIndex)];
+    });
+    const getRowCells = (rows, rowIndex, comparator) => {
+        const targetRow = rows[rowIndex];
+        return bind$2(targetRow.cells, (item, i) => {
+            // Check that we haven't already added this one.
+            return isDuplicatedCell(rows, rowIndex, i, comparator) ? [] : [item];
+        });
+    };
+    const replaceColumns = (grid, indexes, applyScope, comparator, substitution) => {
+        // Make this efficient later.
+        const rows = extractGridDetails(grid).rows;
+        const targets = bind$2(indexes, (index) => getColumnCells(rows, index, comparator));
+        const rowHeaders = map$1(rows, (row) => isHeaderCells(row.cells));
+        const shouldReplaceCell = columnReplacePredicate(targets, rowHeaders);
+        const scopeGenerator = columnScopeGenerator(applyScope, rowHeaders);
+        return replaceIn(grid, targets, comparator, substitution, replace, scopeGenerator, shouldReplaceCell);
+    };
+    const replaceRows = (grid, indexes, section, applyScope, comparator, substitution, tableSection) => {
+        const { cols, rows } = extractGridDetails(grid);
+        const targetRow = rows[indexes[0]];
+        const targets = bind$2(indexes, (index) => getRowCells(rows, index, comparator));
+        const columnHeaders = map$1(targetRow.cells, (_cell, index) => isHeaderCells(getColumnCells(rows, index, comparator)));
+        // Transform and replace the target row
+        // TODO: TINY-7776: This doesn't deal with rowspans which can break the layout when moving to a new section
+        const newRows = [...rows];
+        each$2(indexes, (index) => {
+            newRows[index] = tableSection.transformRow(rows[index], section);
+        });
+        const newGrid = [...cols, ...newRows];
+        const shouldReplaceCell = rowReplacerPredicate(targetRow, columnHeaders);
+        const scopeGenerator = rowScopeGenerator(applyScope, columnHeaders);
+        return replaceIn(newGrid, targets, comparator, substitution, tableSection.transformCell, scopeGenerator, shouldReplaceCell);
+    };
+    const replaceCells = (grid, details, comparator, substitution) => {
+        const rows = extractGridDetails(grid).rows;
+        const targetCells = map$1(details, (detail) => getCell(rows[detail.row], detail.column));
+        return replaceIn(grid, targetCells, comparator, substitution, replace, Optional.none, always);
+    };
+
+    const uniqueColumns = (details) => {
+        const uniqueCheck = (rest, detail) => {
+            const columnExists = exists(rest, (currentDetail) => currentDetail.column === detail.column);
+            return columnExists ? rest : rest.concat([detail]);
+        };
+        return foldl(details, uniqueCheck, []).sort((detailA, detailB) => detailA.column - detailB.column);
+    };
+
+    // This uses a slight variation to the default `ContentEditable.isEditable` behaviour,
+    // as when the element is detached we assume it is editable because it is a new cell.
+    const isEditable = (elem) => isEditable$1(elem, true);
+    const prune = (table) => {
+        const cells = cells$1(table);
+        if (cells.length === 0) {
+            remove$5(table);
+        }
+    };
+    const outcome = (grid, cursor) => ({
+        grid,
+        cursor
+    });
+    const findEditableCursorPosition = (rows) => findMap(rows, (row) => findMap(row.cells, (cell) => {
+        const elem = cell.element;
+        return someIf(isEditable(elem), elem);
+    }));
+    const elementFromGrid = (grid, row, column) => {
+        const rows = extractGridDetails(grid).rows;
+        return Optional.from(rows[row]?.cells[column]?.element)
+            .filter(isEditable)
+            // Fallback to the first valid position in the table
+            .orThunk(() => findEditableCursorPosition(rows));
+    };
+    const bundle = (grid, row, column) => {
+        const cursorElement = elementFromGrid(grid, row, column);
+        return outcome(grid, cursorElement);
+    };
+    const uniqueRows = (details) => {
+        const rowCompilation = (rest, detail) => {
+            const rowExists = exists(rest, (currentDetail) => currentDetail.row === detail.row);
+            return rowExists ? rest : rest.concat([detail]);
+        };
+        return foldl(details, rowCompilation, []).sort((detailA, detailB) => detailA.row - detailB.row);
+    };
+    const opInsertRowsBefore = (grid, details, comparator, genWrappers) => {
+        const targetIndex = details[0].row;
+        const rows = uniqueRows(details);
+        const newGrid = foldr(rows, (acc, row) => {
+            const newG = insertRowAt(acc.grid, targetIndex, row.row + acc.delta, comparator, genWrappers.getOrInit);
+            return { grid: newG, delta: acc.delta + 1 };
+        }, { grid, delta: 0 }).grid;
+        return bundle(newGrid, targetIndex, details[0].column);
+    };
+    const opInsertRowsAfter = (grid, details, comparator, genWrappers) => {
+        const rows = uniqueRows(details);
+        const target = rows[rows.length - 1];
+        const targetIndex = target.row + target.rowspan;
+        const newGrid = foldr(rows, (newG, row) => {
+            return insertRowAt(newG, targetIndex, row.row, comparator, genWrappers.getOrInit);
+        }, grid);
+        return bundle(newGrid, targetIndex, details[0].column);
+    };
+    const opInsertColumnsBefore = (grid, extractDetail, comparator, genWrappers) => {
+        const details = extractDetail.details;
+        const columns = uniqueColumns(details);
+        const targetIndex = columns[0].column;
+        const newGrid = foldr(columns, (acc, col) => {
+            const newG = insertColumnAt(acc.grid, targetIndex, col.column + acc.delta, comparator, genWrappers.getOrInit);
+            return { grid: newG, delta: acc.delta + 1 };
+        }, { grid, delta: 0 }).grid;
+        return bundle(newGrid, details[0].row, targetIndex);
+    };
+    const opInsertColumnsAfter = (grid, extractDetail, comparator, genWrappers) => {
+        const details = extractDetail.details;
+        const target = details[details.length - 1];
+        const targetIndex = target.column + target.colspan;
+        const columns = uniqueColumns(details);
+        const newGrid = foldr(columns, (newG, col) => {
+            return insertColumnAt(newG, targetIndex, col.column, comparator, genWrappers.getOrInit);
+        }, grid);
+        return bundle(newGrid, details[0].row, targetIndex);
+    };
+    const opMakeColumnsHeader = (initialGrid, details, comparator, genWrappers) => {
+        const columns = uniqueColumns(details);
+        const columnIndexes = map$1(columns, (detail) => detail.column);
+        const newGrid = replaceColumns(initialGrid, columnIndexes, true, comparator, genWrappers.replaceOrInit);
+        return bundle(newGrid, details[0].row, details[0].column);
+    };
+    const opMakeCellsHeader = (initialGrid, details, comparator, genWrappers) => {
+        const newGrid = replaceCells(initialGrid, details, comparator, genWrappers.replaceOrInit);
+        return bundle(newGrid, details[0].row, details[0].column);
+    };
+    const opUnmakeColumnsHeader = (initialGrid, details, comparator, genWrappers) => {
+        const columns = uniqueColumns(details);
+        const columnIndexes = map$1(columns, (detail) => detail.column);
+        const newGrid = replaceColumns(initialGrid, columnIndexes, false, comparator, genWrappers.replaceOrInit);
+        return bundle(newGrid, details[0].row, details[0].column);
+    };
+    const opUnmakeCellsHeader = (initialGrid, details, comparator, genWrappers) => {
+        const newGrid = replaceCells(initialGrid, details, comparator, genWrappers.replaceOrInit);
+        return bundle(newGrid, details[0].row, details[0].column);
+    };
+    const makeRowsSection = (section, applyScope) => (initialGrid, details, comparator, genWrappers, tableSection) => {
+        const rows = uniqueRows(details);
+        const rowIndexes = map$1(rows, (detail) => detail.row);
+        const newGrid = replaceRows(initialGrid, rowIndexes, section, applyScope, comparator, genWrappers.replaceOrInit, tableSection);
+        return bundle(newGrid, details[0].row, details[0].column);
+    };
+    const opMakeRowsHeader = makeRowsSection('thead', true);
+    const opMakeRowsBody = makeRowsSection('tbody', false);
+    const opMakeRowsFooter = makeRowsSection('tfoot', false);
+    const opEraseColumns = (grid, extractDetail, _comparator, _genWrappers) => {
+        const columns = uniqueColumns(extractDetail.details);
+        const newGrid = deleteColumnsAt(grid, map$1(columns, (column) => column.column));
+        const maxColIndex = newGrid.length > 0 ? newGrid[0].cells.length - 1 : 0;
+        return bundle(newGrid, columns[0].row, Math.min(columns[0].column, maxColIndex));
+    };
+    const opEraseRows = (grid, details, _comparator, _genWrappers) => {
+        const rows = uniqueRows(details);
+        const newGrid = deleteRowsAt(grid, rows[0].row, rows[rows.length - 1].row);
+        const maxRowIndex = Math.max(extractGridDetails(newGrid).rows.length - 1, 0);
+        return bundle(newGrid, Math.min(details[0].row, maxRowIndex), details[0].column);
+    };
+    const opMergeCells = (grid, mergable, comparator, genWrappers) => {
+        const cells = mergable.cells;
+        merge$2(cells);
+        const newGrid = merge$1(grid, mergable.bounds, comparator, genWrappers.merge(cells));
+        return outcome(newGrid, Optional.from(cells[0]));
+    };
+    const opUnmergeCells = (grid, unmergable, comparator, genWrappers) => {
+        const unmerge$1 = (b, cell) => unmerge(b, cell, comparator, genWrappers.unmerge(cell));
+        const newGrid = foldr(unmergable, unmerge$1, grid);
+        return outcome(newGrid, Optional.from(unmergable[0]));
+    };
+    const opPasteCells = (grid, pasteDetails, comparator, _genWrappers) => {
+        const gridify = (table, generators) => {
+            const wh = Warehouse.fromTable(table);
+            return toGrid(wh, generators, true);
+        };
+        const gridB = gridify(pasteDetails.clipboard, pasteDetails.generators);
+        const startAddress = address(pasteDetails.row, pasteDetails.column);
+        const mergedGrid = merge(startAddress, grid, gridB, pasteDetails.generators, comparator);
+        return mergedGrid.fold(() => outcome(grid, Optional.some(pasteDetails.element)), (newGrid) => {
+            return bundle(newGrid, pasteDetails.row, pasteDetails.column);
+        });
+    };
+    const gridifyRows = (rows, generators, context) => {
+        const pasteDetails = fromPastedRows(rows, context.section);
+        const wh = Warehouse.generate(pasteDetails);
+        return toGrid(wh, generators, true);
+    };
+    const opPasteColsBefore = (grid, pasteDetails, comparator, _genWrappers) => {
+        const rows = extractGridDetails(grid).rows;
+        const index = pasteDetails.cells[0].column;
+        const context = rows[pasteDetails.cells[0].row];
+        const gridB = gridifyRows(pasteDetails.clipboard, pasteDetails.generators, context);
+        const mergedGrid = insertCols(index, grid, gridB, pasteDetails.generators, comparator);
+        return bundle(mergedGrid, pasteDetails.cells[0].row, pasteDetails.cells[0].column);
+    };
+    const opPasteColsAfter = (grid, pasteDetails, comparator, _genWrappers) => {
+        const rows = extractGridDetails(grid).rows;
+        const index = pasteDetails.cells[pasteDetails.cells.length - 1].column + pasteDetails.cells[pasteDetails.cells.length - 1].colspan;
+        const context = rows[pasteDetails.cells[0].row];
+        const gridB = gridifyRows(pasteDetails.clipboard, pasteDetails.generators, context);
+        const mergedGrid = insertCols(index, grid, gridB, pasteDetails.generators, comparator);
+        return bundle(mergedGrid, pasteDetails.cells[0].row, index);
+    };
+    const opPasteRowsBefore = (grid, pasteDetails, comparator, _genWrappers) => {
+        const rows = extractGridDetails(grid).rows;
+        const index = pasteDetails.cells[0].row;
+        const context = rows[index];
+        const gridB = gridifyRows(pasteDetails.clipboard, pasteDetails.generators, context);
+        const mergedGrid = insertRows(index, grid, gridB, pasteDetails.generators, comparator);
+        return bundle(mergedGrid, pasteDetails.cells[0].row, pasteDetails.cells[0].column);
+    };
+    const opPasteRowsAfter = (grid, pasteDetails, comparator, _genWrappers) => {
+        const rows = extractGridDetails(grid).rows;
+        const index = pasteDetails.cells[pasteDetails.cells.length - 1].row + pasteDetails.cells[pasteDetails.cells.length - 1].rowspan;
+        const context = rows[pasteDetails.cells[0].row];
+        const gridB = gridifyRows(pasteDetails.clipboard, pasteDetails.generators, context);
+        const mergedGrid = insertRows(index, grid, gridB, pasteDetails.generators, comparator);
+        return bundle(mergedGrid, index, pasteDetails.cells[0].column);
+    };
+    const opGetColumnsType = (table, target) => {
+        const house = Warehouse.fromTable(table);
+        const details = onCells(house, target);
+        return details.bind((selectedCells) => {
+            const lastSelectedCell = selectedCells[selectedCells.length - 1];
+            const minColRange = selectedCells[0].column;
+            const maxColRange = lastSelectedCell.column + lastSelectedCell.colspan;
+            const selectedColumnCells = flatten(map$1(house.all, (row) => filter$2(row.cells, (cell) => cell.column >= minColRange && cell.column < maxColRange)));
+            return findCommonCellType(selectedColumnCells);
+        }).getOr('');
+    };
+    const opGetCellsType = (table, target) => {
+        const house = Warehouse.fromTable(table);
+        const details = onCells(house, target);
+        return details.bind(findCommonCellType).getOr('');
+    };
+    const opGetRowsType = (table, target) => {
+        const house = Warehouse.fromTable(table);
+        const details = onCells(house, target);
+        return details.bind((selectedCells) => {
+            const lastSelectedCell = selectedCells[selectedCells.length - 1];
+            const minRowRange = selectedCells[0].row;
+            const maxRowRange = lastSelectedCell.row + lastSelectedCell.rowspan;
+            const selectedRows = house.all.slice(minRowRange, maxRowRange);
+            return findCommonRowType(selectedRows);
+        }).getOr('');
+    };
+    // Only column modifications force a resizing. Everything else just tries to preserve the table as is.
+    const resize = (table, list, details, behaviours) => adjustWidthTo(table, list, details, behaviours.sizing);
+    const adjustAndRedistributeWidths = (table, list, details, behaviours) => adjustAndRedistributeWidths$1(table, list, details, behaviours.sizing, behaviours.resize);
+    // Custom selection extractors
+    const firstColumnIsLocked = (_warehouse, details) => exists(details, (detail) => detail.column === 0 && detail.isLocked);
+    // TODO: Maybe have an Arr.existsR which would be more efficient for most cases below
+    const lastColumnIsLocked = (warehouse, details) => exists(details, (detail) => detail.column + detail.colspan >= warehouse.grid.columns && detail.isLocked);
+    const getColumnsWidth = (warehouse, details) => {
+        const columns$1 = columns(warehouse);
+        const uniqueCols = uniqueColumns(details);
+        return foldl(uniqueCols, (acc, detail) => {
+            const column = columns$1[detail.column];
+            const colWidth = column.map(getOuter).getOr(0);
+            return acc + colWidth;
+        }, 0);
+    };
+    const insertColumnsExtractor = (before) => (warehouse, target) => onCells(warehouse, target).filter((details) => {
+        const checkLocked = before ? firstColumnIsLocked : lastColumnIsLocked;
+        return !checkLocked(warehouse, details);
+    }).map((details) => ({
+        details,
+        pixelDelta: getColumnsWidth(warehouse, details),
+    }));
+    const eraseColumnsExtractor = (warehouse, target) => onUnlockedCells(warehouse, target).map((details) => ({
+        details,
+        pixelDelta: -getColumnsWidth(warehouse, details), // needs to be negative as we are removing columns
+    }));
+    const pasteColumnsExtractor = (before) => (warehouse, target) => onPasteByEditor(warehouse, target).filter((details) => {
+        const checkLocked = before ? firstColumnIsLocked : lastColumnIsLocked;
+        return !checkLocked(warehouse, details.cells);
+    });
+    const headerCellGenerator = Generators.transform('th');
+    const bodyCellGenerator = Generators.transform('td');
+    const insertRowsBefore = (table, target, generators, behaviours) => run(opInsertRowsBefore, onCells, noop, noop, Generators.modification, table, target, generators, behaviours);
+    const insertRowsAfter = (table, target, generators, behaviours) => run(opInsertRowsAfter, onCells, noop, noop, Generators.modification, table, target, generators, behaviours);
+    const insertColumnsBefore = (table, target, generators, behaviours) => run(opInsertColumnsBefore, insertColumnsExtractor(true), adjustAndRedistributeWidths, noop, Generators.modification, table, target, generators, behaviours);
+    const insertColumnsAfter = (table, target, generators, behaviours) => run(opInsertColumnsAfter, insertColumnsExtractor(false), adjustAndRedistributeWidths, noop, Generators.modification, table, target, generators, behaviours);
+    const eraseColumns = (table, target, generators, behaviours) => run(opEraseColumns, eraseColumnsExtractor, adjustAndRedistributeWidths, prune, Generators.modification, table, target, generators, behaviours);
+    const eraseRows = (table, target, generators, behaviours) => run(opEraseRows, onCells, noop, prune, Generators.modification, table, target, generators, behaviours);
+    const makeColumnsHeader = (table, target, generators, behaviours) => run(opMakeColumnsHeader, onUnlockedCells, noop, noop, headerCellGenerator, table, target, generators, behaviours);
+    const unmakeColumnsHeader = (table, target, generators, behaviours) => run(opUnmakeColumnsHeader, onUnlockedCells, noop, noop, bodyCellGenerator, table, target, generators, behaviours);
+    const makeRowsHeader = (table, target, generators, behaviours) => run(opMakeRowsHeader, onCells, noop, noop, headerCellGenerator, table, target, generators, behaviours);
+    const makeRowsBody = (table, target, generators, behaviours) => run(opMakeRowsBody, onCells, noop, noop, bodyCellGenerator, table, target, generators, behaviours);
+    const makeRowsFooter = (table, target, generators, behaviours) => run(opMakeRowsFooter, onCells, noop, noop, bodyCellGenerator, table, target, generators, behaviours);
+    const makeCellsHeader = (table, target, generators, behaviours) => run(opMakeCellsHeader, onUnlockedCells, noop, noop, headerCellGenerator, table, target, generators, behaviours);
+    const unmakeCellsHeader = (table, target, generators, behaviours) => run(opUnmakeCellsHeader, onUnlockedCells, noop, noop, bodyCellGenerator, table, target, generators, behaviours);
+    const mergeCells = (table, target, generators, behaviours) => run(opMergeCells, onUnlockedMergable, resize, noop, Generators.merging, table, target, generators, behaviours);
+    const unmergeCells = (table, target, generators, behaviours) => run(opUnmergeCells, onUnlockedUnmergable, resize, noop, Generators.merging, table, target, generators, behaviours);
+    const pasteCells = (table, target, generators, behaviours) => run(opPasteCells, onPaste, resize, noop, Generators.modification, table, target, generators, behaviours);
+    const pasteColsBefore = (table, target, generators, behaviours) => run(opPasteColsBefore, pasteColumnsExtractor(true), noop, noop, Generators.modification, table, target, generators, behaviours);
+    const pasteColsAfter = (table, target, generators, behaviours) => run(opPasteColsAfter, pasteColumnsExtractor(false), noop, noop, Generators.modification, table, target, generators, behaviours);
+    const pasteRowsBefore = (table, target, generators, behaviours) => run(opPasteRowsBefore, onPasteByEditor, noop, noop, Generators.modification, table, target, generators, behaviours);
+    const pasteRowsAfter = (table, target, generators, behaviours) => run(opPasteRowsAfter, onPasteByEditor, noop, noop, Generators.modification, table, target, generators, behaviours);
+    const getColumnsType = opGetColumnsType;
+    const getCellsType = opGetCellsType;
+    const getRowsType = opGetRowsType;
+
+    const inSelection = (bounds, detail) => {
+        const leftEdge = detail.column;
+        const rightEdge = detail.column + detail.colspan - 1;
+        const topEdge = detail.row;
+        const bottomEdge = detail.row + detail.rowspan - 1;
+        return (leftEdge <= bounds.finishCol && rightEdge >= bounds.startCol) && (topEdge <= bounds.finishRow && bottomEdge >= bounds.startRow);
+    };
+    // Note, something is *within* if it is completely contained within the bounds.
+    const isWithin = (bounds, detail) => {
+        return (detail.column >= bounds.startCol &&
+            (detail.column + detail.colspan - 1) <= bounds.finishCol &&
+            detail.row >= bounds.startRow &&
+            (detail.row + detail.rowspan - 1) <= bounds.finishRow);
+    };
+    const isRectangular = (warehouse, bounds) => {
+        let isRect = true;
+        const detailIsWithin = curry(isWithin, bounds);
+        for (let i = bounds.startRow; i <= bounds.finishRow; i++) {
+            for (let j = bounds.startCol; j <= bounds.finishCol; j++) {
+                isRect = isRect && Warehouse.getAt(warehouse, i, j).exists(detailIsWithin);
+            }
+        }
+        return isRect ? Optional.some(bounds) : Optional.none();
+    };
+
+    const getBounds = (detailA, detailB) => {
+        return bounds(Math.min(detailA.row, detailB.row), Math.min(detailA.column, detailB.column), Math.max(detailA.row + detailA.rowspan - 1, detailB.row + detailB.rowspan - 1), Math.max(detailA.column + detailA.colspan - 1, detailB.column + detailB.colspan - 1));
+    };
+    const getAnyBox = (warehouse, startCell, finishCell) => {
+        const startCoords = Warehouse.findItem(warehouse, startCell, eq$1);
+        const finishCoords = Warehouse.findItem(warehouse, finishCell, eq$1);
+        return startCoords.bind((sc) => {
+            return finishCoords.map((fc) => {
+                return getBounds(sc, fc);
+            });
+        });
+    };
+    const getBox$1 = (warehouse, startCell, finishCell) => {
+        return getAnyBox(warehouse, startCell, finishCell).bind((bounds) => {
+            return isRectangular(warehouse, bounds);
+        });
+    };
+
+    const moveBy$1 = (warehouse, cell, row, column) => {
+        return Warehouse.findItem(warehouse, cell, eq$1).bind((detail) => {
+            const startRow = row > 0 ? detail.row + detail.rowspan - 1 : detail.row;
+            const startCol = column > 0 ? detail.column + detail.colspan - 1 : detail.column;
+            const dest = Warehouse.getAt(warehouse, startRow + row, startCol + column);
+            return dest.map((d) => {
+                return d.element;
+            });
+        });
+    };
+    const intercepts$1 = (warehouse, start, finish) => {
+        return getAnyBox(warehouse, start, finish).map((bounds) => {
+            const inside = Warehouse.filterItems(warehouse, curry(inSelection, bounds));
+            return map$1(inside, (detail) => {
+                return detail.element;
+            });
+        });
+    };
+    const parentCell = (warehouse, innerCell) => {
+        const isContainedBy = (c1, c2) => {
+            return contains(c2, c1);
+        };
+        return Warehouse.findItem(warehouse, innerCell, isContainedBy).map((detail) => {
+            return detail.element;
+        });
+    };
+
+    const moveBy = (cell, deltaRow, deltaColumn) => {
+        return table(cell).bind((table) => {
+            const warehouse = getWarehouse(table);
+            return moveBy$1(warehouse, cell, deltaRow, deltaColumn);
+        });
+    };
+    const intercepts = (table, first, last) => {
+        const warehouse = getWarehouse(table);
+        return intercepts$1(warehouse, first, last);
+    };
+    const nestedIntercepts = (table, first, firstTable, last, lastTable) => {
+        const warehouse = getWarehouse(table);
+        const optStartCell = eq$1(table, firstTable) ? Optional.some(first) : parentCell(warehouse, first);
+        const optLastCell = eq$1(table, lastTable) ? Optional.some(last) : parentCell(warehouse, last);
+        return optStartCell.bind((startCell) => optLastCell.bind((lastCell) => intercepts$1(warehouse, startCell, lastCell)));
+    };
+    const getBox = (table, first, last) => {
+        const warehouse = getWarehouse(table);
+        return getBox$1(warehouse, first, last);
+    };
+    // Private method ... keep warehouse in snooker, please.
+    const getWarehouse = Warehouse.fromTable;
+
+    const DefaultRenderOptions = {
+        styles: {
+            'border-collapse': 'collapse',
+            'width': '100%'
+        },
+        attributes: {
+            border: '1'
+        },
+        colGroups: false
+    };
+    const tableHeaderCell = () => SugarElement.fromTag('th');
+    const tableCell = () => SugarElement.fromTag('td');
+    const tableColumn = () => SugarElement.fromTag('col');
+    const createRow = (columns, rowHeaders, columnHeaders, rowIndex) => {
+        const tr = SugarElement.fromTag('tr');
+        for (let j = 0; j < columns; j++) {
+            const td = rowIndex < rowHeaders || j < columnHeaders ? tableHeaderCell() : tableCell();
+            if (j < columnHeaders) {
+                set$2(td, 'scope', 'row');
+            }
+            if (rowIndex < rowHeaders) {
+                set$2(td, 'scope', 'col');
+            }
+            // Note, this is a placeholder so that the cells have height. The unicode character didn't work in IE10.
+            append$1(td, SugarElement.fromTag('br'));
+            append$1(tr, td);
+        }
+        return tr;
+    };
+    const createGroupRow = (columns) => {
+        const columnGroup = SugarElement.fromTag('colgroup');
+        range$1(columns, () => append$1(columnGroup, tableColumn()));
+        return columnGroup;
+    };
+    const createRows = (rows, columns, rowHeaders, columnHeaders) => range$1(rows, (r) => createRow(columns, rowHeaders, columnHeaders, r));
+    const render = (rows, columns, rowHeaders, columnHeaders, headerType, renderOpts = DefaultRenderOptions) => {
+        const table = SugarElement.fromTag('table');
+        const rowHeadersGoInThead = headerType !== 'cells';
+        setAll(table, renderOpts.styles);
+        setAll$1(table, renderOpts.attributes);
+        if (renderOpts.colGroups) {
+            append$1(table, createGroupRow(columns));
+        }
+        const actualRowHeaders = Math.min(rows, rowHeaders);
+        if (rowHeadersGoInThead && rowHeaders > 0) {
+            const thead = SugarElement.fromTag('thead');
+            append$1(table, thead);
+            const theadRowHeaders = headerType === 'sectionCells' ? actualRowHeaders : 0;
+            const theadRows = createRows(rowHeaders, columns, theadRowHeaders, columnHeaders);
+            append(thead, theadRows);
+        }
+        const tbody = SugarElement.fromTag('tbody');
+        append$1(table, tbody);
+        const numRows = rowHeadersGoInThead ? rows - actualRowHeaders : rows;
+        const numRowHeaders = rowHeadersGoInThead ? 0 : rowHeaders;
+        const tbodyRows = createRows(numRows, columns, numRowHeaders, columnHeaders);
+        append(tbody, tbodyRows);
+        return table;
+    };
+
+    const Event = (fields) => {
+        let handlers = [];
+        const bind = (handler) => {
+            if (handler === undefined) {
+                throw new Error('Event bind error: undefined handler');
+            }
+            handlers.push(handler);
+        };
+        const unbind = (handler) => {
+            // This is quite a bit slower than handlers.splice() but we hate mutation.
+            // Unbind isn't used very often so it should be ok.
+            handlers = filter$2(handlers, (h) => {
+                return h !== handler;
+            });
+        };
+        const trigger = (...args) => {
+            const event = {};
+            each$2(fields, (name, i) => {
+                event[name] = args[i];
+            });
+            each$2(handlers, (handler) => {
+                handler(event);
+            });
+        };
+        return {
+            bind,
+            unbind,
+            trigger
+        };
+    };
+
+    /** :: {name : Event} -> Events */
+    const create$3 = (typeDefs) => {
+        const registry = map(typeDefs, (event) => {
+            return {
+                bind: event.bind,
+                unbind: event.unbind
+            };
+        });
+        const trigger = map(typeDefs, (event) => {
+            return event.trigger;
+        });
+        return {
+            registry,
+            trigger
+        };
+    };
+
+    const DragMode = exactly([
+        'compare',
+        'extract',
+        'mutate',
+        'sink'
+    ]);
+    const DragSink = exactly([
+        'element',
+        'start',
+        'stop',
+        'destroy'
+    ]);
+    const DragApi = exactly([
+        'forceDrop',
+        'drop',
+        'move',
+        'delayDrop'
+    ]);
+
+    const InDrag = () => {
+        let previous = Optional.none();
+        const reset = () => {
+            previous = Optional.none();
+        };
+        // Return position delta between previous position and nu position,
+        // or None if this is the first. Set the previous position to nu.
+        const update = (mode, nu) => {
+            const result = previous.map((old) => {
+                return mode.compare(old, nu);
+            });
+            previous = Optional.some(nu);
+            return result;
+        };
+        const onEvent = (event, mode) => {
+            const dataOption = mode.extract(event);
+            // Dragster move events require a position delta. The moveevent is only triggered
+            // on the second and subsequent dragster move events. The first is dropped.
+            dataOption.each((data) => {
+                const offset = update(mode, data);
+                offset.each((d) => {
+                    events.trigger.move(d);
+                });
+            });
+        };
+        const events = create$3({
+            move: Event(['info'])
+        });
+        return {
+            onEvent,
+            reset,
+            events: events.registry
+        };
+    };
+
+    const NoDrag = () => {
+        const events = create$3({
+            move: Event(['info'])
+        });
+        return {
+            onEvent: noop,
+            reset: noop,
+            events: events.registry
+        };
+    };
+
+    const Movement = () => {
+        const noDragState = NoDrag();
+        const inDragState = InDrag();
+        let dragState = noDragState;
+        const on = () => {
+            dragState.reset();
+            dragState = inDragState;
+        };
+        const off = () => {
+            dragState.reset();
+            dragState = noDragState;
+        };
+        const onEvent = (event, mode) => {
+            dragState.onEvent(event, mode);
+        };
+        const isOn = () => {
+            return dragState === inDragState;
+        };
+        return {
+            on,
+            off,
+            isOn,
+            onEvent,
+            events: inDragState.events
+        };
+    };
+
+    const setup = (mutation, mode, settings) => {
+        let active = false;
+        const events = create$3({
+            start: Event([]),
+            stop: Event([])
+        });
+        const movement = Movement();
+        const drop = () => {
+            sink.stop();
+            if (movement.isOn()) {
+                movement.off();
+                events.trigger.stop();
+            }
+        };
+        const throttledDrop = last$1(drop, 200);
+        const go = (parent) => {
+            sink.start(parent);
+            movement.on();
+            events.trigger.start();
+        };
+        const mousemove = (event) => {
+            throttledDrop.cancel();
+            movement.onEvent(event, mode);
+        };
+        movement.events.move.bind((event) => {
+            mode.mutate(mutation, event.info);
+        });
+        const on = () => {
+            active = true;
+        };
+        const off = () => {
+            active = false;
+            // acivate some events here?
+        };
+        const isActive = () => active;
+        const runIfActive = (f) => {
+            return (...args) => {
+                if (active) {
+                    f.apply(null, args);
+                }
+            };
+        };
+        const sink = mode.sink(DragApi({
+            // ASSUMPTION: runIfActive is not needed for mousedown. This is pretty much a safety measure for
+            // inconsistent situations so that we don't block input.
+            forceDrop: drop,
+            drop: runIfActive(drop),
+            move: runIfActive(mousemove),
+            delayDrop: runIfActive(throttledDrop.throttle)
+        }), settings);
+        const destroy = () => {
+            sink.destroy();
+        };
+        return {
+            element: sink.element,
+            go,
+            on,
+            off,
+            isActive,
+            destroy,
+            events: events.registry
+        };
+    };
+
+    const styles$1 = css('ephox-dragster');
+    const resolve$1 = styles$1.resolve;
+
+    const Blocker = (options) => {
+        const settings = {
+            layerClass: resolve$1('blocker'),
+            ...options
+        };
+        const div = SugarElement.fromTag('div');
+        set$2(div, 'role', 'presentation');
+        set$2(div, 'data-mce-bogus', 'all');
+        setAll(div, {
+            position: 'fixed',
+            left: '0px',
+            top: '0px',
+            width: '100%',
+            height: '100%'
+        });
+        add$1(div, resolve$1('blocker'));
+        add$1(div, settings.layerClass);
+        const element = constant(div);
+        const destroy = () => {
+            remove$5(div);
+        };
+        return {
+            element,
+            destroy
+        };
+    };
+
+    const compare = (old, nu) => {
+        return SugarPosition(nu.left - old.left, nu.top - old.top);
+    };
+    const extract = (event) => {
+        return Optional.some(SugarPosition(event.x, event.y));
+    };
+    const mutate = (mutation, info) => {
+        mutation.mutate(info.left, info.top);
+    };
+    const sink = (dragApi, settings) => {
+        const blocker = Blocker(settings);
+        // Included for safety. If the blocker has stayed on the screen, get rid of it on a click.
+        const mdown = bind(blocker.element(), 'mousedown', dragApi.forceDrop);
+        const mup = bind(blocker.element(), 'mouseup', dragApi.drop);
+        const mmove = bind(blocker.element(), 'mousemove', dragApi.move);
+        const mout = bind(blocker.element(), 'mouseout', dragApi.delayDrop);
+        const destroy = () => {
+            blocker.destroy();
+            mup.unbind();
+            mmove.unbind();
+            mout.unbind();
+            mdown.unbind();
+        };
+        const start = (parent) => {
+            append$1(parent, blocker.element());
+        };
+        const stop = () => {
+            remove$5(blocker.element());
+        };
+        return DragSink({
+            element: blocker.element,
+            start,
+            stop,
+            destroy
+        });
+    };
+    var MouseDrag = DragMode({
+        compare,
+        extract,
+        sink,
+        mutate
+    });
+
+    const transform = (mutation, settings = {}) => {
+        const mode = settings.mode ?? MouseDrag;
+        return setup(mutation, mode, settings);
+    };
+
+    const styles = css('ephox-snooker');
+    const resolve = styles.resolve;
+
+    const Mutation = () => {
+        const events = create$3({
+            drag: Event(['xDelta', 'yDelta'])
+        });
+        const mutate = (x, y) => {
+            events.trigger.drag(x, y);
+        };
+        return {
+            mutate,
+            events: events.registry
+        };
+    };
+
+    const BarMutation = () => {
+        const events = create$3({
+            drag: Event(['xDelta', 'yDelta', 'target'])
+        });
+        let target = Optional.none();
+        const delegate = Mutation();
+        delegate.events.drag.bind((event) => {
+            target.each((t) => {
+                // There is always going to be this padding / border collapse / margin problem with widths. I'll have to resolve that.
+                events.trigger.drag(event.xDelta, event.yDelta, t);
+            });
+        });
+        const assign = (t) => {
+            target = Optional.some(t);
+        };
+        const get = () => {
+            return target;
+        };
+        return {
+            assign,
+            get,
+            mutate: delegate.mutate,
+            events: events.registry
+        };
+    };
+
+    const col = (column, x, y, w, h) => {
+        const bar = SugarElement.fromTag('div');
+        setAll(bar, {
+            position: 'absolute',
+            left: x - w / 2 + 'px',
+            top: y + 'px',
+            height: h + 'px',
+            width: w + 'px'
+        });
+        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-column': column, 'role': 'presentation' });
+        return bar;
+    };
+    const row = (r, x, y, w, h) => {
+        const bar = SugarElement.fromTag('div');
+        setAll(bar, {
+            position: 'absolute',
+            left: x + 'px',
+            top: y - h / 2 + 'px',
+            height: h + 'px',
+            width: w + 'px'
+        });
+        setAll$1(bar, { 'data-mce-bogus': 'all', 'data-row': r, 'role': 'presentation' });
+        return bar;
+    };
+
+    const resizeBar = resolve('resizer-bar');
+    const resizeRowBar = resolve('resizer-rows');
+    const resizeColBar = resolve('resizer-cols');
+    const BAR_THICKNESS = 7;
+    const resizableRows = (warehouse, isResizable) => bind$2(warehouse.all, (row, i) => isResizable(row.element) ? [i] : []);
+    const resizableColumns = (warehouse, isResizable) => {
+        const resizableCols = [];
+        // Check col elements and see if they are resizable
+        range$1(warehouse.grid.columns, (index) => {
+            // With use of forall, index will be included if col doesn't exist meaning the column cells will be checked below
+            const colElmOpt = Warehouse.getColumnAt(warehouse, index).map((col) => col.element);
+            if (colElmOpt.forall(isResizable)) {
+                resizableCols.push(index);
+            }
+        });
+        // Check cells of the resizable columns and make sure they are resizable
+        return filter$2(resizableCols, (colIndex) => {
+            const columnCells = Warehouse.filterItems(warehouse, (cell) => cell.column === colIndex);
+            return forall(columnCells, (cell) => isResizable(cell.element));
+        });
+    };
+    const destroy = (wire) => {
+        const previous = descendants(wire.parent(), '.' + resizeBar);
+        each$2(previous, remove$5);
+    };
+    const drawBar = (wire, positions, create) => {
+        const origin = wire.origin();
+        each$2(positions, (cpOption) => {
+            cpOption.each((cp) => {
+                const bar = create(origin, cp);
+                add$1(bar, resizeBar);
+                append$1(wire.parent(), bar);
+            });
+        });
+    };
+    const refreshCol = (wire, colPositions, position, tableHeight) => {
+        drawBar(wire, colPositions, (origin, cp) => {
+            const colBar = col(cp.col, cp.x - origin.left, position.top - origin.top, BAR_THICKNESS, tableHeight);
+            add$1(colBar, resizeColBar);
+            return colBar;
+        });
+    };
+    const refreshRow = (wire, rowPositions, position, tableWidth) => {
+        drawBar(wire, rowPositions, (origin, cp) => {
+            const rowBar = row(cp.row, position.left - origin.left, cp.y - origin.top, tableWidth, BAR_THICKNESS);
+            add$1(rowBar, resizeRowBar);
+            return rowBar;
+        });
+    };
+    const refreshGrid = (warhouse, wire, table, rows, cols) => {
+        const position = absolute(table);
+        const isResizable = wire.isResizable;
+        const rowPositions = rows.length > 0 ? height.positions(rows, table) : [];
+        const resizableRowBars = rowPositions.length > 0 ? resizableRows(warhouse, isResizable) : [];
+        const resizableRowPositions = filter$2(rowPositions, (_pos, i) => exists(resizableRowBars, (barIndex) => i === barIndex));
+        refreshRow(wire, resizableRowPositions, position, getOuter(table));
+        const colPositions = cols.length > 0 ? width.positions(cols, table) : [];
+        const resizableColBars = colPositions.length > 0 ? resizableColumns(warhouse, isResizable) : [];
+        const resizableColPositions = filter$2(colPositions, (_pos, i) => exists(resizableColBars, (barIndex) => i === barIndex));
+        refreshCol(wire, resizableColPositions, position, getOuter$1(table));
+    };
+    const refresh = (wire, table) => {
+        destroy(wire);
+        if (wire.isResizable(table)) {
+            const warehouse = Warehouse.fromTable(table);
+            const rows$1 = rows(warehouse);
+            const cols = columns(warehouse);
+            refreshGrid(warehouse, wire, table, rows$1, cols);
+        }
+    };
+    const each = (wire, f) => {
+        const bars = descendants(wire.parent(), '.' + resizeBar);
+        each$2(bars, f);
+    };
+    const hide = (wire) => {
+        each(wire, (bar) => {
+            set$1(bar, 'display', 'none');
+        });
+    };
+    const show = (wire) => {
+        each(wire, (bar) => {
+            set$1(bar, 'display', 'block');
+        });
+    };
+    const isRowBar = (element) => {
+        return has(element, resizeRowBar);
+    };
+    const isColBar = (element) => {
+        return has(element, resizeColBar);
+    };
+
+    const resizeBarDragging = resolve('resizer-bar-dragging');
+    const BarManager = (wire) => {
+        const mutation = BarMutation();
+        const resizing = transform(mutation, {});
+        let hoverTable = Optional.none();
+        const getResizer = (element, type) => {
+            return Optional.from(get$b(element, type));
+        };
+        /* Reposition the bar as the user drags */
+        mutation.events.drag.bind((event) => {
+            getResizer(event.target, 'data-row').each((_dataRow) => {
+                const currentRow = getCssValue(event.target, 'top');
+                set$1(event.target, 'top', currentRow + event.yDelta + 'px');
+            });
+            getResizer(event.target, 'data-column').each((_dataCol) => {
+                const currentCol = getCssValue(event.target, 'left');
+                set$1(event.target, 'left', currentCol + event.xDelta + 'px');
+            });
+        });
+        const getDelta = (target, dir) => {
+            const newX = getCssValue(target, dir);
+            const oldX = getAttrValue(target, 'data-initial-' + dir, 0);
+            return newX - oldX;
+        };
+        /* Resize the column once the user releases the mouse */
+        resizing.events.stop.bind(() => {
+            mutation.get().each((target) => {
+                hoverTable.each((table) => {
+                    getResizer(target, 'data-row').each((row) => {
+                        const delta = getDelta(target, 'top');
+                        remove$6(target, 'data-initial-top');
+                        events.trigger.adjustHeight(table, delta, parseInt(row, 10));
+                    });
+                    getResizer(target, 'data-column').each((column) => {
+                        const delta = getDelta(target, 'left');
+                        remove$6(target, 'data-initial-left');
+                        events.trigger.adjustWidth(table, delta, parseInt(column, 10));
+                    });
+                    refresh(wire, table);
+                });
+            });
+        });
+        const handler = (target, dir) => {
+            events.trigger.startAdjust();
+            mutation.assign(target);
+            set$2(target, 'data-initial-' + dir, getCssValue(target, dir));
+            add$1(target, resizeBarDragging);
+            set$1(target, 'opacity', '0.2');
+            resizing.go(wire.dragContainer());
+        };
+        /* mousedown on resize bar: start dragging when the bar is clicked, storing the initial position. */
+        const mousedown = bind(wire.parent(), 'mousedown', (event) => {
+            if (isRowBar(event.target)) {
+                handler(event.target, 'top');
+            }
+            if (isColBar(event.target)) {
+                handler(event.target, 'left');
+            }
+        });
+        const isRoot = (e) => {
+            return eq$1(e, wire.view());
+        };
+        const findClosestEditableTable = (target) => closest$1(target, 'table', isRoot).filter(isEditable$1);
+        const isResizer = (target) => has(target, 'ephox-snooker-resizer-bar') || has(target, 'ephox-dragster-blocker');
+        /* mouseover on table: When the mouse moves within the CONTENT AREA (NOT THE TABLE), refresh the bars. */
+        const mouseover = bind(wire.view(), 'mouseover', (event) => {
+            findClosestEditableTable(event.target).fold(() => {
+                /*
+                * mouseout is not reliable within ContentEditable, so for all other mouseover events we clear bars.
+                * This is fairly safe to do frequently; it's a single querySelectorAll() on the content and Arr.map on the result.
+                * If we _really_ need to optimise it further, we can start caching the bar references in the wire somehow.
+                *
+                * Because the resizers were moved into the editor for inline mode, we need to check if the event target is not a resizer.
+                */
+                if (inBody(event.target) && !isResizer(event.target)) {
+                    destroy(wire);
+                }
+            }, (table) => {
+                if (resizing.isActive()) {
+                    hoverTable = Optional.some(table);
+                    refresh(wire, table);
+                }
+            });
+        });
+        const destroy$1 = () => {
+            mousedown.unbind();
+            mouseover.unbind();
+            resizing.destroy();
+            destroy(wire);
+        };
+        const refresh$1 = (tbl) => {
+            refresh(wire, tbl);
+        };
+        const events = create$3({
+            adjustHeight: Event(['table', 'delta', 'row']),
+            adjustWidth: Event(['table', 'delta', 'column']),
+            startAdjust: Event([])
+        });
+        return {
+            destroy: destroy$1,
+            refresh: refresh$1,
+            on: resizing.on,
+            off: resizing.off,
+            hideBars: curry(hide, wire),
+            showBars: curry(show, wire),
+            events: events.registry
+        };
+    };
+
+    const create$2 = (wire, resizing, lazySizing) => {
+        const hdirection = height;
+        const vdirection = width;
+        const manager = BarManager(wire);
+        const events = create$3({
+            beforeResize: Event(['table', 'type']),
+            afterResize: Event(['table', 'type']),
+            startDrag: Event([]),
+        });
+        manager.events.adjustHeight.bind((event) => {
+            const table = event.table;
+            events.trigger.beforeResize(table, 'row');
+            const delta = hdirection.delta(event.delta, table);
+            // TODO: Use the resizing behaviour for heights as well
+            adjustHeight(table, delta, event.row);
+            events.trigger.afterResize(table, 'row');
+        });
+        manager.events.startAdjust.bind((_event) => {
+            events.trigger.startDrag();
+        });
+        manager.events.adjustWidth.bind((event) => {
+            const table = event.table;
+            events.trigger.beforeResize(table, 'col');
+            const delta = vdirection.delta(event.delta, table);
+            const tableSize = lazySizing(table);
+            adjustWidth(table, delta, event.column, resizing, tableSize);
+            events.trigger.afterResize(table, 'col');
+        });
+        return {
+            on: manager.on,
+            off: manager.off,
+            refreshBars: manager.refresh,
+            hideBars: manager.hideBars,
+            showBars: manager.showBars,
+            destroy: manager.destroy,
+            events: events.registry
+        };
+    };
+    const TableResize = {
+        create: create$2
+    };
+
+    const option = (name) => (editor) => editor.options.get(name);
+    // Note: This is also contained in the table plugin Options.ts file
+    const defaultWidth = '100%';
+    const getPixelForcedWidth = (editor) => {
+        // Determine the inner size of the parent block element where the table will be inserted
+        const dom = editor.dom;
+        const parentBlock = dom.getParent(editor.selection.getStart(), dom.isBlock) ?? editor.getBody();
+        return getInner(SugarElement.fromDom(parentBlock)) + 'px';
+    };
+    // Note: This is also contained in the table plugin Options.ts file
+    const determineDefaultTableStyles = (editor, defaultStyles) => {
+        if (isTableResponsiveForced(editor) || !shouldStyleWithCss(editor)) {
+            return defaultStyles;
+        }
+        else if (isTablePixelsForced(editor)) {
+            return { ...defaultStyles, width: getPixelForcedWidth(editor) };
+        }
+        else {
+            return { ...defaultStyles, width: defaultWidth };
+        }
+    };
+    // Note: This is also contained in the table plugin Options.ts file
+    const determineDefaultTableAttributes = (editor, defaultAttributes) => {
+        if (isTableResponsiveForced(editor) || shouldStyleWithCss(editor)) {
+            return defaultAttributes;
+        }
+        else if (isTablePixelsForced(editor)) {
+            return { ...defaultAttributes, width: getPixelForcedWidth(editor) };
+        }
+        else {
+            return { ...defaultAttributes, width: defaultWidth };
+        }
+    };
+    const register = (editor) => {
+        const registerOption = editor.options.register;
+        registerOption('table_clone_elements', {
+            processor: 'string[]'
+        });
+        registerOption('table_use_colgroups', {
+            processor: 'boolean',
+            default: true
+        });
+        registerOption('table_header_type', {
+            processor: (value) => {
+                const valid = contains$2(['section', 'cells', 'sectionCells', 'auto'], value);
+                return valid ? { value, valid } : { valid: false, message: 'Must be one of: section, cells, sectionCells or auto.' };
+            },
+            default: 'section'
+        });
+        registerOption('table_sizing_mode', {
+            processor: 'string',
+            default: 'auto'
+        });
+        registerOption('table_default_attributes', {
+            processor: 'object',
+            default: {
+                border: '1'
+            }
+        });
+        registerOption('table_default_styles', {
+            processor: 'object',
+            default: {
+                'border-collapse': 'collapse',
+            }
+        });
+        registerOption('table_column_resizing', {
+            processor: (value) => {
+                const valid = contains$2(['preservetable', 'resizetable'], value);
+                return valid ? { value, valid } : { valid: false, message: 'Must be preservetable, or resizetable.' };
+            },
+            default: 'preservetable'
+        });
+        registerOption('table_resize_bars', {
+            processor: 'boolean',
+            default: true
+        });
+        registerOption('table_style_by_css', {
+            processor: 'boolean',
+            default: true
+        });
+        registerOption('table_merge_content_on_paste', {
+            processor: 'boolean',
+            default: true
+        });
+        registerOption('table_default_header_rows', {
+            processor: 'number',
+            default: 0
+        });
+        registerOption('table_default_header_cols', {
+            processor: 'number',
+            default: 0
+        });
+    };
+    const getTableCloneElements = (editor) => {
+        return Optional.from(editor.options.get('table_clone_elements'));
+    };
+    const hasTableObjectResizing = (editor) => {
+        const objectResizing = editor.options.get('object_resizing');
+        return contains$2(objectResizing.split(','), 'table');
+    };
+    const getTableHeaderType = option('table_header_type');
+    const getTableColumnResizingBehaviour = option('table_column_resizing');
+    const isPreserveTableColumnResizing = (editor) => getTableColumnResizingBehaviour(editor) === 'preservetable';
+    const isResizeTableColumnResizing = (editor) => getTableColumnResizingBehaviour(editor) === 'resizetable';
+    const getTableSizingMode = option('table_sizing_mode');
+    const isTablePercentagesForced = (editor) => getTableSizingMode(editor) === 'relative';
+    const isTablePixelsForced = (editor) => getTableSizingMode(editor) === 'fixed';
+    const isTableResponsiveForced = (editor) => getTableSizingMode(editor) === 'responsive';
+    const hasTableResizeBars = option('table_resize_bars');
+    const shouldStyleWithCss = option('table_style_by_css');
+    const shouldMergeContentOnPaste = option('table_merge_content_on_paste');
+    const defaultHeaderRows = option('table_default_header_rows');
+    const defaultHeaderCols = option('table_default_header_cols');
+    const getTableDefaultAttributes = (editor) => {
+        // Note: The we don't rely on the default here as we need to dynamically lookup the widths based on the current editor state
+        const options = editor.options;
+        const defaultAttributes = options.get('table_default_attributes');
+        return options.isSet('table_default_attributes') ? defaultAttributes : determineDefaultTableAttributes(editor, defaultAttributes);
+    };
+    const getTableDefaultStyles = (editor) => {
+        // Note: The we don't rely on the default here as we need to dynamically lookup the widths based on the current editor state
+        const options = editor.options;
+        const defaultStyles = options.get('table_default_styles');
+        return options.isSet('table_default_styles') ? defaultStyles : determineDefaultTableStyles(editor, defaultStyles);
+    };
+    const tableUseColumnGroup = option('table_use_colgroups');
+
+    /*
+     NOTE: This file is partially duplicated in the following locations:
+      - plugins/table/core/Utils.ts
+      - advtable
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const getBody = (editor) => SugarElement.fromDom(editor.getBody());
+    const getIsRoot = (editor) => (element) => eq$1(element, getBody(editor));
+    const removeDataStyle = (table) => {
+        remove$6(table, 'data-mce-style');
+        const removeStyleAttribute = (element) => remove$6(element, 'data-mce-style');
+        each$2(cells$1(table), removeStyleAttribute);
+        each$2(columns$1(table), removeStyleAttribute);
+        each$2(rows$1(table), removeStyleAttribute);
+    };
+    const getSelectionStart = (editor) => SugarElement.fromDom(editor.selection.getStart());
+    const getPixelWidth = (elm) => elm.getBoundingClientRect().width;
+    const getPixelHeight = (elm) => elm.getBoundingClientRect().height;
+    const addPxSuffix = (size) => /^\d+(\.\d+)?$/.test(size) ? size + 'px' : size;
+    const getRawValue = (prop) => (editor, elm) => {
+        const raw = editor.dom.getStyle(elm, prop) || editor.dom.getAttrib(elm, prop);
+        // If a value has no unit, assume it is a pixel value
+        return Optional.from(raw)
+            .filter(isNotEmpty)
+            .map(addPxSuffix);
+    };
+    const isPercentage$1 = (value) => /^(\d+(\.\d+)?)%$/.test(value);
+    const isPixel = (value) => /^(\d+(\.\d+)?)px$/.test(value);
+    const getRawWidth = getRawValue('width');
+    const getRawHeight = getRawValue('height');
+    const isInEditableContext$1 = (cell) => closest$2(cell, isTag('table')).exists(isEditable$1);
+
+    const lookupTable = (container) => {
+        return ancestor$1(container, 'table');
+    };
+    const identify = (start, finish, isRoot) => {
+        const getIsRoot = (rootTable) => {
+            return (element) => {
+                return (isRoot !== undefined && isRoot(element)) || eq$1(element, rootTable);
+            };
+        };
+        // Optimisation: If the cells are equal, it's a single cell array
+        if (eq$1(start, finish)) {
+            return Optional.some({
+                boxes: Optional.some([start]),
+                start,
+                finish
+            });
+        }
+        else {
+            return lookupTable(start).bind((startTable) => {
+                return lookupTable(finish).bind((finishTable) => {
+                    if (eq$1(startTable, finishTable)) { // Selecting from within the same table.
+                        return Optional.some({
+                            boxes: intercepts(startTable, start, finish),
+                            start,
+                            finish
+                        });
+                    }
+                    else if (contains(startTable, finishTable)) { // Selecting from the parent table to the nested table.
+                        const ancestorCells = ancestors$3(finish, 'td,th', getIsRoot(startTable));
+                        const finishCell = ancestorCells.length > 0 ? ancestorCells[ancestorCells.length - 1] : finish;
+                        return Optional.some({
+                            boxes: nestedIntercepts(startTable, start, startTable, finish, finishTable),
+                            start,
+                            finish: finishCell
+                        });
+                    }
+                    else if (contains(finishTable, startTable)) { // Selecting from the nested table to the parent table.
+                        const ancestorCells = ancestors$3(start, 'td,th', getIsRoot(finishTable));
+                        const startCell = ancestorCells.length > 0 ? ancestorCells[ancestorCells.length - 1] : start;
+                        return Optional.some({
+                            boxes: nestedIntercepts(finishTable, start, startTable, finish, finishTable),
+                            start,
+                            finish: startCell
+                        });
+                    }
+                    else { // Selecting from a nested table to a different nested table.
+                        return ancestors(start, finish).shared.bind((lca) => {
+                            return closest$1(lca, 'table', isRoot).bind((lcaTable) => {
+                                const finishAncestorCells = ancestors$3(finish, 'td,th', getIsRoot(lcaTable));
+                                const finishCell = finishAncestorCells.length > 0 ? finishAncestorCells[finishAncestorCells.length - 1] : finish;
+                                const startAncestorCells = ancestors$3(start, 'td,th', getIsRoot(lcaTable));
+                                const startCell = startAncestorCells.length > 0 ? startAncestorCells[startAncestorCells.length - 1] : start;
+                                return Optional.some({
+                                    boxes: nestedIntercepts(lcaTable, start, startTable, finish, finishTable),
+                                    start: startCell,
+                                    finish: finishCell
+                                });
+                            });
+                        });
+                    }
+                });
+            });
+        }
+    };
+    const retrieve$1 = (container, selector) => {
+        const sels = descendants(container, selector);
+        return sels.length > 0 ? Optional.some(sels) : Optional.none();
+    };
+    const getLast = (boxes, lastSelectedSelector) => {
+        return find$1(boxes, (box) => {
+            return is$1(box, lastSelectedSelector);
+        });
+    };
+    const getEdges = (container, firstSelectedSelector, lastSelectedSelector) => {
+        return descendant(container, firstSelectedSelector).bind((first) => {
+            return descendant(container, lastSelectedSelector).bind((last) => {
+                return sharedOne(lookupTable, [first, last]).map((table) => {
+                    return {
+                        first,
+                        last,
+                        table
+                    };
+                });
+            });
+        });
+    };
+    const expandTo = (finish, firstSelectedSelector) => {
+        return ancestor$1(finish, 'table').bind((table) => {
+            return descendant(table, firstSelectedSelector).bind((start) => {
+                return identify(start, finish).bind((identified) => {
+                    return identified.boxes.map((boxes) => {
+                        return {
+                            boxes,
+                            start: identified.start,
+                            finish: identified.finish
+                        };
+                    });
+                });
+            });
+        });
+    };
+    const shiftSelection = (boxes, deltaRow, deltaColumn, firstSelectedSelector, lastSelectedSelector) => {
+        return getLast(boxes, lastSelectedSelector).bind((last) => {
+            return moveBy(last, deltaRow, deltaColumn).bind((finish) => {
+                return expandTo(finish, firstSelectedSelector);
+            });
+        });
+    };
+
+    // Explicitly calling CellSelection.retrieve so that we can see the API signature.
+    const retrieve = (container, selector) => {
+        return retrieve$1(container, selector);
+    };
+    const retrieveBox = (container, firstSelectedSelector, lastSelectedSelector) => {
+        return getEdges(container, firstSelectedSelector, lastSelectedSelector).bind((edges) => {
+            const isRoot = (ancestor) => {
+                return eq$1(container, ancestor);
+            };
+            const sectionSelector = 'thead,tfoot,tbody,table';
+            const firstAncestor = ancestor$1(edges.first, sectionSelector, isRoot);
+            const lastAncestor = ancestor$1(edges.last, sectionSelector, isRoot);
+            return firstAncestor.bind((fA) => {
+                return lastAncestor.bind((lA) => {
+                    return eq$1(fA, lA) ? getBox(edges.table, edges.first, edges.last) : Optional.none();
+                });
+            });
+        });
+    };
+
+    const selection = identity;
+    const unmergable = (selectedCells) => {
+        const hasSpan = (elem, type) => getOpt(elem, type).exists((span) => parseInt(span, 10) > 1);
+        const hasRowOrColSpan = (elem) => hasSpan(elem, 'rowspan') || hasSpan(elem, 'colspan');
+        return selectedCells.length > 0 && forall(selectedCells, hasRowOrColSpan) ? Optional.some(selectedCells) : Optional.none();
+    };
+    const mergable = (table, selectedCells, ephemera) => {
+        if (selectedCells.length <= 1) {
+            return Optional.none();
+        }
+        else {
+            return retrieveBox(table, ephemera.firstSelectedSelector, ephemera.lastSelectedSelector)
+                .map((bounds) => ({ bounds, cells: selectedCells }));
+        }
+    };
+
+    const create$1 = (selection, kill) => ({
+        selection,
+        kill
+    });
+    const Response = {
+        create: create$1
+    };
+
+    const fold = (subject, onNone, onMultiple, onSingle) => {
+        switch (subject.tag) {
+            case "none" /* SelectionTypeTag.None */:
+                return onNone();
+            case "single" /* SelectionTypeTag.Single */:
+                return onSingle(subject.element);
+            case "multiple" /* SelectionTypeTag.Multiple */:
+                return onMultiple(subject.elements);
+        }
+    };
+    const none = () => ({ tag: "none" /* SelectionTypeTag.None */ });
+    const multiple = (elements) => ({ tag: "multiple" /* SelectionTypeTag.Multiple */, elements });
+    const single = (element) => ({ tag: "single" /* SelectionTypeTag.Single */, element });
+
+    const Selections = (lazyRoot, getStart, selectedSelector) => {
+        const get = () => retrieve(lazyRoot(), selectedSelector).fold(() => getStart().fold(none, single), multiple);
+        return {
+            get
+        };
+    };
+
+    const create = (start, soffset, finish, foffset) => {
+        return {
+            start: Situ.on(start, soffset),
+            finish: Situ.on(finish, foffset)
+        };
+    };
+    const Situs = {
+        create
+    };
+
+    const convertToRange = (win, selection) => {
+        // TODO: Use API packages of sugar
+        const rng = asLtrRange(win, selection);
+        return SimRange.create(SugarElement.fromDom(rng.startContainer), rng.startOffset, SugarElement.fromDom(rng.endContainer), rng.endOffset);
+    };
+    const makeSitus = Situs.create;
+
+    // Based on a start and finish, select the appropriate box of cells
+    const sync = (container, isRoot, start, soffset, finish, foffset, selectRange) => {
+        if (!(eq$1(start, finish) && soffset === foffset)) {
+            return closest$1(start, 'td,th', isRoot).bind((s) => {
+                return closest$1(finish, 'td,th', isRoot).bind((f) => {
+                    return detect(container, isRoot, s, f, selectRange);
+                });
+            });
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    // If the cells are different, and there is a rectangle to connect them, select the cells.
+    const detect = (container, isRoot, start, finish, selectRange) => {
+        if (!eq$1(start, finish)) {
+            return identify(start, finish, isRoot).bind((cellSel) => {
+                const boxes = cellSel.boxes.getOr([]);
+                if (boxes.length > 1) {
+                    selectRange(container, boxes, cellSel.start, cellSel.finish);
+                    return Optional.some(Response.create(Optional.some(makeSitus(start, 0, start, getEnd(start))), true));
+                }
+                else {
+                    return Optional.none();
+                }
+            });
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const update = (rows, columns, container, selected, annotations) => {
+        const updateSelection = (newSels) => {
+            annotations.clearBeforeUpdate(container);
+            annotations.selectRange(container, newSels.boxes, newSels.start, newSels.finish);
+            return newSels.boxes;
+        };
+        return shiftSelection(selected, rows, columns, annotations.firstSelectedSelector, annotations.lastSelectedSelector).map(updateSelection);
+    };
+
+    const adt$1 = Adt.generate([
+        { none: ['message'] },
+        { success: [] },
+        { failedUp: ['cell'] },
+        { failedDown: ['cell'] }
+    ]);
+    // Let's get some bounding rects, and see if they overlap (x-wise)
+    const isOverlapping = (bridge, before, after) => {
+        const beforeBounds = bridge.getRect(before);
+        const afterBounds = bridge.getRect(after);
+        return afterBounds.right > beforeBounds.left && afterBounds.left < beforeBounds.right;
+    };
+    const isRow = (elem) => {
+        return closest$1(elem, 'tr');
+    };
+    const verify = (bridge, before, beforeOffset, after, afterOffset, failure, isRoot) => {
+        // Identify the cells that the before and after are in.
+        return closest$1(after, 'td,th', isRoot).bind((afterCell) => {
+            return closest$1(before, 'td,th', isRoot).map((beforeCell) => {
+                // If they are not in the same cell
+                if (!eq$1(afterCell, beforeCell)) {
+                    return sharedOne(isRow, [afterCell, beforeCell]).fold(() => {
+                        // No shared row, and they overlap x-wise -> success, otherwise: failed
+                        return isOverlapping(bridge, beforeCell, afterCell) ? adt$1.success() : failure(beforeCell);
+                    }, (_sharedRow) => {
+                        // In the same row, so it failed.
+                        return failure(beforeCell);
+                    });
+                }
+                else {
+                    return eq$1(after, afterCell) && getEnd(afterCell) === afterOffset ? failure(beforeCell) : adt$1.none('in same cell');
+                }
+            });
+        }).getOr(adt$1.none('default'));
+    };
+    const cata = (subject, onNone, onSuccess, onFailedUp, onFailedDown) => {
+        return subject.fold(onNone, onSuccess, onFailedUp, onFailedDown);
+    };
+    const BeforeAfter = {
+        ...adt$1,
+        verify,
+        cata
+    };
+
+    const isBr = isTag('br');
+    const gatherer = (cand, gather, isRoot) => {
+        return gather(cand, isRoot).bind((target) => {
+            return isText(target) && get$5(target).trim().length === 0 ? gatherer(target, gather, isRoot) : Optional.some(target);
+        });
+    };
+    const handleBr = (isRoot, element, direction) => {
+        // 1. Has a neighbouring sibling ... position relative to neighbouring element
+        // 2. Has no neighbouring sibling ... position relative to gathered element
+        return direction.traverse(element).orThunk(() => {
+            return gatherer(element, direction.gather, isRoot);
+        }).map(direction.relative);
+    };
+    const findBr = (element, offset) => {
+        return child$2(element, offset).filter(isBr).orThunk(() => {
+            // Can be either side of the br, and still be a br.
+            return child$2(element, offset - 1).filter(isBr);
+        });
+    };
+    const handleParent = (isRoot, element, offset, direction) => {
+        // 1. Has no neighbouring sibling, position relative to gathered element
+        // 2. Has a neighbouring sibling, position at the neighbouring sibling with respect to parent
+        return findBr(element, offset).bind((br) => {
+            return direction.traverse(br).fold(() => {
+                return gatherer(br, direction.gather, isRoot).map(direction.relative);
+            }, (adjacent) => {
+                return indexInParent(adjacent).map((info) => {
+                    return Situ.on(info.parent, info.index);
+                });
+            });
+        });
+    };
+    const tryBr = (isRoot, element, offset, direction) => {
+        // Three different situations
+        // 1. the br is the child, and it has a previous sibling. Use parent, index-1)
+        // 2. the br is the child and it has no previous sibling, set to before the previous gather result
+        // 3. the br is the element and it has a previous sibling, use parent index-1)
+        // 4. the br is the element and it has no previous sibling, set to before the previous gather result.
+        // 2. the element is the br itself,
+        const target = isBr(element) ? handleBr(isRoot, element, direction) : handleParent(isRoot, element, offset, direction);
+        return target.map((tgt) => {
+            return {
+                start: tgt,
+                finish: tgt
+            };
+        });
+    };
+    const process = (analysis) => {
+        return BeforeAfter.cata(analysis, (_message) => {
+            return Optional.none();
+        }, () => {
+            return Optional.none();
+        }, (cell) => {
+            return Optional.some(point(cell, 0));
+        }, (cell) => {
+            return Optional.some(point(cell, getEnd(cell)));
+        });
+    };
+
+    const moveDown = (caret, amount) => {
+        return {
+            left: caret.left,
+            top: caret.top + amount,
+            right: caret.right,
+            bottom: caret.bottom + amount
+        };
+    };
+    const moveUp = (caret, amount) => {
+        return {
+            left: caret.left,
+            top: caret.top - amount,
+            right: caret.right,
+            bottom: caret.bottom - amount
+        };
+    };
+    const translate = (caret, xDelta, yDelta) => {
+        return {
+            left: caret.left + xDelta,
+            top: caret.top + yDelta,
+            right: caret.right + xDelta,
+            bottom: caret.bottom + yDelta
+        };
+    };
+    const getTop = (caret) => {
+        return caret.top;
+    };
+    const getBottom = (caret) => {
+        return caret.bottom;
+    };
+
+    const getPartialBox = (bridge, element, offset) => {
+        if (offset >= 0 && offset < getEnd(element)) {
+            return bridge.getRangedRect(element, offset, element, offset + 1);
+        }
+        else if (offset > 0) {
+            return bridge.getRangedRect(element, offset - 1, element, offset);
+        }
+        return Optional.none();
+    };
+    const toCaret = (rect) => ({
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom
+    });
+    const getElemBox = (bridge, element) => {
+        return Optional.some(bridge.getRect(element));
+    };
+    const getBoxAt = (bridge, element, offset) => {
+        // Note, we might need to consider this offset and descend.
+        if (isElement(element)) {
+            return getElemBox(bridge, element).map(toCaret);
+        }
+        else if (isText(element)) {
+            return getPartialBox(bridge, element, offset).map(toCaret);
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const getEntireBox = (bridge, element) => {
+        if (isElement(element)) {
+            return getElemBox(bridge, element).map(toCaret);
+        }
+        else if (isText(element)) {
+            return bridge.getRangedRect(element, 0, element, getEnd(element)).map(toCaret);
+        }
+        else {
+            return Optional.none();
+        }
+    };
+
+    const JUMP_SIZE = 5;
+    const NUM_RETRIES = 100;
+    const adt = Adt.generate([
+        { none: [] },
+        { retry: ['caret'] }
+    ]);
+    const isOutside = (caret, box) => {
+        return caret.left < box.left || Math.abs(box.right - caret.left) < 1 || caret.left > box.right;
+    };
+    // Find the block and determine whether or not that block is outside. If it is outside, move up/down and right.
+    const inOutsideBlock = (bridge, element, caret) => {
+        return closest$2(element, isBlock).fold(never, (cell) => {
+            return getEntireBox(bridge, cell).exists((box) => {
+                return isOutside(caret, box);
+            });
+        });
+    };
+    /*
+     * The approach is as follows.
+     *
+     * The browser APIs for caret ranges return elements that are the closest text elements to your (x, y) position, even if those
+     * closest elements are miles away. This causes problems when you are trying to identify what is immediately above or below
+     * a cell, because often the closest text is in a cell that is in a completely different column. Therefore, the approach needs
+     * to keep moving down until the thing that we are hitting is likely to be a true positive.
+     *
+     * Steps:
+     *
+     * 1. If the y position of the next guess is not different from the original, keep going.
+     * 2a. If the guess box doesn't actually include the position looked for, then the browser has returned a node that does not have
+     *    a rectangle which truly intercepts the point. So, keep going. Note, we used to jump straight away here, but that means that
+     *    we might skip over something that wasn't considered close enough but was a better guess than just making the y value skip.
+     * 2b. If the guess box exactly aligns with the caret, then adjust by 1 and go again. This is to get a more accurate offset.
+     * 3. if the guess box does include the caret, but the guess box's parent cell does not *really* contain the caret, try again shifting
+     *    only the x value. If the guess box's parent cell does *really* contain the caret (i.e. it is horizontally-aligned), then stop
+     *    because the guess is GOOD.
+     */
+    const adjustDown = (bridge, element, guessBox, original, caret) => {
+        const lowerCaret = moveDown(caret, JUMP_SIZE);
+        if (Math.abs(guessBox.bottom - original.bottom) < 1) {
+            return adt.retry(lowerCaret);
+        }
+        else if (guessBox.top > caret.bottom) {
+            return adt.retry(lowerCaret);
+        }
+        else if (guessBox.top === caret.bottom) {
+            return adt.retry(moveDown(caret, 1));
+        }
+        else {
+            return inOutsideBlock(bridge, element, caret) ? adt.retry(translate(lowerCaret, JUMP_SIZE, 0)) : adt.none();
+        }
+    };
+    const adjustUp = (bridge, element, guessBox, original, caret) => {
+        const higherCaret = moveUp(caret, JUMP_SIZE);
+        if (Math.abs(guessBox.top - original.top) < 1) {
+            return adt.retry(higherCaret);
+        }
+        else if (guessBox.bottom < caret.top) {
+            return adt.retry(higherCaret);
+        }
+        else if (guessBox.bottom === caret.top) {
+            return adt.retry(moveUp(caret, 1));
+        }
+        else {
+            return inOutsideBlock(bridge, element, caret) ? adt.retry(translate(higherCaret, JUMP_SIZE, 0)) : adt.none();
+        }
+    };
+    const upMovement = {
+        point: getTop,
+        adjuster: adjustUp,
+        move: moveUp,
+        gather: before
+    };
+    const downMovement = {
+        point: getBottom,
+        adjuster: adjustDown,
+        move: moveDown,
+        gather: after
+    };
+    const isAtTable = (bridge, x, y) => {
+        return bridge.elementFromPoint(x, y).filter((elm) => {
+            return name(elm) === 'table';
+        }).isSome();
+    };
+    const adjustForTable = (bridge, movement, original, caret, numRetries) => {
+        return adjustTil(bridge, movement, original, movement.move(caret, JUMP_SIZE), numRetries);
+    };
+    const adjustTil = (bridge, movement, original, caret, numRetries) => {
+        if (numRetries === 0) {
+            return Optional.some(caret);
+        }
+        if (isAtTable(bridge, caret.left, movement.point(caret))) {
+            return adjustForTable(bridge, movement, original, caret, numRetries - 1);
+        }
+        return bridge.situsFromPoint(caret.left, movement.point(caret)).bind((guess) => {
+            return guess.start.fold(Optional.none, (element) => {
+                return getEntireBox(bridge, element).bind((guessBox) => {
+                    return movement.adjuster(bridge, element, guessBox, original, caret).fold(Optional.none, (newCaret) => {
+                        return adjustTil(bridge, movement, original, newCaret, numRetries - 1);
+                    });
+                }).orThunk(() => {
+                    return Optional.some(caret);
+                });
+            }, Optional.none);
+        });
+    };
+    const checkScroll = (movement, adjusted, bridge) => {
+        // I'm not convinced that this is right. Let's re-examine it later.
+        if (movement.point(adjusted) > bridge.getInnerHeight()) {
+            return Optional.some(movement.point(adjusted) - bridge.getInnerHeight());
+        }
+        else if (movement.point(adjusted) < 0) {
+            return Optional.some(-movement.point(adjusted));
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const retry = (movement, bridge, caret) => {
+        const moved = movement.move(caret, JUMP_SIZE);
+        const adjusted = adjustTil(bridge, movement, caret, moved, NUM_RETRIES).getOr(moved);
+        return checkScroll(movement, adjusted, bridge).fold(() => {
+            return bridge.situsFromPoint(adjusted.left, movement.point(adjusted));
+        }, (delta) => {
+            bridge.scrollBy(0, delta);
+            return bridge.situsFromPoint(adjusted.left, movement.point(adjusted) - delta);
+        });
+    };
+    const Retries = {
+        tryUp: curry(retry, upMovement),
+        tryDown: curry(retry, downMovement),
+        getJumpSize: constant(JUMP_SIZE)
+    };
+
+    const MAX_RETRIES = 20;
+    const findSpot = (bridge, isRoot, direction) => {
+        return bridge.getSelection().bind((sel) => {
+            return tryBr(isRoot, sel.finish, sel.foffset, direction).fold(() => {
+                return Optional.some(point(sel.finish, sel.foffset));
+            }, (brNeighbour) => {
+                const range = bridge.fromSitus(brNeighbour);
+                const analysis = BeforeAfter.verify(bridge, sel.finish, sel.foffset, range.finish, range.foffset, direction.failure, isRoot);
+                return process(analysis);
+            });
+        });
+    };
+    const scan = (bridge, isRoot, element, offset, direction, numRetries) => {
+        if (numRetries === 0) {
+            return Optional.none();
+        }
+        // Firstly, move the (x, y) and see what element we end up on.
+        return tryCursor(bridge, isRoot, element, offset, direction).bind((situs) => {
+            const range = bridge.fromSitus(situs);
+            // Now, check to see if the element is a new cell.
+            const analysis = BeforeAfter.verify(bridge, element, offset, range.finish, range.foffset, direction.failure, isRoot);
+            return BeforeAfter.cata(analysis, () => {
+                return Optional.none();
+            }, () => {
+                // We have a new cell, so we stop looking.
+                return Optional.some(situs);
+            }, (cell) => {
+                if (eq$1(element, cell) && offset === 0) {
+                    return tryAgain(bridge, element, offset, moveUp, direction);
+                }
+                else { // We need to look again from the start of our current cell
+                    return scan(bridge, isRoot, cell, 0, direction, numRetries - 1);
+                }
+            }, (cell) => {
+                // If we were here last time, move and try again.
+                if (eq$1(element, cell) && offset === getEnd(cell)) {
+                    return tryAgain(bridge, element, offset, moveDown, direction);
+                }
+                else { // We need to look again from the end of our current cell
+                    return scan(bridge, isRoot, cell, getEnd(cell), direction, numRetries - 1);
+                }
+            });
+        });
+    };
+    const tryAgain = (bridge, element, offset, move, direction) => {
+        return getBoxAt(bridge, element, offset).bind((box) => {
+            return tryAt(bridge, direction, move(box, Retries.getJumpSize()));
+        });
+    };
+    const tryAt = (bridge, direction, box) => {
+        const browser = detect$2().browser;
+        // NOTE: As we attempt to take over selection everywhere, we'll probably need to separate these again.
+        if (browser.isChromium() || browser.isSafari() || browser.isFirefox()) {
+            return direction.retry(bridge, box);
+        }
+        else {
+            return Optional.none();
+        }
+    };
+    const tryCursor = (bridge, isRoot, element, offset, direction) => {
+        return getBoxAt(bridge, element, offset).bind((box) => {
+            return tryAt(bridge, direction, box);
+        });
+    };
+    const handle = (bridge, isRoot, direction) => {
+        return findSpot(bridge, isRoot, direction).bind((spot) => {
+            // There is a point to start doing box-hitting from
+            return scan(bridge, isRoot, spot.element, spot.offset, direction, MAX_RETRIES).map(bridge.fromSitus);
+        });
+    };
+
+    const inSameTable = (elem, table) => {
+        return ancestor(elem, (e) => {
+            return parent(e).exists((p) => {
+                return eq$1(p, table);
+            });
+        });
+    };
+    // Note: initial is the finishing element, because that's where the cursor starts from
+    // Anchor is the starting element, and is only used to work out if we are in the same table
+    const simulate = (bridge, isRoot, direction, initial, anchor) => {
+        return closest$1(initial, 'td,th', isRoot).bind((start) => {
+            return closest$1(start, 'table', isRoot).bind((table) => {
+                if (!inSameTable(anchor, table)) {
+                    return Optional.none();
+                }
+                return handle(bridge, isRoot, direction).bind((range) => {
+                    return closest$1(range.finish, 'td,th', isRoot).map((finish) => {
+                        return {
+                            start,
+                            finish,
+                            range
+                        };
+                    });
+                });
+            });
+        });
+    };
+    const navigate = (bridge, isRoot, direction, initial, anchor, precheck) => {
+        return precheck(initial, isRoot).orThunk(() => {
+            return simulate(bridge, isRoot, direction, initial, anchor).map((info) => {
+                const range = info.range;
+                return Response.create(Optional.some(makeSitus(range.start, range.soffset, range.finish, range.foffset)), true);
+            });
+        });
+    };
+    const firstUpCheck = (initial, isRoot) => {
+        return closest$1(initial, 'tr', isRoot).bind((startRow) => {
+            return closest$1(startRow, 'table', isRoot).bind((table) => {
+                const rows = descendants(table, 'tr');
+                if (eq$1(startRow, rows[0])) {
+                    return seekLeft(table, (element) => {
+                        return last(element).isSome();
+                    }, isRoot).map((last) => {
+                        const lastOffset = getEnd(last);
+                        return Response.create(Optional.some(makeSitus(last, lastOffset, last, lastOffset)), true);
+                    });
+                }
+                else {
+                    return Optional.none();
+                }
+            });
+        });
+    };
+    const lastDownCheck = (initial, isRoot) => {
+        return closest$1(initial, 'tr', isRoot).bind((startRow) => {
+            return closest$1(startRow, 'table', isRoot).bind((table) => {
+                const rows = descendants(table, 'tr');
+                if (eq$1(startRow, rows[rows.length - 1])) {
+                    return seekRight(table, (element) => {
+                        return first(element).isSome();
+                    }, isRoot).map((first) => {
+                        return Response.create(Optional.some(makeSitus(first, 0, first, 0)), true);
+                    });
+                }
+                else {
+                    return Optional.none();
+                }
+            });
+        });
+    };
+    const select = (bridge, container, isRoot, direction, initial, anchor, selectRange) => {
+        return simulate(bridge, isRoot, direction, initial, anchor).bind((info) => {
+            return detect(container, isRoot, info.start, info.finish, selectRange);
+        });
+    };
+
+    const findCell = (target, isRoot) => closest$1(target, 'td,th', isRoot);
+    const isInEditableContext = (cell) => parentElement(cell).exists(isEditable$1);
+    const MouseSelection = (bridge, container, isRoot, annotations) => {
+        const cursor = value();
+        const clearstate = cursor.clear;
+        const applySelection = (event) => {
+            cursor.on((start) => {
+                annotations.clearBeforeUpdate(container);
+                findCell(event.target, isRoot).each((finish) => {
+                    identify(start, finish, isRoot).each((cellSel) => {
+                        const boxes = cellSel.boxes.getOr([]);
+                        if (boxes.length === 1) {
+                            // If a single noneditable cell is selected and the actual selection target within the cell
+                            // is also noneditable, make sure it is annotated
+                            const singleCell = boxes[0];
+                            const isNonEditableCell = getRaw$1(singleCell) === 'false';
+                            const isCellClosestContentEditable = is$2(closest(event.target), singleCell, eq$1);
+                            if (isNonEditableCell && isCellClosestContentEditable) {
+                                // Not selecting the contents or the node of the actual cell as shown below, keeping the selection on the offscreen element.
+                                annotations.selectRange(container, boxes, singleCell, singleCell);
+                            }
+                        }
+                        else if (boxes.length > 1) {
+                            // Wait until we have more than one, otherwise you can't do text selection inside a cell.
+                            annotations.selectRange(container, boxes, cellSel.start, cellSel.finish);
+                            // stop the browser from creating a big text selection, select the cell where the cursor is
+                            bridge.selectContents(finish);
+                        }
+                    });
+                });
+            });
+        };
+        /* Keep this as lightweight as possible when we're not in a table selection, it runs constantly */
+        const mousedown = (event) => {
+            annotations.clear(container);
+            findCell(event.target, isRoot).filter(isInEditableContext).each(cursor.set);
+        };
+        /* Keep this as lightweight as possible when we're not in a table selection, it runs constantly */
+        const mouseover = (event) => {
+            applySelection(event);
+        };
+        /* Keep this as lightweight as possible when we're not in a table selection, it runs constantly */
+        const mouseup = (event) => {
+            // Needed as Firefox will change the selection between the mouseover and mouseup when selecting
+            // just 2 cells as Firefox supports multiple selection ranges
+            applySelection(event);
+            clearstate();
+        };
+        return {
+            clearstate,
+            mousedown,
+            mouseover,
+            mouseup
+        };
+    };
+
+    const down = {
+        traverse: nextSibling,
+        gather: after,
+        relative: Situ.before,
+        retry: Retries.tryDown,
+        failure: BeforeAfter.failedDown
+    };
+    const up = {
+        traverse: prevSibling,
+        gather: before,
+        relative: Situ.before,
+        retry: Retries.tryUp,
+        failure: BeforeAfter.failedUp
+    };
+
+    const isKey = (key) => {
+        return (keycode) => {
+            return keycode === key;
+        };
+    };
+    const isUp = isKey(38);
+    const isDown = isKey(40);
+    const isNavigation = (keycode) => {
+        return keycode >= 37 && keycode <= 40;
+    };
+    const ltr = {
+        // We need to move KEYS out of keytar and into something much more low-level.
+        isBackward: isKey(37),
+        isForward: isKey(39)
+    };
+    const rtl = {
+        isBackward: isKey(39),
+        isForward: isKey(37)
+    };
+
+    const WindowBridge = (win) => {
+        const elementFromPoint = (x, y) => {
+            return SugarElement.fromPoint(SugarElement.fromDom(win.document), x, y);
+        };
+        const getRect = (element) => {
+            return element.dom.getBoundingClientRect();
+        };
+        const getRangedRect = (start, soffset, finish, foffset) => {
+            const sel = SimSelection.exact(start, soffset, finish, foffset);
+            return getFirstRect(win, sel);
+        };
+        const getSelection = () => {
+            return get$3(win).map((exactAdt) => {
+                return convertToRange(win, exactAdt);
+            });
+        };
+        const fromSitus = (situs) => {
+            const relative = SimSelection.relative(situs.start, situs.finish);
+            return convertToRange(win, relative);
+        };
+        const situsFromPoint = (x, y) => {
+            return getAtPoint(win, x, y).map((exact) => {
+                return Situs.create(exact.start, exact.soffset, exact.finish, exact.foffset);
+            });
+        };
+        const clearSelection = () => {
+            clear(win);
+        };
+        const collapseSelection = (toStart = false) => {
+            get$3(win).each((sel) => sel.fold((rng) => rng.collapse(toStart), (startSitu, finishSitu) => {
+                const situ = toStart ? startSitu : finishSitu;
+                setRelative(win, situ, situ);
+            }, (start, soffset, finish, foffset) => {
+                const node = toStart ? start : finish;
+                const offset = toStart ? soffset : foffset;
+                setExact(win, node, offset, node, offset);
+            }));
+        };
+        const selectNode = (element) => {
+            setToElement(win, element, false);
+        };
+        const selectContents = (element) => {
+            setToElement(win, element);
+        };
+        const setSelection = (sel) => {
+            setExact(win, sel.start, sel.soffset, sel.finish, sel.foffset);
+        };
+        const setRelativeSelection = (start, finish) => {
+            setRelative(win, start, finish);
+        };
+        const getInnerHeight = () => {
+            return win.innerHeight;
+        };
+        const getScrollY = () => {
+            const pos = get$6(SugarElement.fromDom(win.document));
+            return pos.top;
+        };
+        const scrollBy = (x, y) => {
+            by(x, y, SugarElement.fromDom(win.document));
+        };
+        return {
+            elementFromPoint,
+            getRect,
+            getRangedRect,
+            getSelection,
+            fromSitus,
+            situsFromPoint,
+            clearSelection,
+            collapseSelection,
+            setSelection,
+            setRelativeSelection,
+            selectNode,
+            selectContents,
+            getInnerHeight,
+            getScrollY,
+            scrollBy
+        };
+    };
+
+    const rc = (rows, cols) => ({ rows, cols });
+    const mouse = (win, container, isRoot, annotations) => {
+        const bridge = WindowBridge(win);
+        const handlers = MouseSelection(bridge, container, isRoot, annotations);
+        return {
+            clearstate: handlers.clearstate,
+            mousedown: handlers.mousedown,
+            mouseover: handlers.mouseover,
+            mouseup: handlers.mouseup
+        };
+    };
+    const isEditableNode = (node) => closest$2(node, isHTMLElement).exists(isEditable$1);
+    const isEditableSelection = (start, finish) => isEditableNode(start) || isEditableNode(finish);
+    const keyboard = (win, container, isRoot, annotations) => {
+        const bridge = WindowBridge(win);
+        const clearToNavigate = () => {
+            annotations.clear(container);
+            return Optional.none();
+        };
+        const keydown = (event, start, soffset, finish, foffset, direction) => {
+            const realEvent = event.raw;
+            const keycode = realEvent.which;
+            const shiftKey = realEvent.shiftKey === true;
+            const handler = retrieve$1(container, annotations.selectedSelector).fold(() => {
+                // Make sure any possible lingering annotations are cleared
+                if (isNavigation(keycode) && !shiftKey) {
+                    annotations.clearBeforeUpdate(container);
+                }
+                // Shift down should predict the movement and set the selection.
+                if (isNavigation(keycode) && shiftKey && !isEditableSelection(start, finish)) {
+                    return Optional.none;
+                }
+                else if (isDown(keycode) && shiftKey) {
+                    return curry(select, bridge, container, isRoot, down, finish, start, annotations.selectRange);
+                }
+                else if (isUp(keycode) && shiftKey) { // Shift up should predict the movement and set the selection.
+                    return curry(select, bridge, container, isRoot, up, finish, start, annotations.selectRange);
+                }
+                else if (isDown(keycode)) { // Down should predict the movement and set the cursor
+                    return curry(navigate, bridge, isRoot, down, finish, start, lastDownCheck);
+                }
+                else if (isUp(keycode)) { // Up should predict the movement and set the cursor
+                    return curry(navigate, bridge, isRoot, up, finish, start, firstUpCheck);
+                }
+                else {
+                    return Optional.none;
+                }
+            }, (selected) => {
+                const update$1 = (attempts) => {
+                    return () => {
+                        const navigation = findMap(attempts, (delta) => {
+                            return update(delta.rows, delta.cols, container, selected, annotations);
+                        });
+                        // Shift the selected rows and update the selection.
+                        return navigation.fold(() => {
+                            // The cell selection went outside the table, so clear it and bridge from the first box to before/after
+                            // the table
+                            return getEdges(container, annotations.firstSelectedSelector, annotations.lastSelectedSelector).map((edges) => {
+                                const relative = isDown(keycode) || direction.isForward(keycode) ? Situ.after : Situ.before;
+                                bridge.setRelativeSelection(Situ.on(edges.first, 0), relative(edges.table));
+                                annotations.clear(container);
+                                return Response.create(Optional.none(), true);
+                            });
+                        }, (_) => {
+                            return Optional.some(Response.create(Optional.none(), true));
+                        });
+                    };
+                };
+                if (isNavigation(keycode) && shiftKey && !isEditableSelection(start, finish)) {
+                    return Optional.none;
+                }
+                else if (isDown(keycode) && shiftKey) {
+                    return update$1([rc(+1, 0)]);
+                }
+                else if (isUp(keycode) && shiftKey) {
+                    return update$1([rc(-1, 0)]);
+                }
+                else if (direction.isBackward(keycode) && shiftKey) { // Left and right should try up/down respectively if they fail.
+                    return update$1([rc(0, -1), rc(-1, 0)]);
+                }
+                else if (direction.isForward(keycode) && shiftKey) {
+                    return update$1([rc(0, +1), rc(+1, 0)]);
+                }
+                else if (isNavigation(keycode) && !shiftKey) { // Clear the selection on normal arrow keys.
+                    return clearToNavigate;
+                }
+                else {
+                    return Optional.none;
+                }
+            });
+            return handler();
+        };
+        const keyup = (event, start, soffset, finish, foffset) => {
+            return retrieve$1(container, annotations.selectedSelector).fold(() => {
+                const realEvent = event.raw;
+                const keycode = realEvent.which;
+                const shiftKey = realEvent.shiftKey === true;
+                if (!shiftKey) {
+                    return Optional.none();
+                }
+                if (isNavigation(keycode) && isEditableSelection(start, finish)) {
+                    return sync(container, isRoot, start, soffset, finish, foffset, annotations.selectRange);
+                }
+                else {
+                    return Optional.none();
+                }
+            }, Optional.none);
+        };
+        return {
+            keydown,
+            keyup
+        };
+    };
+    const external = (win, container, isRoot, annotations) => {
+        const bridge = WindowBridge(win);
+        return (start, finish) => {
+            annotations.clearBeforeUpdate(container);
+            identify(start, finish, isRoot).each((cellSel) => {
+                const boxes = cellSel.boxes.getOr([]);
+                annotations.selectRange(container, boxes, cellSel.start, cellSel.finish);
+                // stop the browser from creating a big text selection, place the selection at the end of the cell where the cursor is
+                bridge.selectContents(finish);
+                bridge.collapseSelection();
+            });
+        };
+    };
+
+    const byClass = (ephemera) => {
+        const addSelectionClass = addClass(ephemera.selected);
+        const removeSelectionClasses = removeClasses([ephemera.selected, ephemera.lastSelected, ephemera.firstSelected]);
+        const clear = (container) => {
+            const sels = descendants(container, ephemera.selectedSelector);
+            each$2(sels, removeSelectionClasses);
+        };
+        const selectRange = (container, cells, start, finish) => {
+            clear(container);
+            each$2(cells, addSelectionClass);
+            add$1(start, ephemera.firstSelected);
+            add$1(finish, ephemera.lastSelected);
+        };
+        return {
+            clearBeforeUpdate: clear,
+            clear,
+            selectRange,
+            selectedSelector: ephemera.selectedSelector,
+            firstSelectedSelector: ephemera.firstSelectedSelector,
+            lastSelectedSelector: ephemera.lastSelectedSelector
+        };
+    };
+    const byAttr = (ephemera, onSelection, onClear) => {
+        const removeSelectionAttributes = (element) => {
+            remove$6(element, ephemera.selected);
+            remove$6(element, ephemera.firstSelected);
+            remove$6(element, ephemera.lastSelected);
+        };
+        const addSelectionAttribute = (element) => {
+            set$2(element, ephemera.selected, '1');
+        };
+        const clear = (container) => {
+            clearBeforeUpdate(container);
+            onClear();
+        };
+        const clearBeforeUpdate = (container) => {
+            const sels = descendants(container, `${ephemera.selectedSelector},${ephemera.firstSelectedSelector},${ephemera.lastSelectedSelector}`);
+            each$2(sels, removeSelectionAttributes);
+        };
+        const selectRange = (container, cells, start, finish) => {
+            clear(container);
+            each$2(cells, addSelectionAttribute);
+            set$2(start, ephemera.firstSelected, '1');
+            set$2(finish, ephemera.lastSelected, '1');
+            onSelection(cells, start, finish);
+        };
+        return {
+            clearBeforeUpdate,
+            clear,
+            selectRange,
+            selectedSelector: ephemera.selectedSelector,
+            firstSelectedSelector: ephemera.firstSelectedSelector,
+            lastSelectedSelector: ephemera.lastSelectedSelector
+        };
+    };
+    const SelectionAnnotation = {
+        byClass,
+        byAttr
+    };
+
+    /*
+     NOTE: This file is duplicated in the following locations:
+      - plugins/table/selection/Ephemera.ts
+      - advtable
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const strSelected = 'data-mce-selected';
+    const strSelectedSelector = 'td[' + strSelected + '],th[' + strSelected + ']';
+    // used with not selectors
+    const strAttributeSelector = '[' + strSelected + ']';
+    const strFirstSelected = 'data-mce-first-selected';
+    const strFirstSelectedSelector = 'td[' + strFirstSelected + '],th[' + strFirstSelected + ']';
+    const strLastSelected = 'data-mce-last-selected';
+    const strLastSelectedSelector = 'td[' + strLastSelected + '],th[' + strLastSelected + ']';
+    const attributeSelector = strAttributeSelector;
+    const ephemera = {
+        selected: strSelected,
+        selectedSelector: strSelectedSelector,
+        firstSelected: strFirstSelected,
+        firstSelectedSelector: strFirstSelectedSelector,
+        lastSelected: strLastSelected,
+        lastSelectedSelector: strLastSelectedSelector
+    };
+
+    /*
+     NOTE: This file is partially duplicated in the following locations:
+      - plugins/table/queries/TableTargets.ts
+      - advtable
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const forMenu = (selectedCells, table, cell) => ({
+        element: cell,
+        mergable: mergable(table, selectedCells, ephemera),
+        unmergable: unmergable(selectedCells),
+        selection: selection(selectedCells)
+    });
+    const paste = (element, clipboard, generators) => ({
+        element,
+        clipboard,
+        generators
+    });
+    const pasteRows = (selectedCells, _cell, clipboard, generators) => ({
+        selection: selection(selectedCells),
+        clipboard,
+        generators
+    });
+
+    /*
+     NOTE: This file is partially duplicated in the following locations:
+      - plugins/table/selection/TableSelection.ts
+      - advtable
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const getSelectionCellFallback = (element) => table(element).bind((table) => retrieve(table, ephemera.firstSelectedSelector)).fold(constant(element), (cells) => cells[0]);
+    const getSelectionFromSelector = (selector) => (initCell, isRoot) => {
+        const cellName = name(initCell);
+        const cell = cellName === 'col' || cellName === 'colgroup' ? getSelectionCellFallback(initCell) : initCell;
+        return closest$1(cell, selector, isRoot);
+    };
+    const getSelectionCellOrCaption = getSelectionFromSelector('th,td,caption');
+    const getSelectionCell = getSelectionFromSelector('th,td');
+    // Note: Includes single cell if the start of the selection whether collapsed or ranged is within a table cell
+    const getCellsFromSelection = (editor) => fromDom(editor.model.table.getSelectedCells());
+    const getCellsFromFakeSelection = (editor) => filter$2(getCellsFromSelection(editor), (cell) => is$1(cell, ephemera.selectedSelector));
+
+    const extractSelected = (cells) => {
+        // Assume for now that we only have one table (also handles the case where we multi select outside a table)
+        return table(cells[0]).map((table) => {
+            const replica = extract$1(table, attributeSelector);
+            removeDataStyle(replica);
+            return [replica];
+        });
+    };
+    const serializeElements = (editor, elements) => map$1(elements, (elm) => editor.selection.serializer.serialize(elm.dom, {})).join('');
+    const getTextContent = (editor, replicaElements) => {
+        const doc = editor.getDoc();
+        const dos = getRootNode(SugarElement.fromDom(editor.getBody()));
+        // Set up offscreen div so that the extracted table element can be inserted into the DOM
+        // TINY-10847: If the table element is detached from the DOM, calling innerText is equivalent to calling
+        // textContent which does not include '\n' and '\t' characters to separate rows and cells respectively
+        const offscreenDiv = SugarElement.fromTag('div', doc);
+        set$2(offscreenDiv, 'data-mce-bogus', 'all');
+        setAll(offscreenDiv, {
+            position: 'fixed',
+            left: '-9999999px',
+            top: '0',
+            overflow: 'hidden',
+            opacity: '0'
+        });
+        const root = getContentContainer(dos);
+        append(offscreenDiv, replicaElements);
+        append$1(root, offscreenDiv);
+        const textContent = offscreenDiv.dom.innerText;
+        remove$5(offscreenDiv);
+        return textContent;
+    };
+    const registerEvents = (editor, actions) => {
+        editor.on('BeforeGetContent', (e) => {
+            const multiCellContext = (cells) => {
+                e.preventDefault();
+                extractSelected(cells).each((replicaElements) => {
+                    const content = e.format === 'text' ? getTextContent(editor, replicaElements) : serializeElements(editor, replicaElements);
+                    e.content = content;
+                });
+            };
+            if (e.selection === true) {
+                const cells = getCellsFromFakeSelection(editor);
+                if (cells.length >= 1) {
+                    multiCellContext(cells);
+                }
+            }
+        });
+        editor.on('BeforeSetContent', (e) => {
+            if (e.selection === true && e.paste === true) {
+                const selectedCells = getCellsFromSelection(editor);
+                head(selectedCells).each((cell) => {
+                    table(cell).each((table) => {
+                        const elements = filter$2(fromHtml(e.content), (content) => {
+                            return name(content) !== 'meta';
+                        });
+                        const isTable = isTag('table');
+                        if (shouldMergeContentOnPaste(editor) && elements.length === 1 && isTable(elements[0])) {
+                            e.preventDefault();
+                            const doc = SugarElement.fromDom(editor.getDoc());
+                            const generators = paste$1(doc);
+                            const targets = paste(cell, elements[0], generators);
+                            actions.pasteCells(table, targets).each(() => {
+                                editor.focus();
+                            });
+                        }
+                    });
+                });
+            }
+        });
+    };
+
+    /*
+     NOTE: This file is duplicated in the following locations:
+      - core/api/TableEvents.ts
+      - plugins/table/api/Events.ts
+      - advtable
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const fireNewRow = (editor, row) => editor.dispatch('NewRow', { node: row });
+    const fireNewCell = (editor, cell) => editor.dispatch('NewCell', { node: cell });
+    const fireTableModified = (editor, table, data) => {
+        editor.dispatch('TableModified', { ...data, table });
+    };
+    const fireTableSelectionChange = (editor, cells, start, finish, otherCells) => {
+        editor.dispatch('TableSelectionChange', {
+            cells,
+            start,
+            finish,
+            otherCells
+        });
+    };
+    const fireTableSelectionClear = (editor) => {
+        editor.dispatch('TableSelectionClear');
+    };
+    const fireObjectResizeStart = (editor, target, width, height, origin) => {
+        editor.dispatch('ObjectResizeStart', { target, width, height, origin });
+    };
+    const fireObjectResized = (editor, target, width, height, origin) => {
+        editor.dispatch('ObjectResized', { target, width, height, origin });
+    };
+    const styleModified = { structure: false, style: true };
+    const structureModified = { structure: true, style: false };
+    const styleAndStructureModified = { structure: true, style: true };
+
+    const get$1 = (editor, table) => {
+        // Note: We can't enforce none (responsive), as if someone manually resizes a table
+        // then it must switch to either pixel (fixed) or percentage (relative) sizing
+        if (isTablePercentagesForced(editor)) {
+            return TableSize.percentageSize(table);
+        }
+        else if (isTablePixelsForced(editor)) {
+            return TableSize.pixelSize(table);
+        }
+        else {
+            // Detect based on the table width
+            return TableSize.getTableSize(table);
+        }
+    };
+
+    const TableActions = (editor, resizeHandler, cellSelectionHandler) => {
+        const isTableBody = (editor) => name(getBody(editor)) === 'table';
+        const lastRowGuard = (table) => !isTableBody(editor) || getGridSize(table).rows > 1;
+        const lastColumnGuard = (table) => !isTableBody(editor) || getGridSize(table).columns > 1;
+        // Optional.none gives the default cloneFormats.
+        const cloneFormats = getTableCloneElements(editor);
+        const colMutationOp = isResizeTableColumnResizing(editor) ? noop : halve;
+        const getTableSectionType = (table) => {
+            switch (getTableHeaderType(editor)) {
+                case 'section':
+                    return TableSection.section();
+                case 'sectionCells':
+                    return TableSection.sectionCells();
+                case 'cells':
+                    return TableSection.cells();
+                default:
+                    // Attempt to automatically find the type. If a type can't be found
+                    // then fallback to "section" to maintain backwards compatibility.
+                    return TableSection.getTableSectionType(table, 'section');
+            }
+        };
+        const setSelectionFromAction = (table, result) => result.cursor.fold(() => {
+            // Snooker has reported we don't have a good cursor position. However, we may have a locked column
+            // with noneditable cells, so lets check if we have a noneditable cell and if so place the selection
+            const cells = cells$1(table);
+            return head(cells).filter(inBody).map((firstCell) => {
+                cellSelectionHandler.clearSelectedCells(table.dom);
+                const rng = editor.dom.createRng();
+                rng.selectNode(firstCell.dom);
+                editor.selection.setRng(rng);
+                set$2(firstCell, 'data-mce-selected', '1');
+                return rng;
+            });
+        }, (cell) => {
+            const des = freefallRtl(cell);
+            const rng = editor.dom.createRng();
+            rng.setStart(des.element.dom, des.offset);
+            rng.setEnd(des.element.dom, des.offset);
+            editor.selection.setRng(rng);
+            cellSelectionHandler.clearSelectedCells(table.dom);
+            return Optional.some(rng);
+        });
+        const execute = (operation, guard, mutate, effect) => (table, target, noEvents = false) => {
+            removeDataStyle(table);
+            const doc = SugarElement.fromDom(editor.getDoc());
+            const generators = cellOperations(mutate, doc, cloneFormats);
+            const behaviours = {
+                sizing: get$1(editor, table),
+                resize: isResizeTableColumnResizing(editor) ? resizeTable() : preserveTable(),
+                section: getTableSectionType(table)
+            };
+            return guard(table) ? operation(table, target, generators, behaviours).bind((result) => {
+                // Update the resize bars after the table operation
+                resizeHandler.refresh(table.dom);
+                // INVESTIGATE: Should "noEvents" prevent these from firing as well?
+                each$2(result.newRows, (row) => {
+                    fireNewRow(editor, row.dom);
+                });
+                each$2(result.newCells, (cell) => {
+                    fireNewCell(editor, cell.dom);
+                });
+                const range = setSelectionFromAction(table, result);
+                if (inBody(table)) {
+                    removeDataStyle(table);
+                    if (!noEvents) {
+                        fireTableModified(editor, table.dom, effect);
+                    }
+                }
+                return range.map((rng) => ({
+                    rng,
+                    effect
+                }));
+            }) : Optional.none();
+        };
+        const deleteRow = execute(eraseRows, lastRowGuard, noop, structureModified);
+        const deleteColumn = execute(eraseColumns, lastColumnGuard, noop, structureModified);
+        const insertRowsBefore$1 = execute(insertRowsBefore, always, noop, structureModified);
+        const insertRowsAfter$1 = execute(insertRowsAfter, always, noop, structureModified);
+        const insertColumnsBefore$1 = execute(insertColumnsBefore, always, colMutationOp, structureModified);
+        const insertColumnsAfter$1 = execute(insertColumnsAfter, always, colMutationOp, structureModified);
+        const mergeCells$1 = execute(mergeCells, always, noop, structureModified);
+        const unmergeCells$1 = execute(unmergeCells, always, noop, structureModified);
+        const pasteColsBefore$1 = execute(pasteColsBefore, always, noop, structureModified);
+        const pasteColsAfter$1 = execute(pasteColsAfter, always, noop, structureModified);
+        const pasteRowsBefore$1 = execute(pasteRowsBefore, always, noop, structureModified);
+        const pasteRowsAfter$1 = execute(pasteRowsAfter, always, noop, structureModified);
+        const pasteCells$1 = execute(pasteCells, always, noop, styleAndStructureModified);
+        const makeCellsHeader$1 = execute(makeCellsHeader, always, noop, structureModified);
+        const unmakeCellsHeader$1 = execute(unmakeCellsHeader, always, noop, structureModified);
+        const makeColumnsHeader$1 = execute(makeColumnsHeader, always, noop, structureModified);
+        const unmakeColumnsHeader$1 = execute(unmakeColumnsHeader, always, noop, structureModified);
+        const makeRowsHeader$1 = execute(makeRowsHeader, always, noop, structureModified);
+        const makeRowsBody$1 = execute(makeRowsBody, always, noop, structureModified);
+        const makeRowsFooter$1 = execute(makeRowsFooter, always, noop, structureModified);
+        const getTableCellType = getCellsType;
+        const getTableColType = getColumnsType;
+        const getTableRowType = getRowsType;
+        return {
+            deleteRow,
+            deleteColumn,
+            insertRowsBefore: insertRowsBefore$1,
+            insertRowsAfter: insertRowsAfter$1,
+            insertColumnsBefore: insertColumnsBefore$1,
+            insertColumnsAfter: insertColumnsAfter$1,
+            mergeCells: mergeCells$1,
+            unmergeCells: unmergeCells$1,
+            pasteColsBefore: pasteColsBefore$1,
+            pasteColsAfter: pasteColsAfter$1,
+            pasteRowsBefore: pasteRowsBefore$1,
+            pasteRowsAfter: pasteRowsAfter$1,
+            pasteCells: pasteCells$1,
+            makeCellsHeader: makeCellsHeader$1,
+            unmakeCellsHeader: unmakeCellsHeader$1,
+            makeColumnsHeader: makeColumnsHeader$1,
+            unmakeColumnsHeader: unmakeColumnsHeader$1,
+            makeRowsHeader: makeRowsHeader$1,
+            makeRowsBody: makeRowsBody$1,
+            makeRowsFooter: makeRowsFooter$1,
+            getTableRowType,
+            getTableCellType,
+            getTableColType
+        };
+    };
+
+    const placeCaretInCell = (editor, cell) => {
+        editor.selection.select(cell.dom, true);
+        editor.selection.collapse(true);
+    };
+    const selectFirstCellInTable = (editor, tableElm) => {
+        descendant(tableElm, 'td,th').each(curry(placeCaretInCell, editor));
+    };
+    const fireEvents = (editor, table) => {
+        each$2(descendants(table, 'tr'), (row) => {
+            fireNewRow(editor, row.dom);
+            each$2(descendants(row, 'th,td'), (cell) => {
+                fireNewCell(editor, cell.dom);
+            });
+        });
+    };
+    const isPercentage = (width) => isString(width) && width.indexOf('%') !== -1;
+    const insert = (editor, columns, rows, colHeaders, rowHeaders) => {
+        const defaultStyles = getTableDefaultStyles(editor);
+        const options = {
+            styles: defaultStyles,
+            attributes: getTableDefaultAttributes(editor),
+            colGroups: tableUseColumnGroup(editor)
+        };
+        // Don't create an undo level when inserting the base table HTML otherwise we can end up with 2 undo levels
+        editor.undoManager.ignore(() => {
+            const table = render(rows, columns, rowHeaders, colHeaders, getTableHeaderType(editor), options);
+            set$2(table, 'data-mce-id', '__mce');
+            const html = getOuter$2(table);
+            editor.insertContent(html);
+            editor.addVisual();
+        });
+        // Enforce the sizing mode of the table
+        return descendant(getBody(editor), 'table[data-mce-id="__mce"]').map((table) => {
+            if (isTablePixelsForced(editor)) {
+                convertToPixelSizeWidth(table);
+            }
+            else if (isTableResponsiveForced(editor)) {
+                convertToNoneSizeWidth(table);
+            }
+            else if (isTablePercentagesForced(editor) || isPercentage(defaultStyles.width)) {
+                convertToPercentSizeWidth(table);
+            }
+            removeDataStyle(table);
+            remove$6(table, 'data-mce-id');
+            fireEvents(editor, table);
+            selectFirstCellInTable(editor, table);
+            return table.dom;
+        }).getOrNull();
+    };
+    const insertTable = (editor, rows, columns, options = {}) => {
+        const checkInput = (val) => isNumber(val) && val > 0;
+        if (checkInput(rows) && checkInput(columns)) {
+            const headerRows = options.headerRows ?? defaultHeaderRows(editor);
+            const headerColumns = options.headerColumns ?? defaultHeaderCols(editor);
+            return insert(editor, columns, rows, headerColumns, headerRows);
+        }
+        else {
+            // eslint-disable-next-line no-console
+            console.error('Invalid values for mceInsertTable - rows and columns values are required to insert a table.');
+            return null;
+        }
+    };
+
+    var global = tinymce.util.Tools.resolve('tinymce.FakeClipboard');
+
+    /*
+     NOTE: This file is duplicated in the following locations:
+      - plugins/table/api/Clipboard.ts
+     Make sure that if making changes to this file, the other files are updated as well
+     */
+    const tableTypeBase = 'x-tinymce/dom-table-';
+    const tableTypeRow = tableTypeBase + 'rows';
+    const tableTypeColumn = tableTypeBase + 'columns';
+    const setData = (items) => {
+        const fakeClipboardItem = global.FakeClipboardItem(items);
+        global.write([fakeClipboardItem]);
+    };
+    const getData = (type) => {
+        const items = global.read() ?? [];
+        return findMap(items, (item) => Optional.from(item.getType(type)));
+    };
+    const clearData = (type) => {
+        if (getData(type).isSome()) {
+            global.clear();
+        }
+    };
+    const setRows = (rowsOpt) => {
+        rowsOpt.fold(clearRows, (rows) => setData({ [tableTypeRow]: rows }));
+    };
+    const getRows = () => getData(tableTypeRow);
+    const clearRows = () => clearData(tableTypeRow);
+    const setColumns = (columnsOpt) => {
+        columnsOpt.fold(clearColumns, (columns) => setData({ [tableTypeColumn]: columns }));
+    };
+    const getColumns = () => getData(tableTypeColumn);
+    const clearColumns = () => clearData(tableTypeColumn);
+
+    const getSelectionStartCellOrCaption = (editor) => getSelectionCellOrCaption(getSelectionStart(editor), getIsRoot(editor)).filter(isInEditableContext$1);
+    const getSelectionStartCell = (editor) => getSelectionCell(getSelectionStart(editor), getIsRoot(editor)).filter(isInEditableContext$1);
+    const registerCommands = (editor, actions) => {
+        const isRoot = getIsRoot(editor);
+        const eraseTable = () => getSelectionStartCellOrCaption(editor).each((cellOrCaption) => {
+            table(cellOrCaption, isRoot).filter(not(isRoot)).each((table) => {
+                const cursor = SugarElement.fromText('');
+                after$4(table, cursor);
+                remove$5(table);
+                if (editor.dom.isEmpty(editor.getBody())) {
+                    editor.setContent('');
+                    editor.selection.setCursorLocation();
+                }
+                else {
+                    const rng = editor.dom.createRng();
+                    rng.setStart(cursor.dom, 0);
+                    rng.setEnd(cursor.dom, 0);
+                    editor.selection.setRng(rng);
+                    editor.nodeChanged();
+                }
+            });
+        });
+        const setSizingMode = (sizing) => getSelectionStartCellOrCaption(editor).each((cellOrCaption) => {
+            // Do nothing if tables are forced to use a specific sizing mode
+            const isForcedSizing = isTableResponsiveForced(editor) || isTablePixelsForced(editor) || isTablePercentagesForced(editor);
+            if (!isForcedSizing) {
+                table(cellOrCaption, isRoot).each((table) => {
+                    if (sizing === 'relative' && !isPercentSizing(table)) {
+                        convertToPercentSizeWidth(table);
+                    }
+                    else if (sizing === 'fixed' && !isPixelSizing(table)) {
+                        convertToPixelSizeWidth(table);
+                    }
+                    else if (sizing === 'responsive' && !isNoneSizing(table)) {
+                        convertToNoneSizeWidth(table);
+                    }
+                    removeDataStyle(table);
+                    fireTableModified(editor, table.dom, structureModified);
+                });
+            }
+        });
+        const getTableFromCell = (cell) => table(cell, isRoot);
+        const performActionOnSelection = (action) => getSelectionStartCell(editor).bind((cell) => getTableFromCell(cell).map((table) => action(table, cell)));
+        const toggleTableClass = (_ui, clazz) => {
+            performActionOnSelection((table) => {
+                editor.formatter.toggle('tableclass', { value: clazz }, table.dom);
+                fireTableModified(editor, table.dom, styleModified);
+            });
+        };
+        const toggleTableCellClass = (_ui, clazz) => {
+            performActionOnSelection((table) => {
+                const selectedCells = getCellsFromSelection(editor);
+                const allHaveClass = forall(selectedCells, (cell) => editor.formatter.match('tablecellclass', { value: clazz }, cell.dom));
+                const formatterAction = allHaveClass ? editor.formatter.remove : editor.formatter.apply;
+                each$2(selectedCells, (cell) => formatterAction('tablecellclass', { value: clazz }, cell.dom));
+                fireTableModified(editor, table.dom, styleModified);
+            });
+        };
+        const toggleCaption = () => {
+            getSelectionStartCellOrCaption(editor).each((cellOrCaption) => {
+                table(cellOrCaption, isRoot).each((table) => {
+                    child(table, 'caption').fold(() => {
+                        const caption = SugarElement.fromTag('caption');
+                        append$1(caption, SugarElement.fromText('Caption'));
+                        appendAt(table, caption, 0);
+                        editor.selection.setCursorLocation(caption.dom, 0);
+                    }, (caption) => {
+                        if (isTag('caption')(cellOrCaption)) {
+                            one('td', table).each((td) => editor.selection.setCursorLocation(td.dom, 0));
+                        }
+                        remove$5(caption);
+                    });
+                    fireTableModified(editor, table.dom, structureModified);
+                });
+            });
+        };
+        const postExecute = (_data) => {
+            editor.focus();
+        };
+        const actOnSelection = (execute, noEvents = false) => performActionOnSelection((table, startCell) => {
+            const targets = forMenu(getCellsFromSelection(editor), table, startCell);
+            execute(table, targets, noEvents).each(postExecute);
+        });
+        const copyRowSelection = () => performActionOnSelection((table, startCell) => {
+            const targets = forMenu(getCellsFromSelection(editor), table, startCell);
+            const generators = cellOperations(noop, SugarElement.fromDom(editor.getDoc()), Optional.none());
+            return copyRows(table, targets, generators);
+        });
+        const copyColSelection = () => performActionOnSelection((table, startCell) => {
+            const targets = forMenu(getCellsFromSelection(editor), table, startCell);
+            return copyCols(table, targets);
+        });
+        const pasteOnSelection = (execute, getRows) => 
+        // If we have FakeClipboard rows to paste
+        getRows().each((rows) => {
+            const clonedRows = map$1(rows, (row) => deep(row));
+            performActionOnSelection((table, startCell) => {
+                const generators = paste$1(SugarElement.fromDom(editor.getDoc()));
+                const targets = pasteRows(getCellsFromSelection(editor), startCell, clonedRows, generators);
+                execute(table, targets).each(postExecute);
+            });
+        });
+        const actOnType = (getAction) => (_ui, args) => get$c(args, 'type').each((type) => {
+            actOnSelection(getAction(type), args.no_events);
+        });
+        // Register action commands
+        each$1({
+            mceTableSplitCells: () => actOnSelection(actions.unmergeCells),
+            mceTableMergeCells: () => actOnSelection(actions.mergeCells),
+            mceTableInsertRowBefore: () => actOnSelection(actions.insertRowsBefore),
+            mceTableInsertRowAfter: () => actOnSelection(actions.insertRowsAfter),
+            mceTableInsertColBefore: () => actOnSelection(actions.insertColumnsBefore),
+            mceTableInsertColAfter: () => actOnSelection(actions.insertColumnsAfter),
+            mceTableDeleteCol: () => actOnSelection(actions.deleteColumn),
+            mceTableDeleteRow: () => actOnSelection(actions.deleteRow),
+            mceTableCutCol: () => copyColSelection().each((selection) => {
+                setColumns(selection);
+                actOnSelection(actions.deleteColumn);
+            }),
+            mceTableCutRow: () => copyRowSelection().each((selection) => {
+                setRows(selection);
+                actOnSelection(actions.deleteRow);
+            }),
+            mceTableCopyCol: () => copyColSelection().each((selection) => setColumns(selection)),
+            mceTableCopyRow: () => copyRowSelection().each((selection) => setRows(selection)),
+            mceTablePasteColBefore: () => pasteOnSelection(actions.pasteColsBefore, getColumns),
+            mceTablePasteColAfter: () => pasteOnSelection(actions.pasteColsAfter, getColumns),
+            mceTablePasteRowBefore: () => pasteOnSelection(actions.pasteRowsBefore, getRows),
+            mceTablePasteRowAfter: () => pasteOnSelection(actions.pasteRowsAfter, getRows),
+            mceTableDelete: eraseTable,
+            mceTableCellToggleClass: toggleTableCellClass,
+            mceTableToggleClass: toggleTableClass,
+            mceTableToggleCaption: toggleCaption,
+            mceTableSizingMode: (_ui, sizing) => setSizingMode(sizing),
+            mceTableCellType: actOnType((type) => type === 'th' ? actions.makeCellsHeader : actions.unmakeCellsHeader),
+            mceTableColType: actOnType((type) => type === 'th' ? actions.makeColumnsHeader : actions.unmakeColumnsHeader),
+            mceTableRowType: actOnType((type) => {
+                switch (type) {
+                    case 'header':
+                        return actions.makeRowsHeader;
+                    case 'footer':
+                        return actions.makeRowsFooter;
+                    default:
+                        return actions.makeRowsBody;
+                }
+            })
+        }, (func, name) => editor.addCommand(name, func));
+        editor.addCommand('mceInsertTable', (_ui, args) => {
+            insertTable(editor, args.rows, args.columns, args.options);
+        });
+        // Apply cell style using command (background color, border color, border style and border width)
+        // tinyMCE.activeEditor.execCommand('mceTableApplyCellStyle', false, { backgroundColor: 'red', borderColor: 'blue' })
+        // Remove cell style using command (an empty string indicates to remove the style)
+        // tinyMCE.activeEditor.execCommand('mceTableApplyCellStyle', false, { backgroundColor: '' })
+        editor.addCommand('mceTableApplyCellStyle', (_ui, args) => {
+            const getFormatName = (style) => 'tablecell' + style.toLowerCase().replace('-', '');
+            if (!isObject(args)) {
+                return;
+            }
+            const cells = filter$2(getCellsFromSelection(editor), isInEditableContext$1);
+            if (cells.length === 0) {
+                return;
+            }
+            const validArgs = filter$1(args, (value, style) => editor.formatter.has(getFormatName(style)) && isString(value));
+            if (isEmpty(validArgs)) {
+                return;
+            }
+            each$1(validArgs, (value, style) => {
+                const formatName = getFormatName(style);
+                each$2(cells, (cell) => {
+                    if (value === '') {
+                        editor.formatter.remove(formatName, { value: null }, cell.dom, true);
+                    }
+                    else {
+                        editor.formatter.apply(formatName, { value }, cell.dom);
+                    }
+                });
+            });
+            /*
+              Use the first cell in the selection to get the table and fire the TableModified event.
+              If this command is applied over multiple tables, only the first table selected
+              will have a TableModified event thrown.
+            */
+            getTableFromCell(cells[0]).each((table) => fireTableModified(editor, table.dom, styleModified));
+        });
+    };
+
+    const registerQueryCommands = (editor, actions) => {
+        const isRoot = getIsRoot(editor);
+        const lookupOnSelection = (action) => getSelectionCell(getSelectionStart(editor)).bind((cell) => table(cell, isRoot).map((table) => {
+            const targets = forMenu(getCellsFromSelection(editor), table, cell);
+            return action(table, targets);
+        })).getOr('');
+        each$1({
+            mceTableRowType: () => lookupOnSelection(actions.getTableRowType),
+            mceTableCellType: () => lookupOnSelection(actions.getTableCellType),
+            mceTableColType: () => lookupOnSelection(actions.getTableColType)
+        }, (func, name) => editor.addQueryValueHandler(name, func));
+    };
+
+    const hasInternalTarget = (e) => !has(SugarElement.fromDom(e.target), 'ephox-snooker-resizer-bar');
+    const TableCellSelectionHandler = (editor, resizeHandler) => {
+        const cellSelection = Selections(() => SugarElement.fromDom(editor.getBody()), () => getSelectionCell(getSelectionStart(editor), getIsRoot(editor)), ephemera.selectedSelector);
+        const onSelection = (cells, start, finish) => {
+            const tableOpt = table(start);
+            tableOpt.each((table) => {
+                const cellsDom = map$1(cells, (cell) => cell.dom);
+                const cloneFormats = getTableCloneElements(editor);
+                const generators = cellOperations(noop, SugarElement.fromDom(editor.getDoc()), cloneFormats);
+                const selectedCells = getCellsFromSelection(editor);
+                const otherCellsDom = getOtherCells(table, { selection: selectedCells }, generators)
+                    .map((otherCells) => map(otherCells, (cellArr) => map$1(cellArr, (cell) => cell.dom)))
+                    .getOrUndefined();
+                fireTableSelectionChange(editor, cellsDom, start.dom, finish.dom, otherCellsDom);
+            });
+        };
+        const onClear = () => fireTableSelectionClear(editor);
+        const annotations = SelectionAnnotation.byAttr(ephemera, onSelection, onClear);
+        editor.on('init', (_e) => {
+            const win = editor.getWin();
+            const body = getBody(editor);
+            const isRoot = getIsRoot(editor);
+            // When the selection changes through either the mouse or keyboard, and the selection is no longer within the table.
+            // Remove the selection.
+            const syncSelection = () => {
+                const sel = editor.selection;
+                const start = SugarElement.fromDom(sel.getStart());
+                const end = SugarElement.fromDom(sel.getEnd());
+                const shared = sharedOne(table, [start, end]);
+                shared.fold(() => annotations.clear(body), noop);
+            };
+            const mouseHandlers = mouse(win, body, isRoot, annotations);
+            const keyHandlers = keyboard(win, body, isRoot, annotations);
+            const external$1 = external(win, body, isRoot, annotations);
+            const hasShiftKey = (event) => event.raw.shiftKey === true;
+            editor.on('TableSelectorChange', (e) => external$1(e.start, e.finish));
+            const handleResponse = (event, response) => {
+                // Only handle shift key non shiftkey cell navigation is handled by core
+                if (!hasShiftKey(event)) {
+                    return;
+                }
+                if (response.kill) {
+                    event.kill();
+                }
+                response.selection.each((ns) => {
+                    const relative = SimSelection.relative(ns.start, ns.finish);
+                    const rng = asLtrRange(win, relative);
+                    editor.selection.setRng(rng);
+                });
+            };
+            const keyup = (event) => {
+                const wrappedEvent = fromRawEvent(event);
+                // Note, this is an optimisation.
+                if (wrappedEvent.raw.shiftKey && isNavigation(wrappedEvent.raw.which)) {
+                    const rng = editor.selection.getRng();
+                    const start = SugarElement.fromDom(rng.startContainer);
+                    const end = SugarElement.fromDom(rng.endContainer);
+                    keyHandlers.keyup(wrappedEvent, start, rng.startOffset, end, rng.endOffset).each((response) => {
+                        handleResponse(wrappedEvent, response);
+                    });
+                }
+            };
+            const keydown = (event) => {
+                const wrappedEvent = fromRawEvent(event);
+                resizeHandler.hide();
+                const rng = editor.selection.getRng();
+                const start = SugarElement.fromDom(rng.startContainer);
+                const end = SugarElement.fromDom(rng.endContainer);
+                const direction = onDirection(ltr, rtl)(SugarElement.fromDom(editor.selection.getStart()));
+                keyHandlers.keydown(wrappedEvent, start, rng.startOffset, end, rng.endOffset, direction).each((response) => {
+                    handleResponse(wrappedEvent, response);
+                });
+                resizeHandler.show();
+            };
+            const isLeftMouse = (raw) => raw.button === 0;
+            // https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/buttons
+            const isLeftButtonPressed = (raw) => {
+                // Only added by Chrome/Firefox in June 2015.
+                // This is only to fix a 1px bug (TBIO-2836) so return true if we're on an older browser
+                if (raw.buttons === undefined) {
+                    return true;
+                }
+                // use bitwise & for optimal comparison
+                // eslint-disable-next-line no-bitwise
+                return (raw.buttons & 1) !== 0;
+            };
+            const dragStart = (_e) => {
+                mouseHandlers.clearstate();
+            };
+            const mouseDown = (e) => {
+                if (isLeftMouse(e) && hasInternalTarget(e)) {
+                    mouseHandlers.mousedown(fromRawEvent(e));
+                }
+            };
+            const mouseOver = (e) => {
+                if (isLeftButtonPressed(e) && hasInternalTarget(e)) {
+                    mouseHandlers.mouseover(fromRawEvent(e));
+                }
+            };
+            const mouseUp = (e) => {
+                if (isLeftMouse(e) && hasInternalTarget(e)) {
+                    mouseHandlers.mouseup(fromRawEvent(e));
+                }
+            };
+            const getDoubleTap = () => {
+                const lastTarget = Cell(SugarElement.fromDom(body));
+                const lastTimeStamp = Cell(0);
+                const touchEnd = (t) => {
+                    const target = SugarElement.fromDom(t.target);
+                    if (isTag('td')(target) || isTag('th')(target)) {
+                        const lT = lastTarget.get();
+                        const lTS = lastTimeStamp.get();
+                        if (eq$1(lT, target) && (t.timeStamp - lTS) < 300) {
+                            t.preventDefault();
+                            external$1(target, target);
+                        }
+                    }
+                    lastTarget.set(target);
+                    lastTimeStamp.set(t.timeStamp);
+                };
+                return {
+                    touchEnd
+                };
+            };
+            const doubleTap = getDoubleTap();
+            editor.on('dragstart', dragStart);
+            editor.on('mousedown', mouseDown);
+            editor.on('mouseover', mouseOver);
+            editor.on('mouseup', mouseUp);
+            editor.on('touchend', doubleTap.touchEnd);
+            editor.on('keyup', keyup);
+            editor.on('keydown', keydown);
+            editor.on('NodeChange', syncSelection);
+        });
+        editor.on('PreInit', () => {
+            editor.serializer.addTempAttr(ephemera.firstSelected);
+            editor.serializer.addTempAttr(ephemera.lastSelected);
+        });
+        const clearSelectedCells = (container) => annotations.clear(SugarElement.fromDom(container));
+        const getSelectedCells = () => fold(cellSelection.get(), 
+        // No fake selected cells
+        constant([]), 
+        // This path is taken whenever there is fake cell selection even for just a single selected cell
+        (cells) => {
+            return map$1(cells, (cell) => cell.dom);
+        }, 
+        // For this path, the start of the selection whether collapsed or ranged is within a table cell
+        (cell) => [cell.dom]);
+        return {
+            getSelectedCells,
+            clearSelectedCells
+        };
+    };
+
+    const get = (editor, isResizable) => {
+        const editorBody = SugarElement.fromDom(editor.getBody());
+        return ResizeWire.body(editorBody, isResizable);
+    };
+
+    const isTable = (node) => isNonNullable(node) && node.nodeName === 'TABLE';
+    const barResizerPrefix = 'bar-';
+    const isResizable = (elm) => get$b(elm, 'data-mce-resize') !== 'false';
+    const syncTableCellPixels = (table) => {
+        const warehouse = Warehouse.fromTable(table);
+        if (!Warehouse.hasColumns(warehouse)) {
+            // Ensure the specified width matches the actual cell width
+            each$2(cells$1(table), (cell) => {
+                const computedWidth = get$9(cell, 'width');
+                set$1(cell, 'width', computedWidth);
+                remove$6(cell, 'width');
+            });
+        }
+    };
+    const isCornerResize = (origin) => startsWith(origin, 'corner-');
+    const getCornerLocation = (origin) => removeLeading(origin, 'corner-');
+    const TableResizeHandler = (editor) => {
+        const selectionRng = value();
+        const tableResize = value();
+        const resizeWire = value();
+        let startW;
+        let startRawW;
+        let startH;
+        let startRawH;
+        const lazySizing = (table) => get$1(editor, table);
+        const lazyResizingBehaviour = () => isPreserveTableColumnResizing(editor) ? preserveTable() : resizeTable();
+        const getNumColumns = (table) => getGridSize(table).columns;
+        const getNumRows = (table) => getGridSize(table).rows;
+        const afterCornerResize = (table, origin, width, height) => {
+            // Origin will tell us which handle was clicked, eg corner-se or corner-nw
+            // so check to see if it ends with `e` (eg east edge)
+            const location = getCornerLocation(origin);
+            const isRightEdgeResize = endsWith(location, 'e');
+            const isNorthEdgeResize = startsWith(location, 'n');
+            // Responsive tables don't have a width so we need to convert it to a relative/percent
+            // table instead, as that's closer to responsive sizing than fixed sizing
+            if (startRawW === '') {
+                convertToPercentSizeWidth(table);
+            }
+            // Responsive tables don't have a height so we need to convert it to a fixed value to be able to resize the table height
+            if (startRawH === '') {
+                convertToPixelSizeHeight(table);
+            }
+            // Adjust the column sizes and update the table width to use the right sizing, if the table changed size.
+            // This is needed as core will always use pixels when setting the width.
+            if (width !== startW && startRawW !== '') {
+                // Restore the original size and then let snooker resize appropriately
+                set$1(table, 'width', startRawW);
+                const resizing = lazyResizingBehaviour();
+                const tableSize = lazySizing(table);
+                // For preserve table we want to always resize the entire table. So pretend the last column is being resized
+                const col = isPreserveTableColumnResizing(editor) || isRightEdgeResize ? getNumColumns(table) - 1 : 0;
+                adjustWidth(table, width - startW, col, resizing, tableSize);
+                // Handle the edge case where someone might fire this event without resizing.
+                // If so then we need to ensure the table is still using percent
+            }
+            else if (isPercentage$1(startRawW)) {
+                const percentW = parseFloat(startRawW.replace('%', ''));
+                const targetPercentW = width * percentW / startW;
+                set$1(table, 'width', targetPercentW + '%');
+            }
+            // Sync the cell sizes, as the core resizing logic doesn't update them, but snooker does
+            if (isPixel(startRawW)) {
+                syncTableCellPixels(table);
+            }
+            // NOTE: This will only change the height of the first or last tr
+            if (height !== startH && startRawH !== '') {
+                // Restore the original size and then let snooker resize appropriately
+                set$1(table, 'height', startRawH);
+                const idx = isNorthEdgeResize ? 0 : getNumRows(table) - 1;
+                adjustHeight(table, height - startH, idx);
+            }
+        };
+        const destroy = () => {
+            tableResize.on((sz) => {
+                sz.destroy();
+            });
+        };
+        editor.on('init', () => {
+            const rawWire = get(editor, isResizable);
+            resizeWire.set(rawWire);
+            if (hasTableObjectResizing(editor) && hasTableResizeBars(editor)) {
+                const resizing = lazyResizingBehaviour();
+                const sz = TableResize.create(rawWire, resizing, lazySizing);
+                if (!editor.mode.isReadOnly()) {
+                    sz.on();
+                }
+                sz.events.startDrag.bind((_event) => {
+                    selectionRng.set(editor.selection.getRng());
+                });
+                sz.events.beforeResize.bind((event) => {
+                    const rawTable = event.table.dom;
+                    fireObjectResizeStart(editor, rawTable, getPixelWidth(rawTable), getPixelHeight(rawTable), barResizerPrefix + event.type);
+                });
+                sz.events.afterResize.bind((event) => {
+                    const table = event.table;
+                    const rawTable = table.dom;
+                    removeDataStyle(table);
+                    selectionRng.on((rng) => {
+                        editor.selection.setRng(rng);
+                        editor.focus();
+                    });
+                    fireObjectResized(editor, rawTable, getPixelWidth(rawTable), getPixelHeight(rawTable), barResizerPrefix + event.type);
+                    editor.undoManager.add();
+                });
+                tableResize.set(sz);
+            }
+        });
+        // If we're updating the table width via the old mechanic, we need to update the constituent cells' widths/heights too.
+        editor.on('ObjectResizeStart', (e) => {
+            const targetElm = e.target;
+            if (isTable(targetElm) && !editor.mode.isReadOnly()) {
+                const table = SugarElement.fromDom(targetElm);
+                // Add a class based on the resizing mode
+                each$2(editor.dom.select('.mce-clonedresizable'), (clone) => {
+                    editor.dom.addClass(clone, 'mce-' + getTableColumnResizingBehaviour(editor) + '-columns');
+                });
+                if (!isPixelSizing(table) && isTablePixelsForced(editor)) {
+                    convertToPixelSizeWidth(table);
+                }
+                else if (!isPercentSizing(table) && isTablePercentagesForced(editor)) {
+                    convertToPercentSizeWidth(table);
+                }
+                // TINY-6601: If resizing using a bar, then snooker will base the resizing on the initial size. So
+                // when using a responsive table we need to ensure we convert to a relative table before resizing
+                if (isNoneSizing(table) && startsWith(e.origin, barResizerPrefix)) {
+                    convertToPercentSizeWidth(table);
+                }
+                startW = e.width;
+                startRawW = isTableResponsiveForced(editor) ? '' : getRawWidth(editor, targetElm).getOr('');
+                startH = e.height;
+                startRawH = getRawHeight(editor, targetElm).getOr('');
+            }
+        });
+        editor.on('ObjectResized', (e) => {
+            const targetElm = e.target;
+            if (isTable(targetElm)) {
+                const table = SugarElement.fromDom(targetElm);
+                // Resize based on the snooker logic to adjust the individual col/rows if resized from a corner
+                const origin = e.origin;
+                if (isCornerResize(origin)) {
+                    afterCornerResize(table, origin, e.width, e.height);
+                }
+                removeDataStyle(table);
+                fireTableModified(editor, table.dom, styleModified);
+            }
+        });
+        const showResizeBars = () => {
+            tableResize.on((resize) => {
+                resize.on();
+                resize.showBars();
+            });
+        };
+        const hideResizeBars = () => {
+            tableResize.on((resize) => {
+                resize.off();
+                resize.hideBars();
+            });
+        };
+        editor.on('DisabledStateChange', (e) => {
+            e.state ? hideResizeBars() : showResizeBars();
+        });
+        editor.on('SwitchMode', () => {
+            editor.mode.isReadOnly() ? hideResizeBars() : showResizeBars();
+        });
+        editor.on('dragstart dragend', (e) => {
+            e.type === 'dragstart' ? hideResizeBars() : showResizeBars();
+        });
+        editor.on('remove', () => {
+            destroy();
+        });
+        const refresh = (table) => {
+            tableResize.on((resize) => resize.refreshBars(SugarElement.fromDom(table)));
+        };
+        const hide = () => {
+            tableResize.on((resize) => resize.hideBars());
+        };
+        const show = () => {
+            tableResize.on((resize) => resize.showBars());
+        };
+        return {
+            refresh,
+            hide,
+            show
+        };
+    };
+
+    const setupTable = (editor) => {
+        register(editor);
+        const resizeHandler = TableResizeHandler(editor);
+        const cellSelectionHandler = TableCellSelectionHandler(editor, resizeHandler);
+        const actions = TableActions(editor, resizeHandler, cellSelectionHandler);
+        registerCommands(editor, actions);
+        registerQueryCommands(editor, actions);
+        // TODO: TINY-8385 Maybe move to core. Although, will need RTC to have that working first
+        registerEvents(editor, actions);
+        return {
+            getSelectedCells: cellSelectionHandler.getSelectedCells,
+            clearSelectedCells: cellSelectionHandler.clearSelectedCells
+        };
+    };
+
+    const DomModel = (editor) => {
+        const table = setupTable(editor);
+        return {
+            table
+        };
+    };
+    var Model = () => {
+        global$1.add('dom', DomModel);
+    };
+
+    Model();
+    /** *****
+     * DO NOT EXPORT ANYTHING
+     *
+     * IF YOU DO ROLLUP WILL LEAVE A GLOBAL ON THE PAGE
+     *******/
+
+})();

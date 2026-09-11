@@ -1,6 +1,5 @@
 import '../scss/index.scss'
 import { nanoid } from 'nanoid'
-import { prototype } from 'dropzone'
 import preloader from 'preloader-js'
 
 // === === === === === === === === === === === ===

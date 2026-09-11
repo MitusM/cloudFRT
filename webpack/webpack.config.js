@@ -6,7 +6,7 @@ const CopyPlugin = require('copy-webpack-plugin')
 // const svg = require("./svg");
 const images = require('./images')
 const sass = require('./sass')
-const babel = require('./babel')
+// Babel убран (modern browsers, webpack 5 сам парсит ESM)
 
 var appRoot = require('app-root-path')
 
@@ -147,7 +147,7 @@ const common = merge([
   },
   images(),
   // svg(),
-  babel(),
+  // babel(),
 ])
 
 module.exports = function (env) {
