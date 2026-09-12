@@ -2,12 +2,7 @@ import sharp from 'sharp'
 import { promisify } from 'util'
 import { imageSizeFromFile } from 'image-size/fromFile'
 import imagemin from 'imagemin'
-import imageminMozjpeg from 'imagemin-mozjpeg'
-import imageminPngquant from 'imagemin-pngquant'
 import imageminWebp from 'imagemin-webp'
-import imageminSvgo from 'imagemin-svgo'
-// const { extendDefaultPlugins } = require('svgo')
-// import extendDefaultPlugins from 'svgo'
 import path from 'path'
 
 import File from '../path/file.js'
@@ -150,58 +145,6 @@ class Images extends File {
         })
         .catch((err) => reject(err))
     })
-  }
-
-  //
-  async optimazition(file, folder) {
-    file = typeof file === 'string' ? [file] : file
-    // FIXME: extend default options
-    const jpgQuality = this.options.jpgQuality
-      ? {
-          quality: this.options.jpgQuality,
-        }
-      : {}
-
-    const pngQuality = this.options.pngQuality
-      ? {
-          quality: this.options.pngQuality,
-        }
-      : {
-          quality: [0.6, 0.8],
-        }
-
-    const webpQuality = this.options.webpQuality
-      ? {
-          quality: this.options.webpQuality,
-        }
-      : {
-          quality: 50,
-        }
-
-    // try {
-    // FIXME: Вынести в отдельный метод
-    folder = this.isAbsolute(folder)
-      ? folder
-      : this.resolve([].slice.call(arguments, 1).join(''))
-
-    return await imagemin(file, {
-      destination: this.mkDir(folder),
-      plugins: [
-        // imageminWebp(webpQuality),
-        imageminMozjpeg(jpgQuality),
-        imageminPngquant(pngQuality),
-        imageminWebp(webpQuality),
-        // imageminSvgo({
-        //   plugins: extendDefaultPlugins([{
-        //     name: 'removeViewBox',
-        //     active: false
-        //   }])
-        // })
-      ],
-    })
-    // } catch (error) {
-    //   new Error(error)
-    // }
   }
 
   /**

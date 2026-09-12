@@ -5,7 +5,7 @@ class Files extends Images {
     super(options)
   }
 
-  // { isDirectory: boolean; path: string; create: any; atime: any; ctime: any; mtime: any; file: string; type: any; name: string; height: any; width: any; orientation: any; }
+  // { isDirectory: boolean; path: string; create: any; atime: any; ctime: any; mtime: any; file: string; type: any; name: string; height: any; width: any; }
   async statFile(file) {
     let obj = {}
     /** относительный путь до файла */
@@ -30,10 +30,9 @@ class Files extends Images {
       let img = this.extImg.indexOf(ext)
       if (img > 0) {
         // FIXME: Переписать на statImg
-        let { height, orientation, width } = await this.dimensions(file)
+        let { height, width } = await this.dimensions(file)
         obj.height = height
         obj.width = width
-        if (orientation) obj.orientation = orientation
         obj.image = true
       } else {
         obj.image = false

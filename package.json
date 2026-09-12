@@ -34,10 +34,7 @@
     "file-type": "^22.0.2",
     "filehound": "^1.17.6",
     "image-size": "^2.0.2",
-    "imagemin": "^8.0.1",
-    "imagemin-mozjpeg": "^10.0.0",
-    "imagemin-pngquant": "^9.0.2",
-    "imagemin-svgo": "^10.0.1",
+    "imagemin": "^9.0.1",
     "imagemin-webp": "^8.0.0",
     "ioredis": "^6.0.0",
     "izitoast": "^1.4.0",
@@ -91,10 +88,7 @@
   "allowScripts": {
     "cwebp-bin@8.0.0": true,
     "cwebp-bin@7.0.1": true,
-    "gifsicle@5.3.0": true,
     "mozjpeg@7.1.1": true,
-    "mozjpeg@8.0.0": true,
-    "optipng-bin@7.0.1": true,
-    "pngquant-bin@6.0.1": true
+    "mozjpeg@8.0.0": true
   }
 }
