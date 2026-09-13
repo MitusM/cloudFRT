@@ -1,0 +1,10 @@
+<a class="dest-card" href="{{ item.url }}">
+  {% if item.image %}
+  <div class="dc-media"><img class="dc-img" src="{{ item.image }}" alt="{{ item.cardTitle }}" loading="lazy" /></div>
+  {% endif %}
+  <div class="dc-body">
+    {% if item.level %}<span class="lv">{{ item.level }}</span>{% endif %}
+    <span class="t">{{ item.cardTitle }}</span>
+    {% if item.intro %}<span class="dc-desc">{{ item.intro }}</span>{% endif %}
+  </div>
+</a>

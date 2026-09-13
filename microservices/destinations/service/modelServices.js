@@ -518,9 +518,9 @@ class Model extends PDO {
   // Собирает маркеры для карты на гео-хабе: сам узел (если есть location) +
   // прямые дочерние узлы с координатами. Возвращает { points, center }.
   // location хранится как OPoint { coordinates: [lng, lat] } (GeoJSON порядок!).
+  // С DestType: каждая точка содержит typeSlug, typeName, typeIcon для symbol-слоя карты.
   async getMapPoints(rid) {
     const pull = (r) => {
-      // нормализуем location в { lat, lng }
       if (r && r.location) {
         const c = r.location.coordinates
         if (Array.isArray(c) && c.length >= 2) {
@@ -533,23 +533,36 @@ class Model extends PDO {
     const points = []
     let center = null
 
-    // сам узел
-    const self = await this.getByRid(rid)
+    // сам узел (с типом)
+    const self = await this.queryOne(
+      `SELECT @rid, slug, title, level, location, out('HAS_TYPE').slug AS typeSlug,
+              out('HAS_TYPE').name AS typeName, out('HAS_TYPE').icon AS typeIcon
+       FROM ${rid}`
+    )
     const selfLoc = pull(self)
     if (selfLoc && self.title) {
-      points.push({ name: self.title, level: self.level, ...selfLoc })
+      const ts = Array.isArray(self.typeSlug) ? self.typeSlug[0] : self.typeSlug
+      const tn = Array.isArray(self.typeName) ? self.typeName[0] : self.typeName
+      const ti = Array.isArray(self.typeIcon) ? self.typeIcon[0] : self.typeIcon
+      points.push({ name: self.title, level: self.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
       center = selfLoc
     }
 
-    // прямые дети с location (достопримечательности/подместа) — только опубликованные
+    // прямые дети с location — только опубликованные, с типом
     const kids = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, location FROM Dest
+      `SELECT @rid as rid, slug, title, level, location,
+              out('HAS_TYPE').slug AS typeSlug, out('HAS_TYPE').name AS typeName,
+              out('HAS_TYPE').icon AS typeIcon
+       FROM Dest
        WHERE ${rid} IN out('PART_OF') AND location IS NOT NULL AND status = 'published'`
     )
     for (const k of kids || []) {
       const loc = pull(k)
       if (loc && k.title) {
-        points.push({ name: k.title, level: k.level, ...loc })
+        const ts = Array.isArray(k.typeSlug) ? k.typeSlug[0] : k.typeSlug
+        const tn = Array.isArray(k.typeName) ? k.typeName[0] : k.typeName
+        const ti = Array.isArray(k.typeIcon) ? k.typeIcon[0] : k.typeIcon
+        points.push({ name: k.title, level: k.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
       }
     }
 
@@ -563,8 +576,74 @@ class Model extends PDO {
     return { points, center }
   }
 
-  async getSettings() {
-    return this.queryOne('SELECT * FROM Settings WHERE microservice="destinations"')
+  // ============ DestType: типы объектов (13.09.2026) ============
+
+  /** Все типы DestType (каталог) */
+  async getTypes() {
+    return this.queryAll(
+      `SELECT @rid as rid, slug, slug_plural, name, name_plural, icon, description, priority FROM DestType ORDER BY priority`
+    )
+  }
+
+  /** Получить тип объекта по RID Dest: { slug, name, name_plural, icon } или null */
+  async getDestType(destRid) {
+    const row = await this.queryOne(
+      `SELECT out('HAS_TYPE').slug AS slug, out('HAS_TYPE').name AS name,
+              out('HAS_TYPE').name_plural AS name_plural, out('HAS_TYPE').icon AS icon
+       FROM ${destRid} WHERE out('HAS_TYPE').size() > 0`
+    )
+    if (!row) return null
+    const slug = Array.isArray(row.slug) ? row.slug[0] : row.slug
+    const name = Array.isArray(row.name) ? row.name[0] : row.name
+    const icon = Array.isArray(row.icon) ? row.icon[0] : row.icon
+    const name_plural = Array.isArray(row.name_plural) ? row.name_plural[0] : row.name_plural
+    return slug ? { slug, name, name_plural, icon } : null
+  }
+
+  /** Присвоить / сменить тип объекта: удаляет старые HAS_TYPE, создаёт новое ребро */
+  async setDestType(destRid, typeSlug) {
+    const type = await this.queryOne(
+      `SELECT @rid FROM DestType WHERE slug = '${String(typeSlug).replace(/'/g, "\\'")}'`
+    )
+    if (!type) return { done: false, error: `DestType '${typeSlug}' not found` }
+    await this.command(`DELETE EDGE HAS_TYPE WHERE out = ${destRid}`)
+    await this.create('HAS_TYPE', destRid, type['@rid'])
+    return { done: true }
+  }
+
+  /** «Похожие места» по типу: того же типа под тем же родителем (исключая сам узел) */
+  async getSimilarByType(destRid, limit = 8) {
+    const lim = parseInt(limit, 10) || 8
+    const typeRow = await this.queryOne(
+      `SELECT out('HAS_TYPE').@rid AS typeRid FROM ${destRid} WHERE out('HAS_TYPE').size() > 0`
+    )
+    if (!typeRow || !typeRow.typeRid) return []
+    const typeRid = Array.isArray(typeRow.typeRid) ? typeRow.typeRid[0] : typeRow.typeRid
+    const parentRow = await this.queryOne(`SELECT out('PART_OF') AS p FROM ${destRid}`)
+    const parents = (parentRow && parentRow.p) || []
+    if (!parents.length) return []
+    const parentClause = parents.map((p) => `${p['@rid'] || p} IN out('PART_OF')`).join(' OR ')
+    return this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, status, content FROM Dest
+       WHERE (${parentClause}) AND @rid <> ${destRid} AND status = 'published'
+         AND ${typeRid} IN out('HAS_TYPE')
+       ORDER BY priority DESC LIMIT ${lim}`
+    )
+  }
+
+  /** Все published объекты заданного типа под родителем (страница категории) */
+  async getByParentAndType(parentRid, typeSlug, limit = 50) {
+    const lim = parseInt(limit, 10) || 50
+    const type = await this.queryOne(
+      `SELECT @rid FROM DestType WHERE slug = '${String(typeSlug).replace(/'/g, "\\'")}'`
+    )
+    if (!type) return []
+    return this.queryAll(
+      `SELECT @rid as rid, slug, title, h1, level, image, priority, description, content FROM Dest
+       WHERE ${parentRid} IN out('PART_OF') AND status = 'published'
+         AND ${type['@rid']} IN out('HAS_TYPE')
+       ORDER BY priority DESC LIMIT ${lim}`
+    )
   }
 }
 

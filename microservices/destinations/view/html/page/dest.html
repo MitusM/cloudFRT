@@ -58,6 +58,14 @@
 {% if description %}<p class="dest-desc">{{ description }}</p>{% endif %}
 {% endif %}
 
+{# ---------- Бейдж типа объекта (DestType) ---------- #}
+{% if type_badge %}
+<div class="dest-type-badge">
+  <span class="dest-type-badge-icon" data-icon="{{ type_badge.icon }}"></span>
+  <span class="dest-type-badge-name">{{ type_badge.name }}</span>
+</div>
+{% endif %}
+
 {# ---------- Контент хаба ---------- #}
 {% if content %}<div class="dest-content">{{ content | safe }}</div>{% endif %}
 

@@ -275,6 +275,75 @@ const endpoints = async (app) => {
       if (cachedHtml) return res.status(200).end(cachedHtml)
 
       const dest = await db.getByPath(slugs)
+
+      // === DestType: если узел не найден — пробуем как страницу категории типа ===
+      // /destinations/gornyj-altaj/ozera/ → последний сегмент 'ozera' — тип
+      if (!dest && slugs.length >= 2) {
+        const parentSlugs = slugs.slice(0, -1)
+        const maybeType = slugs[slugs.length - 1]
+
+        // ищем тип по slug (одинственное), slug_plural (множественный — в URL), или name_plural (русское)
+        // Приоритет: slug_plural > slug > name_plural
+        const types = await db.getTypes()
+        const typeMatch = types.find((t) => t.slug_plural === maybeType || t.slug === maybeType || t.name_plural === maybeType)
+        if (!typeMatch) {
+          return errorHandler(res, 'Not found')
+        }
+
+        // URL типа — всегда slug_plural (множественное число в URL)
+        const typeUrlSlug = typeMatch.slug_plural || typeMatch.slug
+
+        // родительский узел
+        const parentDest = await db.getByPath(parentSlugs)
+        if (!parentDest) {
+          return errorHandler(res, 'Not found')
+        }
+
+        const cacheKey = `destPage:${slugs.join('/')}`
+        const cachedHtml = await CacheRedis.get(cacheKey)
+        if (cachedHtml) return res.status(200).end(cachedHtml)
+
+        // все объекты этого типа под родителем
+        const typeItems = await db.getByParentAndType(parentDest['@rid'], typeMatch.slug)
+
+        // breadcrumb
+        const chain = await db.parentsChain(parentDest['@rid'])
+        const breadcrumb = buildBreadcrumb(chain, parentDest.slug)
+        // добавляем текущий тип как последний элемент
+        breadcrumb.push({ name: typeMatch.name_plural || typeMatch.name, url: `/destinations/${parentSlugs.join('/')}/${typeUrlSlug}`, current: true })
+
+        const data = {
+          title: `${typeMatch.name_plural || typeMatch.name} — ${parentDest.title}`,
+          h1: typeMatch.name_plural || typeMatch.name,
+          description: typeMatch.description || '',
+          image: parentDest.image || '',
+          page: './page/category.html',
+          breadcrumb,
+          breadcrumb_schema: breadcrumbSchema(breadcrumb),
+          type: typeMatch,
+          parent: { slug: parentDest.slug, title: parentDest.title, url: `/destinations/${parentSlugs.join('/')}` },
+          items: typeItems.map((item) => {
+            const cf = destCardFields(item)
+            return {
+              slug: item.slug,
+              title: item.title,
+              level: item.level,
+              url: `/destinations/${parentSlugs.join('/')}/${item.slug}`,
+              cardTitle: cf.cardTitle,
+              image: cf.image,
+              intro: cf.intro,
+            }
+          }),
+          current_year: new Date().getFullYear(),
+        }
+
+        const { response } = await res.app.ask('render', {
+          server: { action: 'html', meta: { dir: templateDir, page: 'index.html', data } },
+        })
+        CacheRedis.set(cacheKey, response.html, CACHE_TTL)
+        return res.status(200).end(response.html)
+      }
+
       if (!dest) {
         return errorHandler(res, 'Not found')
       }
@@ -332,11 +401,18 @@ const endpoints = async (app) => {
           })
       }
 
-      // «Похожие места»: братья по дереву. Для брата URL = up уровень + slug.
-      const sibs = await db.getSiblings(dest['@rid'], 8)
-      // родительский путь = basePath без последнего сегмента (текущий узел)
+      // «Похожие места»: сначала по типу (если есть), затем fallback на братьев по дереву.
+      const destType = await db.getDestType(dest['@rid'])
+      let sims = []
+      if (destType) {
+        sims = await db.getSimilarByType(dest['@rid'], 8)
+      }
+      // fallback: если у узла нет типа или ничего не нашлось — братья по дереву
+      if (!sims.length) {
+        sims = await db.getSiblings(dest['@rid'], 8)
+      }
       const parentPath = slugs.slice(0, -1).join('/')
-      const siblings = sibs.map((s) => {
+      const siblings = sims.map((s) => {
         const cf = destCardFields(s)
         return {
           title: s.title,
@@ -403,6 +479,7 @@ const endpoints = async (app) => {
         children,
         top_places: topPlaces,
         siblings,
+        type_badge: destType ? { slug: destType.slug, name: destType.name, icon: destType.icon } : null,
         links: links,
         articles: related,
         // этап 5: карта
@@ -437,10 +514,12 @@ const endpoints = async (app) => {
       // дерево целиком: [{ slug, title, level, path }] — для списка и select родителя
       const tree = await db.getSitemapTree()
       // JSON-блоб для JS-клиента (парсится из <script type="application/json">)
+      const types = await db.getTypes()
       const adminData = JSON.stringify({
         csrf: req.session.csrfSecret,
         levels: ['country', 'region', 'place', 'attraction'],
         tree: tree,
+        types: types.map((t) => ({ slug: t.slug, name: t.name, icon: t.icon })),
         api: '/destinations/admin',
       })
       const data = {
@@ -563,10 +642,12 @@ const endpoints = async (app) => {
       if (!dest) return errorHandler(res, 'Not found')
       // дополнить: родитель (для выбора в админ-UI) и плоские координаты
       const parentRid = await db.getParentRid(rid)
+      const destType = await db.getDestType(rid)
       return res.status(200).json({
         dest: {
           ...dest,
           parentRid,
+          type: destType ? destType.slug : null,
           lat: dest.location && dest.location.coordinates ? dest.location.coordinates[1] : null,
           lng: dest.location && dest.location.coordinates ? dest.location.coordinates[0] : null,
         },
@@ -604,6 +685,11 @@ const endpoints = async (app) => {
       })
       if (!result.done) return errorHandler(res, result.err || 'Ошибка создания', 500)
 
+      // если передан type — создать HAS_TYPE ребро
+      if (clean.type && result.dest && result.dest['@rid']) {
+        await db.setDestType(result.dest['@rid'], clean.type)
+      }
+
       // инвалидировать кэш публичных страниц
       await invalidatePageCache()
       return res.status(201).json({ done: true, rid: result.dest && result.dest['@rid'] })
@@ -630,6 +716,12 @@ const endpoints = async (app) => {
       }
 
       const result = await db.updateDest(rid, clean)
+
+      // если меняется тип — обновить HAS_TYPE ребро
+      if (clean.type !== undefined) {
+        await db.setDestType(rid, clean.type)
+      }
+
       // если меняется родитель — перенести в дереве (с защитой от циклов)
       if (clean.parentRid !== undefined && String(clean.parentRid) !== String(rid)) {
         // нельзя перенести узел в самого себя или своего потомка

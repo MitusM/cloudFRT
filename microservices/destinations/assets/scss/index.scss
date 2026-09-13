@@ -337,3 +337,52 @@ h2.dest-h2 {
 .dest-map {
   margin: 24px 0;
 }
+
+// ---- Бейдж типа объекта (DestType) ----
+.dest-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #f3f4f6;
+  font-size: 0.9rem;
+  color: #374151;
+  .dest-type-badge-icon {
+    width: 18px;
+    height: 18px;
+    background: #9ca3af;
+    border-radius: 50%;
+  }
+  .dest-type-badge-name {
+    font-weight: 500;
+  }
+}
+
+// ---- Страница категории (page/category.html) ----
+.dest-category-header {
+  margin-bottom: 28px;
+  .dest-h1 {
+    font-size: 2rem;
+    margin: 0 0 8px;
+  }
+  .dest-desc {
+    color: #374151;
+    margin-bottom: 12px;
+  }
+  .dest-parent-link {
+    a {
+      color: #2563eb;
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.dest-empty {
+  color: #6b7280;
+  font-style: italic;
+}

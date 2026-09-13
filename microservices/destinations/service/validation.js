@@ -11,12 +11,27 @@
 
 export const LEVELS = ['country', 'region', 'place', 'attraction']
 
+// Допустимые идентификаторы типов объектов (DestType slug)
+export const VALID_TYPES = [
+  'ozero', 'vodopad', 'gora', 'vershina', 'peshchera', 'reka',
+  'dolina', 'plyazh', 'ostrov', 'park', 'zapovednik', 'muzej',
+  'vidovaya-ploshchadka', 'rodnik',
+]
+
+// Валидация slug типа: проверка на существование в списке
+// (для админ-эндпоинтов; для modelServices.js см. setDestType — там
+//  прямо SELECT по DestType, чтобы не дублировать список)
+export function validateTypeSlug(slug) {
+  return VALID_TYPES.includes(slug)
+}
+
 // Допустимые поля для создания/обновления
 // (status НЕ редактируется формой — меняется отдельным эндпоинтом publish;
 //  он принят здесь только для внутренних вызовов/API.)
 export const FIELDS = [
   'slug', 'title', 'h1', 'level', 'description', 'content',
   'lat', 'lng', 'image', 'is_hub', 'priority', 'parentRid', 'status',
+  'type', // slug типа объекта (DestType)
 ]
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/

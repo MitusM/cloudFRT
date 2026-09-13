@@ -30,6 +30,9 @@ import '../scss/admin.scss'
     attraction: 'достопримечательность',
   }
 
+  // Типы DestType — из adminData.types
+  var TYPES = parsed.types || []
+
   function el(id) {
     return document.getElementById(id)
   }
@@ -480,6 +483,7 @@ import '../scss/admin.scss'
         el(id).value = ''
       }
     )
+    el('f-type').value = ''
     setContent('')
     // авто-уровень: в корне → страна, в стране → регион, и т.д.
     var lvl = nextLevel(state.currentNode ? state.currentNode.level : null)
@@ -574,6 +578,8 @@ import '../scss/admin.scss'
         setContent(d.content && d.content.html ? d.content.html : d.content || '')
         el('f-lat').value = d.lat != null ? d.lat : ''
         el('f-lng').value = d.lng != null ? d.lng : ''
+        // тип объекта
+        el('f-type').value = d.type || ''
         el('f-current-rid').value = d.parentRid || ''
         el('f-current-level').value = d.level || ''
         // родитель: разблокирован для перемещения, заполняется деревом
@@ -672,6 +678,7 @@ import '../scss/admin.scss'
       content: getContent() || undefined,
       image: el('f-image').value.trim() || undefined,
       is_hub: el('f-is_hub').checked,
+      type: el('f-type').value || undefined,
       priority: el('f-priority').value ? parseFloat(el('f-priority').value) : undefined,
       lat: el('f-lat').value ? parseFloat(el('f-lat').value) : undefined,
       lng: el('f-lng').value ? parseFloat(el('f-lng').value) : undefined,
@@ -825,6 +832,19 @@ import '../scss/admin.scss'
     togglePublish(state.currentEditRid, !isPub)
   }
   el('f-level').onchange = updateLevelHint
+
+  // ---- заполнить селект типов из adminData ----
+  if (TYPES.length) {
+    var typeSelect = el('f-type')
+    if (typeSelect) {
+      TYPES.forEach(function (t) {
+        var opt = document.createElement('option')
+        opt.value = t.slug
+        opt.textContent = t.icon ? t.icon + ' ' + t.name : t.name
+        typeSelect.appendChild(opt)
+      })
+    }
+  }
 
   // ---- инициализация tinymce 8 для поля #f-content ----
   if (window.tinymce) {

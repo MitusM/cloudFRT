@@ -64,6 +64,24 @@ CREATE CLASS PART_OF EXTENDS E;      -- иерархия мест (child -PART_O
 CREATE CLASS HAS_TRIP EXTENDS E;     -- место -HAS_TRIP-> Trip
 CREATE CLASS HAS_ARTICLE EXTENDS E;  -- место -HAS_ARTICLE-> Article (/stati)
 CREATE CLASS HAS_MAP EXTENDS E;      -- место -HAS_MAP-> Map
+CREATE CLASS HAS_TYPE EXTENDS E;     -- Dest -HAS_TYPE-> DestType (тип объекта: озеро, водопад…)
+
+/* ---------- DestType: каталог типов объектов (13.09.2026) ---------- */
+CREATE CLASS DestType EXTENDS V;
+CREATE PROPERTY DestType.slug STRING;            -- ключ-идентификатор (ozero, vodopad, …)
+CREATE PROPERTY DestType.name STRING;            -- название (Озеро)
+CREATE PROPERTY DestType.name_plural STRING;     -- множественное (Озёра)
+CREATE PROPERTY DestType.icon STRING;            -- имя иконки (для MapLibre symbol-слоя)
+CREATE PROPERTY DestType.slug_plural STRING;     -- URL-форма множественного: ozera, vodopady, gory…
+CREATE PROPERTY DestType.description STRING;     -- SEO-описание для страниц категорий
+CREATE PROPERTY DestType.priority DOUBLE;        -- порядок сортировки
+CREATE PROPERTY DestType.created DATETIME;       -- sysdate() при вставке
+CREATE INDEX DestType.slug_idx ON DestType (slug) NOTUNIQUE;
+
+/* ---------- slug_plural: URL-форма множественного числа          ----------
+   Для страниц категорий в URL: /gornyj-altaj/ozera/ (не /ozere/).
+   Добавлено 13.09.2026 как отдельное свойство (не генерируется,     ----------
+   так как транслитерация не всегда предсказуема).                    */
 
 /* ---------- Settings (необязательно, симметрия с article) ---------- */
 -- CREATE VERTEX Settings SET microservice = 'destinations';

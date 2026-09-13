@@ -1,0 +1,45 @@
+{# ============================================================
+   page/category.html — страница категории по типу (озёра, водопады…)
+   Данные (data):
+     title, h1, description, image,
+     breadcrumb: [{name, url, current}],
+     type: {slug, name, name_plural, icon, description, priority},
+     parent: {slug, title, url},
+     items: [{slug, title, url, cardTitle, image, intro, level}]
+   ============================================================ #}
+
+{% if breadcrumb %}
+<nav class="dest-breadcrumb" aria-label="breadcrumb">
+  <ol>
+    {% for crumb in breadcrumb %}
+    <li>
+      {% if crumb.current %}
+      <span aria-current="page">{{ crumb.name }}</span>
+      {% else %}
+      <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+
+<div class="dest-category-header">
+  <h1 class="dest-h1">{{ h1 }}</h1>
+  {% if description %}
+  <p class="dest-desc">{{ description }}</p>
+  {% endif %}
+  <p class="dest-parent-link">
+    <a href="{{ parent.url }}">← {{ parent.title }}</a>
+  </p>
+</div>
+
+{% if items.length %}
+<div class="dest-grid">
+  {% for item in items %}
+  {% include "./destCard.html" %}
+  {% endfor %}
+</div>
+{% else %}
+<p class="dest-empty">Пока нет материалов этого типа.</p>
+{% endif %}
