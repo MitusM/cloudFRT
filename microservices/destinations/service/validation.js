@@ -125,6 +125,11 @@ export function validateDestInput(body, { requireTitle = true, levelRequired = f
     if (body.status === 'published' || body.status === 'draft') clean.status = body.status
   }
 
+  // type: slug типа объекта (DestType); пустая строка = снять тип
+  if (body.type !== undefined) {
+    clean.type = body.type === '' ? null : String(body.type)
+  }
+
   // parentRid: null/пусто → null (корень); иначе — строка RID
   if (body.parentRid !== undefined) {
     clean.parentRid =

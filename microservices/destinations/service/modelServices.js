@@ -600,13 +600,18 @@ class Model extends PDO {
     return slug ? { slug, name, name_plural, icon } : null
   }
 
-  /** Присвоить / сменить тип объекта: удаляет старые HAS_TYPE, создаёт новое ребро */
+  /** Присвоить / сменить / снять тип объекта:
+   *  typeSlug = null/undefined/'' — удалить все HAS_TYPE (снять тип)
+   *  typeSlug = slug — удалить старые, создать новое ребро к DestType
+   */
   async setDestType(destRid, typeSlug) {
+    // всегда удаляем старые HAS_TYPE ребра
+    await this.command(`DELETE EDGE HAS_TYPE WHERE out = ${destRid}`)
+    if (!typeSlug) return { done: true } // сняли тип, ребра нет
     const type = await this.queryOne(
       `SELECT @rid FROM DestType WHERE slug = '${String(typeSlug).replace(/'/g, "\\'")}'`
     )
     if (!type) return { done: false, error: `DestType '${typeSlug}' not found` }
-    await this.command(`DELETE EDGE HAS_TYPE WHERE out = ${destRid}`)
     await this.create('HAS_TYPE', destRid, type['@rid'])
     return { done: true }
   }
