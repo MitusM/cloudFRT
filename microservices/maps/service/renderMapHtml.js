@@ -102,6 +102,40 @@ function renderMapHtml(opts = {}) {
       return opt;
     }
 
+    // ── Маппинг typeIcon → цвета + названия (для легенды карты) ──
+    const TYPE_COLORS = {
+      lake:'#3b82f6', waterfall:'#06b6d4', mountain:'#6b7280',
+      peak:'#8b5cf6', cave:'#92400e', river:'#0ea5e9',
+      valley:'#22c55e', beach:'#eab308', island:'#14b8a6',
+      park:'#84cc16', reserve:'#15803d', museum:'#f97316',
+      viewpoint:'#ef4444', spring:'#38bdf8'
+    };
+    const TYPE_NAMES = {
+      lake:'Озеро', waterfall:'Водопад', mountain:'Гора',
+      peak:'Вершина', cave:'Пещера', river:'Река',
+      valley:'Долина', beach:'Пляж', island:'Остров',
+      park:'Парк', reserve:'Заповедник', museum:'Музей',
+      viewpoint:'Смотровая', spring:'Родник'
+    };
+    // ── Инлайн SVG иконки 14 типов (масштаб 12×12, встраиваются в pin) ──
+    // Где возможно — Maki-стиль, иначе минималистичный силуэт.
+    const TYPE_SVG = {
+      lake:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M1 11c3-2 6-2 9 0l2-3c-3-1-6-2-9 0z" fill="#fff" stroke="none"/></svg>',
+      waterfall:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M5 2v8l3-2 2 2V1M3 11v3h9v-3" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      mountain:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M7.5 2L2 12h11z" fill="#fff"/></svg>',
+      peak:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M7.5 1L4 9h2l1.5-3L9 9h2z" fill="#fff"/></svg>',
+      cave:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M1 12c0-2 2-4 6.5-4S14 10 14 12M3 9V6h9v3" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      river:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M1 3c3 3 5-2 8 0 2 1 4 0 5-1M1 8c3 2 5-2 8 0 2 2 4 0 5-1M1 13c3 1 5-2 8 0 2 1 4 0 5-1" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round"/></svg>',
+      valley:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M1 3c2 4 3 0 6 6 2-5 4 0 7-6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      beach:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M1 11c1-1 3-2 6.5-2S14 10 14 11H1z" fill="#fff"/><path d="M3 11V8h9v3" fill="none" stroke="#fff" stroke-width="1.2"/></svg>',
+      island:'<svg viewBox="0 0 15 15" width="12" height="12"><ellipse cx="7.5" cy="10" rx="6" ry="3" fill="#fff"/><path d="M7.5 10L5 6h5z" fill="#fff"/></svg>',
+      park:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M7.5 2L4 8h2l-.5 5h4l-.5-5h2z" fill="#fff"/></svg>',
+      reserve:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M7 3l-3 5h2l-1 5h6l-1-5h2z" fill="#fff"/></svg>',
+      museum:'<svg viewBox="0 0 15 15" width="12" height="12"><path d="M7.5 1L2 4v1h11V4zM3 6v5l-1 1v1h11v-1l-1-1V6" fill="#fff"/></svg>',
+      viewpoint:'<svg viewBox="0 0 15 15" width="12" height="12"><circle cx="7.5" cy="7.5" r="2" fill="#fff"/><circle cx="7.5" cy="7.5" r="4.5" fill="none" stroke="#fff" stroke-width="1.2"/></svg>',
+      spring:'<svg viewBox="0 0 15 15" width="12" height="12"><ellipse cx="7.5" cy="10" rx="3.5" ry="3" fill="#fff"/><path d="M5 8c1-3 2-4 2.5-6.5" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/></svg>'
+    };
+
     // валидные точки (lat/lng обязательны)
     function validPts(points) {
       return (points || []).filter(
@@ -2443,14 +2477,25 @@ function renderMapHtml(opts = {}) {
       for (const p of pts) {
         const lng = +p.lng;
         const lat = +p.lat;
+        const fillColor = (p.typeIcon && TYPE_COLORS[p.typeIcon]) || opt.markerColor;
         const pin = document.createElement('div');
-        pin.style.background = opt.markerColor;
-        pin.style.width = '22px';
-        pin.style.height = '22px';
+        pin.style.background = fillColor;
+        pin.style.width = '26px';
+        pin.style.height = '26px';
         pin.style.borderRadius = '50% 50% 50% 0';
         pin.style.transform = 'rotate(-45deg)';
         pin.style.border = '2px solid #fff';
         pin.style.boxShadow = '0 2px 6px rgba(0,0,0,.4)';
+        pin.style.display = 'flex';
+        pin.style.alignItems = 'center';
+        pin.style.justifyContent = 'center';
+        // Иконка типа (counter-rotated, чтобы оставалась прямой)
+        if (p.typeIcon && TYPE_SVG[p.typeIcon]) {
+          const iconWrap = document.createElement('div');
+          iconWrap.style.cssText = 'transform:rotate(45deg);width:14px;height:14px;display:flex;align-items:center;justify-content:center;';
+          iconWrap.innerHTML = TYPE_SVG[p.typeIcon];
+          pin.appendChild(iconWrap);
+        }
         const mk = new maplibregl.Marker({ element: pin })
           .setLngLat([lng, lat])
           .setPopup(
@@ -2485,7 +2530,48 @@ function renderMapHtml(opts = {}) {
         });
         bounds.extend([lng, lat]);
       }
+
+      // ── Легенда типов мест (левый нижний угол) ──
+      const types = {};
+      pts.forEach(function(p) { if (p.typeIcon && p.typeName) types[p.typeIcon] = p.typeName; });
+      addLegend(map, types);
+
       return bounds;
+    }
+
+    // ── Легенда: цветные кружки + названия типов ──
+    function addLegend(map, types) {
+      if (!map || !types) return;
+      const keys = Object.keys(types);
+      if (!keys.length) return;
+      const container = map.getContainer();
+      if (!container) return;
+      let old = container.querySelector('.frt-legend');
+      if (old) old.remove();
+      const el = document.createElement('div');
+      el.className = 'frt-legend';
+      el.style.cssText = 'position:absolute;bottom:36px;left:10px;z-index:2;' +
+        'background:rgba(255,255,255,.92);border-radius:8px;padding:8px 10px;' +
+        'font:12px/1.5 sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.18);' +
+        'max-height:200px;overflow-y:auto;';
+      const title = document.createElement('div');
+      title.textContent = 'Типы мест';
+      title.style.cssText = 'font-weight:600;margin-bottom:4px;font-size:11px;text-transform:uppercase;color:#6b7280;letter-spacing:.5px;';
+      el.appendChild(title);
+      keys.forEach(function(k) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:5px;margin:1px 0;';
+        const dot = document.createElement('span');
+        dot.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;' +
+          'background:' + (TYPE_COLORS[k] || '#999') + ';flex-shrink:0;';
+        const label = document.createElement('span');
+        label.textContent = types[k];
+        label.style.cssText = 'color:#374151;';
+        row.appendChild(dot);
+        row.appendChild(label);
+        el.appendChild(row);
+      });
+      container.appendChild(el);
     }
 
     // текущий язык карты (для внешних контролов, напр. геокодера)
