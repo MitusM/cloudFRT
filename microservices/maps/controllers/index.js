@@ -146,8 +146,10 @@ const endpoints = async (app) => {
         const destResp = await res.app.ask('destinations', {
           server: { action: 'destinations:search', meta: { query, lang, limit: 8 } },
         })
-        if (destResp && destResp.places && destResp.places.length) {
-          places = destResp.places
+        // ask возвращает { status, response }; response — тело ответа (то что в res.json)
+        const destPlaces = destResp && destResp.response && destResp.response.places
+        if (destPlaces && destPlaces.length) {
+          places = destPlaces
         }
       } catch (err) {
         console.log('[maps:geocode] destinations:search error (non-fatal):', err.message)
