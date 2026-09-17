@@ -138,9 +138,31 @@ const endpoints = async (app) => {
       if (!query || typeof query !== 'string') {
         return res.status(400).json({ type: 'FeatureCollection', features: [] })
       }
-      const db = await app.options.db
-      const result = await mapsService.searchSearchPlace(db, query, lang)
-      const features = (result.places || [])
+
+      // 0) Сначала кураторский каталог Dest (через RPC destinations:search).
+      //    Не жёсткая ошибка — если destinations не ответил, идём дальше.
+      let places = []
+      try {
+        const destResp = await res.app.ask('destinations', {
+          server: { action: 'destinations:search', meta: { query, lang, limit: 8 } },
+        })
+        if (destResp && destResp.places && destResp.places.length) {
+          places = destResp.places
+        }
+      } catch (err) {
+        console.log('[maps:geocode] destinations:search error (non-fatal):', err.message)
+      }
+
+      // 1) Если Dest не нашёл — SearchPlace (OrientDB) → Nominatim фолбэк
+      let source = 'destinations'
+      if (!places.length) {
+        const db = await app.options.db
+        const result = await mapsService.searchSearchPlace(db, query, lang)
+        places = result.places || []
+        source = result.source || 'searchplace'
+      }
+
+      const features = (places || [])
         .filter((p) => p.lat != null && p.lng != null)
         .map((p) => ({
           type: 'Feature',
@@ -159,7 +181,7 @@ const endpoints = async (app) => {
             center: [Number(p.lng), Number(p.lat)],
           },
         }))
-      res.json({ type: 'FeatureCollection', features, source: result.source })
+      res.json({ type: 'FeatureCollection', features, source })
     } catch (err) {
       console.log('⚡ err::maps:geocode', err)
       res.status(err.status || 500).json({ error: err.message || 'geocode failed' })
