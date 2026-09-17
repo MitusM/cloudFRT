@@ -17,7 +17,7 @@ body {
   color: #fff;
   padding: 12px 0;
   .wrap {
-    max-width: 1080px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 0 20px;
   }
@@ -29,7 +29,7 @@ body {
 }
 
 .dest-main {
-  max-width: 900px;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 32px 20px 64px;
 }
@@ -120,7 +120,7 @@ h1.dest-h1 {
   .dest-hero-inner {
     position: relative;
     z-index: 1;
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 0 20px 32px;
     width: 100%;
@@ -313,7 +313,7 @@ h2.dest-h2 {
   font-size: 13px;
   color: #6b7280;
   .wrap {
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
     padding: 0 20px;
   }
@@ -334,8 +334,23 @@ h2.dest-h2 {
 }
 
 // Стиль контейнера карты (из dest.html: .dest-map)
+// Карта на всю ширину браузера — break out из .dest-main (как hero).
+// Заголовок h2 при этом остаётся в контентной колонке 1280px.
 .dest-map {
-  margin: 24px 0;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: 24px;
+  margin-bottom: 24px;
+
+  h2.dest-h2 {
+    max-width: 1280px;
+    margin: 0 auto 12px;
+    padding: 0 20px;
+  }
+
+  // Внутренний контейнер карты (#dest-map) уже имеет width:100%, height и border-radius
+  // от renderMapHtml.js, подхватится автоматически
+  // На мобильных — без дополнительных отступов (карта на всю ширину, как hero)
 }
 
 // ---- Бейдж типа объекта (DestType) ----
