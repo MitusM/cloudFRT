@@ -448,7 +448,7 @@ const endpoints = async (app) => {
               action: 'maps:map',
               meta: {
                 containerId: 'dest-map',
-                heightPx: 420,
+                heightPx: 520,
                 language: 'ru',
                 ...(mapCenter
                   ? { center: [mapCenter.lng, mapCenter.lat], zoom: mapPoints.length > 1 ? 7 : 10 }
