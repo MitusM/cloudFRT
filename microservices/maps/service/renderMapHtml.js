@@ -62,14 +62,14 @@ function renderMapHtml(opts = {}) {
       : 'frt-map-' + Math.random().toString(36).slice(2, 10)
 
   const html = `
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.css" />
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.3.0/dist/maplibre-gl.css" />
 <link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.css" />
 <style>
   .maplibregl-ctrl-active { background-color: #fbc412 !important; }
   .maplibregl-ctrl-active:hover { background-color: #e5b010 !important; }
 </style>
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
-<script src="https://unpkg.com/maplibre-gl@4.4.0/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/maplibre-gl@5.3.0/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.9.4/dist/maplibre-gl-geocoder.js"></script>
 <script src="https://unpkg.com/maplibre-gl-map-to-image@1.2.0/dist/maplibre-gl-map-to-image.min.js"></script>
 <script>
@@ -2608,6 +2608,8 @@ function renderMapHtml(opts = {}) {
         // экспорт GeoJSON — в одной раскрывающейся панели «Инструменты»
         // (опция editor: false — карта «только просмотр», без панели)
         if (opt.editor !== false) makeToolsPanel(map, ctrlPosition);
+        // полноэкранный режим (опция fullscreen: false — скрыть)
+        if (opt.fullscreen !== false) map.addControl(new maplibregl.FullscreenControl(), ctrlPosition);
       }
       // поиск мест — всегда (в т.ч. при hideControls), работает на обеих стилях
       makeGeocoder(map, opt);
