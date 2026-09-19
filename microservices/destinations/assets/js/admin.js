@@ -10,6 +10,7 @@ import '../scss/admin.scss'
 
 ;(function () {
   'use strict'
+  var _$ = window._$
   var DATA = document.getElementById('admin-data')
   var parsed = {}
   try {
@@ -156,13 +157,13 @@ import '../scss/admin.scss'
       } else {
         el('f-content').value = (el('f-content').value || '') + html
       }
-      setMsg('Фото вставлено в контент ✓', 'ok')
+      _$.message('success', { title: '✓', message: 'Фото вставлено в контент' })
     }
 
     dropzone.on('success', function (file, response) {
       var body = response && response.body
       if (!body) {
-        setMsg('Сервер не вернул данные изображения', 'err')
+        _$.message('error', { title: '✗', message: 'Сервер не вернул данные изображения' })
         return
       }
       var uuid = 'f' + (file.upload && file.upload.uuid ? file.upload.uuid : Date.now())
@@ -200,7 +201,7 @@ import '../scss/admin.scss'
           ev.preventDefault()
           ev.stopPropagation()
           if (!coverPath) {
-            setMsg('Сервер не вернул ссылку на webp-изображение', 'err')
+            _$.message('error', { title: '✗', message: 'Сервер не вернул ссылку на webp-изображение' })
             return
           }
           el('f-image').value = coverPath
@@ -210,7 +211,7 @@ import '../scss/admin.scss'
             b.classList.remove('is-active')
           })
           coverBtn.classList.add('is-active')
-          setMsg('Картинка установлена как главная ✓', 'ok')
+          _$.message('success', { title: '✓', message: 'Картинка установлена как главная' })
         })
         scope.appendChild(coverBtn)
       }
@@ -218,7 +219,7 @@ import '../scss/admin.scss'
     })
 
     dropzone.on('error', function (file, message) {
-      setMsg('Ошибка загрузки: ' + (message && message.message ? message.message : message), 'err')
+      _$.message('error', { title: '✗', message: 'Ошибка загрузки: ' + (message && message.message ? message.message : message) })
     })
 
     // удаление файлов с диска при удалении из дропзоны (крестик юзера).
@@ -280,7 +281,7 @@ import '../scss/admin.scss'
       })
       .catch(function (e) {
         setLoading(false)
-        setMsg('Ошибка загрузки: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка загрузки: ' + e.message })
       })
   }
 
@@ -305,7 +306,7 @@ import '../scss/admin.scss'
         renderAll()
       })
       .catch(function (e) {
-        setMsg('Ошибка загрузки: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка загрузки: ' + e.message })
         if (btn) btn.disabled = false
       })
   }
@@ -470,7 +471,7 @@ import '../scss/admin.scss'
         renderSearchResults()
       })
       .catch(function (e) {
-        setMsg('Ошибка поиска: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка поиска: ' + e.message })
       })
   }
 
@@ -498,7 +499,6 @@ import '../scss/admin.scss'
     el('f-parent').disabled = true
     updateLevelHint()
     el('f-is_hub').checked = true
-    setMsg('')
     el('adm-cancel').style.display = 'none'
     el('adm-save').textContent = 'Создать'
     state.editing = false
@@ -563,7 +563,7 @@ import '../scss/admin.scss'
         return r.json()
       })
       .then(function (j) {
-        if (!j.dest) return setMsg('Узел не найден', 'err')
+        if (!j.dest) { _$.message('error', { title: '✗', message: 'Узел не найден' }); return }
         var d = j.dest
         el('adm-form-title').textContent = 'Редактирование: ' + (d.title || d.slug)
         el('f-rid').value = d.rid || ''
@@ -590,7 +590,6 @@ import '../scss/admin.scss'
           el('f-parent').innerHTML = opts
         })
         updateLevelHint()
-        setMsg('')
         el('adm-cancel').style.display = 'inline-block'
         el('adm-save').textContent = 'Сохранить'
         state.editing = true
@@ -598,7 +597,7 @@ import '../scss/admin.scss'
         renderPubBar({ rid: rid, status: d.status || 'draft', title: d.title || d.slug })
       })
       .catch(function (e) {
-        setMsg('Ошибка: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка: ' + e.message })
       })
   }
 
@@ -648,7 +647,7 @@ import '../scss/admin.scss'
       .then(function (r) { return r.json() })
       .then(function (j) {
         if (j.done) {
-          setMsg(makePub ? 'Опубликовано ✓' : 'Снято с публикации', 'ok')
+          _$.message('success', { title: '✓', message: makePub ? 'Опубликовано' : 'Снято с публикации' })
           // обновить список и форму
           loadChildren(state.current)
           setTimeout(function () {
@@ -657,9 +656,9 @@ import '../scss/admin.scss'
               renderPubBar({ rid: rid, status: j.status, title: (n && n.title) || rid })
             }
           }, 350)
-        } else setMsg('Ошибка: ' + (j.error || 'не удалось'), 'err')
+        } else _$.message('error', { title: '✗', message: 'Ошибка: ' + (j.error || 'не удалось') })
       })
-      .catch(function (e) { setMsg('Ошибка сети: ' + e.message, 'err') })
+      .catch(function (e) { _$.message('error', { title: '✗', message: 'Ошибка сети: ' + e.message }) })
   }
 
   // ---- сохранение (create/update) ----
@@ -687,7 +686,7 @@ import '../scss/admin.scss'
     var isNew = !rid
     var url = isNew ? API + '/create' : API + '/' + encodeURIComponent(rid)
     var method = isNew ? 'POST' : 'PUT'
-    setMsg('Сохранение…', 'info')
+    _$.message('info', { title: '⏳', message: 'Сохранение…' })
     fetch(url, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
@@ -703,7 +702,7 @@ import '../scss/admin.scss'
       })
       .then(function (out) {
         if (out.status >= 200 && out.status < 300 && out.json.done) {
-          setMsg('Сохранено ✓', 'ok')
+          _$.message('success', { title: '✓', message: 'Сохранено' })
           setTimeout(function () {
             loadChildren(state.current)
             newNode()
@@ -712,11 +711,11 @@ import '../scss/admin.scss'
           var err = out.json.errors
             ? JSON.stringify(out.json.errors)
             : out.json.error || 'HTTP ' + out.status
-          setMsg('Ошибка: ' + err, 'err')
+          _$.message('error', { title: '✗', message: 'Ошибка: ' + err })
         }
       })
       .catch(function (e) {
-        setMsg('Ошибка сети: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка сети: ' + e.message })
       })
   }
 
@@ -738,12 +737,12 @@ import '../scss/admin.scss'
       })
       .then(function (j) {
         if (j.done) {
-          setMsg('Удалено', 'ok')
+          _$.message('success', { title: '✓', message: 'Удалено' })
           loadChildren(state.current)
-        } else setMsg('Ошибка удаления', 'err')
+        } else _$.message('error', { title: '✗', message: 'Ошибка удаления' })
       })
       .catch(function (e) {
-        setMsg('Ошибка сети: ' + e.message, 'err')
+        _$.message('error', { title: '✗', message: 'Ошибка сети: ' + e.message })
       })
   }
 
@@ -751,11 +750,7 @@ import '../scss/admin.scss'
   function setLoading(v) {
     if (v) el('adm-list').innerHTML = '<div class="adm-empty">Загрузка…</div>'
   }
-  function setMsg(txt, type) {
-    var m = el('adm-msg')
-    m.textContent = txt
-    m.className = 'adm-msg ' + (type || '')
-  }
+  // setMsg удалена — используем _$.message (iziToast)
 
   // ---- события ----
   // навигация по клику на имя узла (›) или breadcrumb
@@ -866,9 +861,7 @@ import '../scss/admin.scss'
         'emoticons visualblocks searchreplace | fullscreen',
       link_default_target: '_blank',
       link_default_protocol: 'https',
-      // не даём tinymce обернуть всё в свои теги при сохранении —
-      // оставляем как есть, т.к. destinations хранит content.html как есть
-      valid_children: '+p[div]',
+      // valid_children в tinymce 8 заменён, div внутри p и так разрешён
       setup: function (ed) {
         ed.on('init', function () {
           // если во время init уже было заполнено (напр. editNode до init),

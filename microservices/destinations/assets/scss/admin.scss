@@ -299,30 +299,7 @@
   }
 }
 
-.adm-msg {
-  font-size: 13px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 500;
-
-  &.ok {
-    background: #ecfdf5;
-    color: #047857;
-    border: 1px solid #a7f3d0;
-  }
-
-  &.err {
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-  }
-
-  &.info {
-    background: #eff6ff;
-    color: #1d4ed8;
-    border: 1px solid #bfdbfe;
-  }
-}
+// .adm-msg удалён — используем iziToast (_$.message)
 
 // ---- кнопка «Показать ещё» (пагинация списка) ----
 .adm-more-wrap {
