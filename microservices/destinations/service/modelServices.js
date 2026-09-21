@@ -576,6 +576,75 @@ class Model extends PDO {
     return { points, center }
   }
 
+  // ---------- ЭТАП 5 (deep): все точки региона (не только прямые дети) ----------
+  // TRAVERSE всех PART_OF-потомков рекурсивно (MAXDEPTH 10).
+  // Возвращает { points, center, types } где types — уникальные типы для легенды
+  async getMapPointsDeep(rid) {
+    const pull = (r) => {
+      if (r && r.location) {
+        const c = r.location.coordinates
+        if (Array.isArray(c) && c.length >= 2) {
+          return { lat: Number(c[1]), lng: Number(c[0]) }
+        }
+      }
+      return null
+    }
+
+    const points = []
+    let center = null
+
+    // сам узел (с типом)
+    const self = await this.queryOne(
+      `SELECT @rid, slug, title, level, location, out('HAS_TYPE').slug AS typeSlug,
+              out('HAS_TYPE').name AS typeName, out('HAS_TYPE').icon AS typeIcon
+       FROM ${rid}`
+    )
+    const selfLoc = pull(self)
+    if (selfLoc && self.title) {
+      const ts = Array.isArray(self.typeSlug) ? self.typeSlug[0] : self.typeSlug
+      const tn = Array.isArray(self.typeName) ? self.typeName[0] : self.typeName
+      const ti = Array.isArray(self.typeIcon) ? self.typeIcon[0] : self.typeIcon
+      points.push({ name: self.title, level: self.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
+      center = selfLoc
+    }
+
+    // ВСЕ потомки через TRAVERSE in('PART_OF') (ребро ребёнок→родитель, in идёт вниз по дереву), только published
+    const descendants = await this.queryAll(
+      `SELECT @rid as rid, slug, title, level, location,
+              out('HAS_TYPE').slug AS typeSlug, out('HAS_TYPE').name AS typeName,
+              out('HAS_TYPE').icon AS typeIcon
+       FROM (TRAVERSE in('PART_OF') FROM ${rid} MAXDEPTH 10)
+       WHERE @rid <> ${rid} AND location IS NOT NULL AND status = 'published'`
+    )
+    for (const d of descendants || []) {
+      const loc = pull(d)
+      if (loc && d.title) {
+        const ts = Array.isArray(d.typeSlug) ? d.typeSlug[0] : d.typeSlug
+        const tn = Array.isArray(d.typeName) ? d.typeName[0] : d.typeName
+        const ti = Array.isArray(d.typeIcon) ? d.typeIcon[0] : d.typeIcon
+        points.push({ name: d.title, level: d.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
+      }
+    }
+
+    // центр: если у узла нет координат — средняя по всем точкам
+    if (!center && points.length) {
+      const lat = points.reduce((a, p) => a + p.lat, 0) / points.length
+      const lng = points.reduce((a, p) => a + p.lng, 0) / points.length
+      center = { lat, lng }
+    }
+
+    // уникальные типы для легенды карты
+    const typeSet = new Map()
+    for (const p of points) {
+      if (p.typeSlug && p.typeName) {
+        typeSet.set(p.typeSlug, { slug: p.typeSlug, name: p.typeName })
+      }
+    }
+    const types = Array.from(typeSet.values())
+
+    return { points, center, types }
+  }
+
   // ============ DestType: типы объектов (13.09.2026) ============
 
   /** Все типы DestType (каталог) */

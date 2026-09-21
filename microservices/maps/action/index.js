@@ -34,6 +34,74 @@ const action = async (app) => {
     }
   })
 
+  /**
+   * maps:mapPoints — HTML карты с предзалитыми точками (MapLibre + Маркеры + Легенда).
+   *
+   * Отличается от maps:map тем, что точки передаются в meta и сразу рендерятся
+   * через MapsRender.renderMap (createMap + addMarkers + fitBounds в один вызов).
+   * Поддерживает types[] для легенды карты.
+   *
+   * meta (все необязательные, кроме points):
+   *   { points[], types?, center?: [lng, lat], zoom?: number, heightPx?: number,
+   *     markerColor?: string, containerId?: string, language?: string }
+   *   points: [{ name, lat, lng, address?, note?, typeIcon?, typeName?, level? }]
+   *
+   * Ответ: res.json({ html })
+   */
+  app.action('maps:mapPoints', async (meta, res) => {
+    try {
+      const { points, center, zoom } = meta || {}
+      const pts = Array.isArray(points) ? points : []
+
+      const containerId = (meta.containerId && /^[A-Za-z0-9_-]+$/.test(meta.containerId))
+        ? meta.containerId
+        : 'dest-map'
+
+      const mapOpts = {
+        containerId,
+        heightPx: meta.heightPx || 520,
+        language: meta.language || 'ru',
+        markerColor: meta.markerColor || '#e11d48',
+        center: center || [37.62, 55.75],
+        zoom: typeof zoom === 'number' ? zoom : 7,
+        editor: false,
+      }
+
+      const rawHtml = renderMapHtml(mapOpts)
+
+      // inline points как JSON
+      const ptsJson = JSON.stringify(pts.map(p => ({
+        name: p.name || '',
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+        address: p.address || '',
+        note: p.note || '',
+        typeIcon: p.typeIcon || null,
+        typeName: p.typeName || null,
+        level: p.level || null,
+      })))
+
+      const injectScript = `<script>
+(function(){
+  var pts = ${ptsJson};
+  var container = document.getElementById('${containerId}');
+  if (!container || !pts.length) return;
+  var wait = setInterval(function(){
+    if (!window.MapsRender) return;
+    clearInterval(wait);
+    window.MapsRender.renderMap(container, pts, ${JSON.stringify(mapOpts)});
+  }, 100);
+  setTimeout(function(){ clearInterval(wait); }, 8000);
+})();
+<\/script>`
+
+      res.json({ html: rawHtml + injectScript })
+    } catch (err) {
+      console.log('⚡ err::maps:mapPoints', err)
+      res.status(500).json({ error: err.message || 'mapPoints failed' })
+    }
+  })
+
   app.action('maps:og', async (meta, res) => {
     try {
       const png = await renderMapPng(meta || {})

@@ -472,6 +472,7 @@ const endpoints = async (app) => {
         description: dest.description || '',
         image: dest.image || '',
         page: './page/dest.html',
+        slug: dest.slug,
         breadcrumb,
         breadcrumb_schema: breadcrumbSchema(breadcrumb),
         level: dest.level,

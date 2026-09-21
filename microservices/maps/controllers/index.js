@@ -362,6 +362,96 @@ const endpoints = async (app) => {
     }
   })
 
+  // GET /maps/:slug — fullscreen карта региона (все объекты, инструменты, легенда)
+  // Как /maps/ (view/index.html) — без админки, чистый fullscreen, editor:true
+  app.get('/maps/:slug', async (req, res) => {
+    try {
+      const { slug } = req.params
+
+      const destResp = await res.app.ask('destinations', {
+        server: { action: 'destinations:getRegionMap', meta: { slug } },
+      })
+      const data = destResp && destResp.response
+
+      if (!data || data.error === 'not found') {
+        return res.status(404).json({ error: 'Регион не найден' })
+      }
+      if (data.error) {
+        console.log('⚡ err::maps:slug rpc', data.error)
+        return res.status(500).json({ error: data.error })
+      }
+
+      const centerArray = data.center ? [data.center.lng, data.center.lat] : [37.62, 55.75]
+      const zoom = data.points && data.points.length > 1 ? 7 : 10
+
+      const mapHtml = renderMapHtml({
+        containerId: 'poi-map',
+        heightPx: 900,
+        language: 'ru',
+        markerColor: '#e11d48',
+        center: centerArray,
+        zoom: zoom,
+        editor: true,
+        token: issueGeoToken(req),
+      })
+
+      const ptsJson = JSON.stringify((data.points || []).map(p => ({
+        name: p.name || '',
+        lat: Number(p.lat),
+        lng: Number(p.lng),
+        address: p.address || '',
+        note: p.note || '',
+        typeIcon: p.typeIcon || null,
+        typeName: p.typeName || null,
+        level: p.level || null,
+      })))
+
+      const title = (data.region.title || slug).replace(/-/g, ' ') + ' — карта объектов'
+
+      const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title}</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif; background:#f6f7f9; }
+    #poi-map { position:absolute; top:0; left:0; width:100%; height:100%; }
+  </style>
+</head>
+<body>
+${mapHtml}
+<script>
+(function(){
+  var pts = ${ptsJson};
+  if (!window.MapsRender || !pts.length) return;
+  var el = document.getElementById('poi-map');
+  if (!el) return;
+  var wait = setInterval(function(){
+    if (!window.MapsRender.renderMap) return;
+    clearInterval(wait);
+    el.style.height = '';
+    window.MapsRender.renderMap(el, pts, {
+      center: ${JSON.stringify(centerArray)},
+      zoom: ${zoom},
+      markerColor: '#e11d48'
+    });
+  }, 150);
+  setTimeout(function(){ clearInterval(wait); }, 8000);
+})();
+<\/script>
+</body>
+</html>`
+
+      res.status(200).end(html)
+    } catch (err) {
+      console.log('⚡ err::maps:/:slug', err)
+      res.status(500).json({ error: 'internal' })
+    }
+  })
+
   return app
 }
 

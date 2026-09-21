@@ -189,11 +189,19 @@
 - `GET /maps/map` — интерактивная карта гео-объектов (HTML)
 - `GET /maps/geocode` — поиск места (SearchPlace из OrientDB → фолбэк Nominatim)
 - `GET /maps/pois` — POI по категории и bbox
+- `GET /maps/:slug` — карта региона (fullscreen MapLibre с объектами каталога Dest).
+  Вызывает RPC `destinations:getRegionMap`, получает все точки поддерева через
+  `TRAVERSE in('PART_OF')`, рендерит карту с маркерами, иконками типов и легендой.
+  URL: `/maps/gornyj-altaj` → карта Горного Алтая со всеми объектами.
 - `GET /maps/og` — серверный рендер карты в PNG (для OG-превью; query: `markers` JSON,
   `width`/`height`/`language`) — отладочный HTTP-вариант RPC `maps:og`
 
 ## RPC (сервис-2-сервис по шине)
 - `maps:map` — вернуть HTML карты + JS `window.MapsRender.*` (для trips и др.)
+- `maps:mapPoints` — вернуть HTML карты с предзалитыми точками (MapLibre + маркеры +
+  легенда). Принимает `points[]`, `center`, `zoom`, `heightPx`, `containerId`,
+  `language`, `markerColor`. Вызывающий не дёргает `MapsRender.renderMap` сам —
+  точки встраиваются в HTML. Используется `maps:mapPoints` для обновлённых dest-карт.
 - `maps:og` — вернуть бинарный PNG карты `{ __frtBase64, contentType:'image/png' }`
   (для OG-превью поездок; запрос: `markers`[], `width`, `height`, `language`)
 

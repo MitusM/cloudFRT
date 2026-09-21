@@ -18,11 +18,34 @@ const PUBLIC_PATHS = [
   '/maps/pois',
 ]
 
+// Проверить, является ли путь публичным: точное совпадение или подпуть,
+// или /maps/<слово> (страница региона, не API-эндпоинт)
+const API_ROUTES = new Set([
+  '/maps/search',
+  '/maps/autocomplete',
+  '/maps/details',
+  '/maps/place-photo',
+  '/maps/reverse',
+  '/maps/resolve-url',
+  '/maps/og',
+])
+
+function isPublicPath(path) {
+  // точное совпадение или подпуть из PUBLIC_PATHS
+  for (const p of PUBLIC_PATHS) {
+    if (path === p || path.startsWith(p + '/')) return true
+  }
+  // /maps/<слово> — страница карты региона (не API)
+  const m = path.match(/^\/maps\/([a-z0-9_-]+)$/i)
+  if (m && !API_ROUTES.has('/maps/' + m[1])) return true
+  return false
+}
+
 const middlewares = (app) => {
   app.all(['/maps(.*)'], async (req, res, next) => {
     // публичные эндпоинты (точное совпадение пути или путь + query) — пропускаем
     const path = req.path || (req.url || '').split('?')[0]
-    const isPublic = PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + '/'))
+    const isPublic = isPublicPath(path)
     if (isPublic) {
       return next()
     }

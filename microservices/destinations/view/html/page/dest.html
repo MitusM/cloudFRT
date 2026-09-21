@@ -72,7 +72,11 @@
 {# ---------- Карта места (этап 5: интеграция с МС maps) ---------- #}
 {% if mapHtml and mapPoints and mapPoints.length %}
 <div class="dest-map">
-  <h2 class="dest-h2">Карта</h2>
+  <h2 class="dest-h2">Карта
+    {% if level !== 'attraction' %}
+    <a class="dest-map-full" href="/maps/{{ slug }}" target="_blank">Посмотреть все объекты на карте →</a>
+    {% endif %}
+  </h2>
   {{ mapHtml | safe }}
   <script>
     (function () {
