@@ -124,6 +124,7 @@ class Model extends PDO {
       `CREATE VERTEX Dest SET
         slug = ${sq(slug)}, title = ${sq(title)}, h1 = ${sq(h1 || title)},
         level = ${sq(level || 'place')}, description = ${sq(description || '')},
+        summary = ${sq(summary || '')},
         content = ${embed(content)}, image = ${sq(image || '')},
         is_hub = ${is_hub === undefined ? true : !!is_hub},
         priority = ${num(priority, 0.5)}, status = '${st}',
@@ -181,7 +182,7 @@ class Model extends PDO {
   // --- Обновить узел (безопасно: белый список полей + ЭКРАН-пингование) ---
   // Поля, которые можно менять. Безопасно от SQL-инъекции (нельзя произвольный set).
   async updateDest(rid, fields) {
-    const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'is_hub', 'priority', 'status']
+    const ALLOWED = ['slug', 'title', 'h1', 'level', 'description', 'content', 'image', 'summary', 'thumbnail', 'is_hub', 'priority', 'status']
     const sq = (v) => this._sqlStr(v) // экранирует ' и \n/\r/\\
     const num = (v) => (v == null ? 'null' : String(v))
     // content — EMBEDDED: пустое → null
@@ -519,7 +520,8 @@ class Model extends PDO {
   // прямые дочерние узлы с координатами. Возвращает { points, center }.
   // location хранится как OPoint { coordinates: [lng, lat] } (GeoJSON порядок!).
   // С DestType: каждая точка содержит typeSlug, typeName, typeIcon для symbol-слоя карты.
-  async getMapPoints(rid) {
+  /** @param {string[]} [pageSlugs] — полный путь страницы для построения ссылок (опционально) */
+  async getMapPoints(rid, pageSlugs = []) {
     const pull = (r) => {
       if (r && r.location) {
         const c = r.location.coordinates
@@ -535,34 +537,43 @@ class Model extends PDO {
 
     // сам узел (с типом)
     const self = await this.queryOne(
-      `SELECT @rid, slug, title, level, location, out('HAS_TYPE').slug AS typeSlug,
+      `SELECT @rid, slug, title, level, summary, thumbnail, location, out('HAS_TYPE').slug AS typeSlug,
               out('HAS_TYPE').name AS typeName, out('HAS_TYPE').icon AS typeIcon
        FROM ${rid}`
     )
     const selfLoc = pull(self)
+    let selfFullSlug = ''
     if (selfLoc && self.title) {
       const ts = Array.isArray(self.typeSlug) ? self.typeSlug[0] : self.typeSlug
       const tn = Array.isArray(self.typeName) ? self.typeName[0] : self.typeName
       const ti = Array.isArray(self.typeIcon) ? self.typeIcon[0] : self.typeIcon
-      points.push({ name: self.title, level: self.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
+      // Строим путь от корня до этого узла для префикса children
+      const chain = await this.parentsChain(rid)
+      const pathSlugs = (chain || []).map(c => c.slug).reverse()
+      selfFullSlug = pathSlugs.join('/')
+      points.push({ name: self.title, level: self.level, summary: self.summary || '', thumbnail: self.thumbnail || '', slug: self.slug || '', fullSlug: selfFullSlug, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
       center = selfLoc
     }
 
     // прямые дети с location — только опубликованные, с типом
     const kids = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, location,
+      `SELECT @rid as rid, slug, title, level, summary, thumbnail, location,
               out('HAS_TYPE').slug AS typeSlug, out('HAS_TYPE').name AS typeName,
               out('HAS_TYPE').icon AS typeIcon
        FROM Dest
        WHERE ${rid} IN out('PART_OF') AND location IS NOT NULL AND status = 'published'`
     )
+    // Получаем parentsChain для каждого ребёнка — пара доп запросов, но точные ссылки
+    const kidsWithPath = []
     for (const k of kids || []) {
       const loc = pull(k)
       if (loc && k.title) {
         const ts = Array.isArray(k.typeSlug) ? k.typeSlug[0] : k.typeSlug
         const tn = Array.isArray(k.typeName) ? k.typeName[0] : k.typeName
         const ti = Array.isArray(k.typeIcon) ? k.typeIcon[0] : k.typeIcon
-        points.push({ name: k.title, level: k.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
+        // полный путь = путь родителя + slug ребёнка
+        const fullSlug = (selfFullSlug || '').split('/').filter(Boolean).concat([k.slug]).join('/')
+        points.push({ name: k.title, level: k.level, summary: k.summary || '', thumbnail: k.thumbnail || '', slug: k.slug || '', fullSlug, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
       }
     }
 
@@ -579,7 +590,8 @@ class Model extends PDO {
   // ---------- ЭТАП 5 (deep): все точки региона (не только прямые дети) ----------
   // TRAVERSE всех PART_OF-потомков рекурсивно (MAXDEPTH 10).
   // Возвращает { points, center, types } где types — уникальные типы для легенды
-  async getMapPointsDeep(rid) {
+  /** @param {string[]} [pageSlugs] — полный путь страницы для построения ссылок */
+  async getMapPointsDeep(rid, pageSlugs = []) {
     const pull = (r) => {
       if (r && r.location) {
         const c = r.location.coordinates
@@ -595,7 +607,7 @@ class Model extends PDO {
 
     // сам узел (с типом)
     const self = await this.queryOne(
-      `SELECT @rid, slug, title, level, location, out('HAS_TYPE').slug AS typeSlug,
+      `SELECT @rid, slug, title, level, summary, thumbnail, location, out('HAS_TYPE').slug AS typeSlug,
               out('HAS_TYPE').name AS typeName, out('HAS_TYPE').icon AS typeIcon
        FROM ${rid}`
     )
@@ -604,25 +616,39 @@ class Model extends PDO {
       const ts = Array.isArray(self.typeSlug) ? self.typeSlug[0] : self.typeSlug
       const tn = Array.isArray(self.typeName) ? self.typeName[0] : self.typeName
       const ti = Array.isArray(self.typeIcon) ? self.typeIcon[0] : self.typeIcon
-      points.push({ name: self.title, level: self.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
+      const chain = await this.parentsChain(rid)
+      const pathSlugs = (chain || []).map(c => c.slug).reverse()
+      const fullSlug = pathSlugs.join('/')
+      points.push({ name: self.title, level: self.level, summary: self.summary || '', thumbnail: self.thumbnail || '', slug: self.slug || '', fullSlug: fullSlug, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...selfLoc })
       center = selfLoc
     }
 
     // ВСЕ потомки через TRAVERSE in('PART_OF') (ребро ребёнок→родитель, in идёт вниз по дереву), только published
     const descendants = await this.queryAll(
-      `SELECT @rid as rid, slug, title, level, location,
+      `SELECT @rid as rid, slug, title, level, summary, thumbnail, location, $path AS path,
               out('HAS_TYPE').slug AS typeSlug, out('HAS_TYPE').name AS typeName,
               out('HAS_TYPE').icon AS typeIcon
        FROM (TRAVERSE in('PART_OF') FROM ${rid} MAXDEPTH 10)
        WHERE @rid <> ${rid} AND location IS NOT NULL AND status = 'published'`
     )
+    // slugMap по всем узлам в дереве — для сборки полного пути
+    const allSlugs = await this.queryAll(
+      `SELECT @rid as rid, slug FROM (TRAVERSE in('PART_OF') FROM ${rid} MAXDEPTH 10)`
+    )
+    const slugMap = {}
+    for (const n of allSlugs) {
+      slugMap[String(n.rid)] = n.slug
+    }
     for (const d of descendants || []) {
       const loc = pull(d)
       if (loc && d.title) {
         const ts = Array.isArray(d.typeSlug) ? d.typeSlug[0] : d.typeSlug
         const tn = Array.isArray(d.typeName) ? d.typeName[0] : d.typeName
         const ti = Array.isArray(d.typeIcon) ? d.typeIcon[0] : d.typeIcon
-        points.push({ name: d.title, level: d.level, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
+        // полный путь от корня: $path даёт [корень, промежуточные, этот]
+        const pathSlugs = (d.path || []).map(rid => slugMap[String(rid)]).filter(Boolean)
+        const fullSlug = pathSlugs.join('/')
+        points.push({ name: d.title, level: d.level, summary: d.summary || '', thumbnail: d.thumbnail || '', slug: d.slug || '', fullSlug: fullSlug, typeSlug: ts || null, typeName: tn || null, typeIcon: ti || null, ...loc })
       }
     }
 

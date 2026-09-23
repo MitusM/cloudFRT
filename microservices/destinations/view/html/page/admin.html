@@ -91,9 +91,13 @@
           <label>Описание (SEO description)
             <textarea id="f-description" rows="2"></textarea>
           </label>
+          <label>Краткое описание (для карты)
+            <textarea id="f-summary" rows="2"></textarea>
+          </label>
           <label>Изображение (URL)
             <input id="f-image" placeholder="https://…" />
           </label>
+          <input type="hidden" id="f-thumbnail" />
           <label>Загрузка фото в материал
             <!-- класс dropzone обязателен: дефолтный css dropzone тайлит миниатюры только под `.dropzone .dz-preview { display:inline-block }`;
                  сам dropzone v5 класс `dropzone` НЕ добавляет на элемент -->

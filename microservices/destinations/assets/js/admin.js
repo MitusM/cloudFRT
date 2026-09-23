@@ -205,6 +205,7 @@ import '../scss/admin.scss'
             return
           }
           el('f-image').value = coverPath
+          if (body.thumbnail) el('f-thumbnail').value = body.thumbnail
           // снять активность с кнопок других превью, отметить текущую
           var cont = scope && scope.parentNode
           ;(cont || document).querySelectorAll('.dz-cover-btn').forEach(function (b) {
@@ -574,7 +575,9 @@ import '../scss/admin.scss'
         el('f-priority').value = d.priority != null ? d.priority : ''
         el('f-is_hub').checked = !(d.is_hub === false)
         el('f-image').value = d.image || ''
+        el('f-thumbnail').value = d.thumbnail || ''
         el('f-description').value = d.description || ''
+        el('f-summary').value = d.summary || ''
         setContent(d.content && d.content.html ? d.content.html : d.content || '')
         el('f-lat').value = d.lat != null ? d.lat : ''
         el('f-lng').value = d.lng != null ? d.lng : ''
@@ -674,8 +677,10 @@ import '../scss/admin.scss'
       level: el('f-level').value,
       parentRid: parentVal || null,
       description: el('f-description').value || undefined,
+      summary: el('f-summary').value || undefined,
       content: getContent() || undefined,
       image: el('f-image').value.trim() || undefined,
+      thumbnail: el('f-thumbnail').value.trim() || undefined,
       is_hub: el('f-is_hub').checked,
       type: el('f-type').value || undefined,
       priority: el('f-priority').value ? parseFloat(el('f-priority').value) : undefined,

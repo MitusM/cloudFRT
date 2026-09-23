@@ -67,6 +67,14 @@ function renderMapHtml(opts = {}) {
 <style>
   .maplibregl-ctrl-active { background-color: #fbc412 !important; }
   .maplibregl-ctrl-active:hover { background-color: #e5b010 !important; }
+  .frt-popup-card { max-width: 260px; font: 14px/1.4 sans-serif; }
+  .frt-popup-thumb { width: 100%; border-radius: 6px 6px 0 0; margin: -12px -12px 8px; display: block; max-width: calc(100% + 24px); }
+  .frt-popup-type { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .5px; }
+  .frt-popup-summary { font-size: 13px; color: #555; margin: 4px 0; }
+  .frt-popup-card a { color: #2563eb; text-decoration: none; font-size: 13px; }
+  .maplibregl-popup-close-button { display: none !important; }
+  .maplibregl-popup-content { padding: 0 !important; overflow: hidden; }
+  .frt-popup-card { padding: 12px; }
 </style>
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
 <script src="https://unpkg.com/maplibre-gl@5.3.0/dist/maplibre-gl.js"></script>
@@ -2499,14 +2507,39 @@ function renderMapHtml(opts = {}) {
         const mk = new maplibregl.Marker({ element: pin })
           .setLngLat([lng, lat])
           .setPopup(
-            new maplibregl.Popup({ offset: 12 }).setHTML(
+            new maplibregl.Popup({ offset: 12, closeButton: false }).setHTML(
+              '<div class="frt-popup-card">' +
+              (p.thumbnail ? '<img src="' + p.thumbnail + '" class="frt-popup-thumb" />' : '') +
+              (p.typeName ? '<span class="frt-popup-type">' + p.typeName + '</span>' : '') +
               '<strong>' + (p.name || 'Место') + '</strong>' +
-              (p.address ? '<br><small>' + p.address + '</small>' : '') +
-              (p.note ? '<br><em>' + p.note + '</em>' : '') +
-              (p.day ? '<br><small>день ' + p.day + '</small>' : '')
+              (p.lat && p.lng ? '<div class="frt-popup-coords">📍 ' + p.lat.toFixed(4) + ', ' + p.lng.toFixed(4) + '</div>' : '') +
+              (p.summary ? '<p class="frt-popup-summary">' + p.summary + '</p>' : '') +
+              (p.fullSlug ? '<a href="/destinations/' + p.fullSlug + '">Открыть страницу →</a>' : '') +
+              '</div>'
             )
           )
           .addTo(map);
+        // WikiMedia фолбэк: если нет thumbnail, асинхронно подгрузить фото
+        if (!p.thumbnail) {
+          const popup = mk.getPopup();
+          popup.on('open', function () {
+            const container = popup._container || popup._content;
+            if (!container || container.querySelector('.frt-popup-thumb') || container.dataset.frtPhotoLoading) return;
+            container.dataset.frtPhotoLoading = '1';
+            const placeId = 'coords:' + lat + ',' + lng;
+            fetch('/maps/place-photo/' + encodeURIComponent(placeId) + '/bytes')
+              .then(function (r) { if (r.ok) return r.blob(); throw new Error('no-photo'); })
+              .then(function (blob) {
+                var url = URL.createObjectURL(blob);
+                var img = document.createElement('img');
+                img.className = 'frt-popup-thumb';
+                img.src = url;
+                container.insertBefore(img, container.firstChild);
+                delete container.dataset.frtPhotoLoading;
+              })
+              .catch(function () { delete container.dataset.frtPhotoLoading; });
+          });
+        }
         map._frtMarkers.push(mk);
         // 🏷 тултип при наведении на маркер (имя места) — без конфликта с popup (клик)
         if (!map._frtTip) { map._frtTip = (function () {
@@ -2519,7 +2552,7 @@ function renderMapHtml(opts = {}) {
         })(); }
         pin.addEventListener('mouseenter', function () {
           if (!map._frtTip) return;
-          map._frtTip.textContent = p.name || 'Место';
+          map._frtTip.textContent = (p.name || 'Место') + (p.typeName ? ' · ' + p.typeName : '');
           const pos = map.project([lng, lat]);
           map._frtTip.style.left = pos.x + 'px';
           map._frtTip.style.top = pos.y + 'px';

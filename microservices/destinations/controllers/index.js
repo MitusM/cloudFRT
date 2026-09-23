@@ -826,10 +826,16 @@ const endpoints = async (app) => {
 
       const imgR = img.map((file) => file.pathFile)
 
+      // thumbnail 320px для карты
+      const thumbnailFolder = process.env.THUMBNAIL_FOLDER_DEST || '/images/destinations/dest/thumbnail/'
+      const thumbnailArr = await Images.resizeWEBP([320], wepFile, thumbnailFolder)
+      const thumbnailPath = thumbnailArr[0]?.pathFile || ''
+
       res.status(200).json({
         status: 200,
         body: {
           original: { name: file0.newName, pathFile: file0.path },
+          thumbnail: thumbnailPath,
           resize: obj,
           webpOriginal: {
             originalName: statFile.name,

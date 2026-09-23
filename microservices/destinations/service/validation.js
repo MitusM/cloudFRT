@@ -96,6 +96,8 @@ export function validateDestInput(body, { requireTitle = true, levelRequired = f
   }
 
   if (body.description !== undefined) clean.description = String(body.description)
+  if (body.summary !== undefined) clean.summary = String(body.summary)
+  if (body.thumbnail !== undefined) clean.thumbnail = String(body.thumbnail)
   if (body.content !== undefined) clean.content = body.content
   if (body.image !== undefined) clean.image = String(body.image)
 

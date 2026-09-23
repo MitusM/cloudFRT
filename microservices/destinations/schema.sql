@@ -43,6 +43,8 @@ CREATE PROPERTY Dest.level STRING;             -- country | region | place | att
 CREATE PROPERTY Dest.description STRING;       -- SEO description
 CREATE PROPERTY Dest.content STRING;          -- контент хаба (HTML-строка; был EMBEDDED — ошибка, nowi fix 31.08)
 CREATE PROPERTY Dest.image STRING;             -- URL изображения
+CREATE PROPERTY Dest.summary STRING;           -- краткое описание (для карты)
+CREATE PROPERTY Dest.thumbnail STRING;         -- миниатюра 320px (для карты)
 CREATE PROPERTY Dest.is_hub BOOLEAN;           -- является ли хабом (default true)
 ALTER PROPERTY Dest.is_hub DEFAULT true;
 CREATE PROPERTY Dest.priority DOUBLE;          -- приоритет в sitemap (0..1)
