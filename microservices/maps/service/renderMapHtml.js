@@ -68,12 +68,12 @@ function renderMapHtml(opts = {}) {
   .maplibregl-ctrl-active { background-color: #fbc412 !important; }
   .maplibregl-ctrl-active:hover { background-color: #e5b010 !important; }
   .frt-popup-card { max-width: 260px; font: 14px/1.4 sans-serif; }
-  .frt-popup-thumb { width: 100%; border-radius: 6px 6px 0 0; margin: -12px -12px 8px; display: block; max-width: calc(100% + 24px); }
+  .frt-popup-thumb { width: calc(100% + 24px); border-radius: 6px 6px 0 0; margin: -12px -12px 8px; display: block; }
   .frt-popup-type { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .5px; }
   .frt-popup-summary { font-size: 13px; color: #555; margin: 4px 0; }
   .frt-popup-card a { color: #2563eb; text-decoration: none; font-size: 13px; }
   .maplibregl-popup-close-button { display: none !important; }
-  .maplibregl-popup-content { padding: 0 !important; overflow: hidden; }
+  .maplibregl-popup-content { padding: 0 !important; }
   .frt-popup-card { padding: 12px; }
 </style>
 <div id="${containerId}" style="width:100%; height:${heightPx}px; border-radius:8px; overflow:hidden;"></div>
